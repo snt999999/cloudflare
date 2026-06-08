@@ -1,4 +1,6 @@
-const LS_PASSWORD_KEY = "solncanet_admin_password_final_v1";
+
+const LS_PASSWORD_KEY = "solncanet_admin_password_showcase_v2";
+const WORKERS = ["Никита П", "Андрей Ш", "Никита К", "Дмитрий П", "Роман З"];
 const $ = (id) => document.getElementById(id);
 let records = [];
 let currentRecord = null;
@@ -7,315 +9,50 @@ let activeTab = "all";
 const els = {
   loginPanel: $("loginPanel"), appPanel: $("appPanel"), loginForm: $("loginForm"), passwordInput: $("passwordInput"),
   loginMessage: $("loginMessage"), loginBtn: $("loginBtn"), logoutBtn: $("logoutBtn"), refreshBtn: $("refreshBtn"),
-  exportBtn: $("exportBtn"), requestsBody: $("requestsBody"), statusFilter: $("statusFilter"), searchInput: $("searchInput"),
+  exportOpenBtn: $("exportOpenBtn"), exportDialog: $("exportDialog"), exportExcelBtn: $("exportExcelBtn"),
+  exportFrom: $("exportFrom"), exportTo: $("exportTo"), exportAllWorkers: $("exportAllWorkers"),
+  requestsBody: $("requestsBody"), statusFilter: $("statusFilter"), searchInput: $("searchInput"),
   dateFrom: $("dateFrom"), dateTo: $("dateTo"), message: $("message"), statTotal: $("statTotal"), statNew: $("statNew"),
   statToday: $("statToday"), statWork: $("statWork"), statPaid: $("statPaid"), dialog: $("requestDialog"),
   dialogTitle: $("dialogTitle"), dClient: $("dClient"), dPhone: $("dPhone"), dDate: $("dDate"), dTime: $("dTime"),
   dService: $("dService"), dAddress: $("dAddress"), dComment: $("dComment"), editStatus: $("editStatus"), editM2: $("editM2"),
-  editResponsible: $("editResponsible"), editObjectCreated: $("editObjectCreated"), editInstallers: $("editInstallers"),
-  editAdminComment: $("editAdminComment"), saveRequestBtn: $("saveRequestBtn")
+  editResponsible: $("editResponsible"), editObjectCreated: $("editObjectCreated"), editAdminComment: $("editAdminComment"),
+  saveRequestBtn: $("saveRequestBtn")
 };
 
 init();
-
-function init() {
+function init(){
   const saved = localStorage.getItem(LS_PASSWORD_KEY);
-  if (saved) validateAndEnter(saved, true);
-
-  els.loginForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const pwd = els.passwordInput.value.trim();
-    if (!pwd) return;
-    await validateAndEnter(pwd, false);
-  });
-
-  els.logoutBtn.addEventListener("click", () => {
-    localStorage.removeItem(LS_PASSWORD_KEY);
-    records = [];
-    els.requestsBody.innerHTML = "";
-    showLogin();
-  });
-
+  if(saved) validateAndEnter(saved);
+  els.loginForm.addEventListener("submit", async e => {e.preventDefault(); const pwd=els.passwordInput.value.trim(); if(pwd) await validateAndEnter(pwd);});
+  els.logoutBtn.addEventListener("click",()=>{localStorage.removeItem(LS_PASSWORD_KEY); records=[]; els.requestsBody.innerHTML=""; showLogin();});
   els.refreshBtn.addEventListener("click", loadRequests);
-  els.exportBtn.addEventListener("click", exportCsv);
-
-  [els.statusFilter, els.searchInput, els.dateFrom, els.dateTo].forEach(el => {
-    el.addEventListener("input", render);
-    el.addEventListener("change", render);
-  });
-
-  document.querySelectorAll("[data-tab]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      activeTab = btn.dataset.tab;
-      document.querySelectorAll("[data-tab]").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      render();
-    });
-  });
-
-  document.querySelectorAll("[data-status-set]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      els.editStatus.value = btn.dataset.statusSet;
-    });
-  });
-
+  els.exportOpenBtn.addEventListener("click", openExportDialog);
+  els.exportExcelBtn.addEventListener("click", exportExcel);
+  els.exportAllWorkers.addEventListener("change", toggleExportWorkers);
+  [els.statusFilter,els.searchInput,els.dateFrom,els.dateTo].forEach(el=>{el.addEventListener("input",render);el.addEventListener("change",render);});
+  document.querySelectorAll("[data-tab]").forEach(btn=>btn.addEventListener("click",()=>{activeTab=btn.dataset.tab;document.querySelectorAll("[data-tab]").forEach(b=>b.classList.remove("active"));btn.classList.add("active");render();}));
+  document.querySelectorAll("[data-status-set]").forEach(btn=>btn.addEventListener("click",()=>{els.editStatus.value=btn.dataset.statusSet;}));
+  document.querySelectorAll('input[name="exportWorker"]').forEach(cb=>cb.addEventListener("change",()=>{if([...document.querySelectorAll('input[name="exportWorker"]')].some(x=>x.checked)) els.exportAllWorkers.checked=false;}));
   els.saveRequestBtn.addEventListener("click", saveCurrentRequest);
 }
-
-async function validateAndEnter(pwd, silent) {
-  hideLoginError();
-  els.loginBtn.disabled = true;
-  els.loginBtn.textContent = "Проверяю...";
-
-  try {
-    const res = await fetch("/list-zayavki", { headers: { "x-admin-password": pwd } });
-    const data = await res.json();
-
-    if (!res.ok || !data.ok) {
-      localStorage.removeItem(LS_PASSWORD_KEY);
-      showLogin();
-      showLoginError(data.error || "Неверный пароль администратора");
-      return;
-    }
-
-    localStorage.setItem(LS_PASSWORD_KEY, pwd);
-    records = data.records || [];
-    showApp();
-    render();
-    showMessage("Вход выполнен. Заявки загружены.", "ok");
-    setTimeout(hideMessage, 1600);
-  } catch (err) {
-    localStorage.removeItem(LS_PASSWORD_KEY);
-    showLogin();
-    showLoginError("Не удалось проверить пароль: " + err.message);
-  } finally {
-    els.loginBtn.disabled = false;
-    els.loginBtn.textContent = "Войти";
-  }
-}
-
-function showApp() {
-  els.loginPanel.style.display = "none";
-  els.appPanel.style.display = "block";
-  els.logoutBtn.style.display = "inline-flex";
-}
-
-function showLogin() {
-  els.appPanel.style.display = "none";
-  els.logoutBtn.style.display = "none";
-  els.loginPanel.style.display = "block";
-}
-
-function showLoginError(text) {
-  els.loginMessage.style.display = "block";
-  els.loginMessage.textContent = text;
-}
-
-function hideLoginError() {
-  els.loginMessage.style.display = "none";
-  els.loginMessage.textContent = "";
-}
-
-function password() { return localStorage.getItem(LS_PASSWORD_KEY) || ""; }
-
-async function loadRequests() {
-  showMessage("Загружаю заявки...", "ok");
-
-  try {
-    const res = await fetch("/list-zayavki", { headers: { "x-admin-password": password() } });
-    const data = await res.json();
-
-    if (!res.ok || !data.ok) {
-      if (res.status === 401) {
-        localStorage.removeItem(LS_PASSWORD_KEY);
-        showLogin();
-        return showLoginError(data.error || "Неверный пароль администратора");
-      }
-      throw new Error(detailedError(data, "Не удалось загрузить заявки"));
-    }
-
-    records = data.records || [];
-    render();
-    showMessage("Заявки обновлены", "ok");
-    setTimeout(hideMessage, 1500);
-  } catch (err) {
-    showMessage(err.message, "error");
-  }
-}
-
-function render() {
-  const filtered = filterRecords(records);
-  els.requestsBody.innerHTML = filtered.map(rowHtml).join("") || `<tr><td colspan="9">Заявок по текущим фильтрам нет.</td></tr>`;
-  updateStats(records);
-  document.querySelectorAll("[data-open-id]").forEach(btn => btn.addEventListener("click", () => openDialog(btn.dataset.openId)));
-}
-
-function filterRecords(items) {
-  const status = els.statusFilter.value;
-  const search = els.searchInput.value.trim().toLowerCase();
-  const from = els.dateFrom.value;
-  const to = els.dateTo.value;
-  const today = todayYmd();
-  const tomorrow = offsetYmd(1);
-
-  return items.filter(r => {
-    const f = r.fields || {};
-    const date = String(f["Дата записи"] || "");
-
-    if (activeTab === "new" && String(f["Статус"] || "") !== "Новая заявка") return false;
-    if (activeTab === "today" && date !== today) return false;
-    if (activeTab === "tomorrow" && date !== tomorrow) return false;
-    if (activeTab === "work" && String(f["Статус"] || "") !== "В работе") return false;
-    if (activeTab === "paid" && String(f["Статус"] || "") !== "Оплачено") return false;
-
-    if (status && String(f["Статус"] || "") !== status) return false;
-    if (from && date && date < from) return false;
-    if (to && date && date > to) return false;
-
-    if (search) {
-      const haystack = [
-        f["Имя клиента"], f["Телефон"], f["Услуга"], f["Адрес"], f["Комментарий клиента"], f["Комментарий"],
-        f["Комментарий администратора"], f["Статус"], f["Монтажники"], f["Ответственный"]
-      ].join(" ").toLowerCase();
-      if (!haystack.includes(search)) return false;
-    }
-
-    return true;
-  }).sort((a, b) => {
-    const af = a.fields || {};
-    const bf = b.fields || {};
-    const ad = String(af["Дата записи"] || "") + " " + String(af["Время записи"] || "");
-    const bd = String(bf["Дата записи"] || "") + " " + String(bf["Время записи"] || "");
-    return bd.localeCompare(ad);
-  });
-}
-
-function rowHtml(r) {
-  const f = r.fields || {};
-  return `<tr>
-    <td>${esc(f["Дата записи"] || "—")}</td>
-    <td>${esc(f["Время записи"] || "—")}</td>
-    <td><b>${esc(f["Имя клиента"] || "—")}</b></td>
-    <td>${phoneLink(f["Телефон"])}</td>
-    <td>${esc(f["Услуга"] || "—")}</td>
-    <td>${esc(shorten(f["Адрес"], 72) || "—")}</td>
-    <td>${esc(f["Итоговый м2"] || f["м2"] || "—")}</td>
-    <td><span class="status" data-status="${attr(f["Статус"] || "")}">${esc(f["Статус"] || "—")}</span></td>
-    <td><button class="mini-btn" data-open-id="${attr(r.id)}">Открыть</button></td>
-  </tr>`;
-}
-
-function updateStats(items) {
-  const today = todayYmd();
-  els.statTotal.textContent = items.length;
-  els.statNew.textContent = items.filter(r => (r.fields || {})["Статус"] === "Новая заявка").length;
-  els.statToday.textContent = items.filter(r => String((r.fields || {})["Дата записи"] || "") === today).length;
-  els.statWork.textContent = items.filter(r => (r.fields || {})["Статус"] === "В работе").length;
-  els.statPaid.textContent = items.filter(r => (r.fields || {})["Статус"] === "Оплачено").length;
-}
-
-function openDialog(id) {
-  currentRecord = records.find(r => String(r.id) === String(id));
-  if (!currentRecord) return;
-
-  const f = currentRecord.fields || {};
-  els.dialogTitle.textContent = `Заявка #${currentRecord.id}`;
-  els.dClient.textContent = f["Имя клиента"] || "—";
-  els.dPhone.textContent = f["Телефон"] || "—";
-  els.dDate.textContent = f["Дата записи"] || "—";
-  els.dTime.textContent = f["Время записи"] || "—";
-  els.dService.textContent = f["Услуга"] || "—";
-  els.dAddress.textContent = f["Адрес"] || "—";
-  els.dComment.textContent = f["Комментарий клиента"] || f["Комментарий"] || "—";
-
-  els.editStatus.value = f["Статус"] || "Новая заявка";
-  els.editM2.value = f["Итоговый м2"] || f["м2"] || "";
-  els.editResponsible.value = f["Ответственный"] || "";
-  els.editObjectCreated.value = truthy(f["Создан объект"]) ? "true" : "false";
-  els.editInstallers.value = f["Монтажники"] || "";
-  els.editAdminComment.value = f["Комментарий администратора"] || "";
-
-  els.dialog.showModal();
-}
-
-async function saveCurrentRequest() {
-  if (!currentRecord) return;
-
-  const fields = {
-    "Статус": els.editStatus.value,
-    "Ответственный": els.editResponsible.value.trim(),
-    "Комментарий администратора": els.editAdminComment.value.trim(),
-    "Монтажники": els.editInstallers.value.trim(),
-    "Создан объект": els.editObjectCreated.value === "true"
-  };
-
-  const m2 = numOrNull(els.editM2.value);
-  if (m2 !== null) fields["Итоговый м2"] = m2;
-
-  els.saveRequestBtn.disabled = true;
-  els.saveRequestBtn.textContent = "Сохраняю...";
-
-  try {
-    const res = await fetch("/update-zayavka", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-admin-password": password() },
-      body: JSON.stringify({ id: currentRecord.id, fields })
-    });
-
-    const data = await res.json();
-    if (!res.ok || !data.ok) throw new Error(detailedError(data, "Не удалось сохранить заявку"));
-
-    els.dialog.close();
-    await loadRequests();
-  } catch (err) {
-    showMessage(err.message, "error");
-  } finally {
-    els.saveRequestBtn.disabled = false;
-    els.saveRequestBtn.textContent = "Сохранить";
-  }
-}
-
-function exportCsv() {
-  const rows = filterRecords(records);
-  const headers = [
-    "Дата записи","Время записи","Имя клиента","Телефон","Услуга","Адрес","м2","Итоговый м2",
-    "Статус","Монтажники","Ответственный","Создан объект","Комментарий клиента","Комментарий администратора","Cal Booking ID"
-  ];
-
-  const csv = [
-    headers.join(";"),
-    ...rows.map(r => {
-      const f = r.fields || {};
-      return headers.map(h => csvCell(f[h] ?? "")).join(";");
-    })
-  ].join("\n");
-
-  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `solncanet_zayavki_${todayYmd()}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-function detailedError(data, fallback) {
-  if (!data) return fallback;
-  if (data.nocodbResponse) return `${data.error || fallback}: ${JSON.stringify(data.nocodbResponse)}`;
-  return data.error || fallback;
-}
-
-function showMessage(text, type) { els.message.style.display = "block"; els.message.className = `message message--${type}`; els.message.textContent = text; }
-function hideMessage() { els.message.style.display = "none"; }
-
-function esc(v){ return String(v ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c])); }
-function attr(v){ return esc(v).replace(/`/g,"&#096;"); }
-function shorten(v,max){ const s=String(v||""); return s.length>max ? s.slice(0,max-1)+"…" : s; }
-function phoneLink(v){ const p=String(v||"").trim(); return p ? `<a href="tel:${attr(p)}">${esc(p)}</a>` : "—"; }
-function numOrNull(v){ if(v==="" || v===null || v===undefined) return null; const n=Number(String(v).replace(",",".")); return Number.isFinite(n) ? n : null; }
-function truthy(v){ return v === true || v === "true" || v === 1 || v === "1" || v === "Да"; }
-function csvCell(v){ const s = String(v ?? "").replace(/\r?\n/g, " ").replace(/"/g, '""'); return `"${s}"`; }
-function todayYmd(){ return new Date().toISOString().slice(0,10); }
-function offsetYmd(days){ const d = new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
+async function validateAndEnter(pwd){hideLoginError(); els.loginBtn.disabled=true; els.loginBtn.textContent="Проверяю..."; try{const res=await fetch("/list-zayavki",{headers:{"x-admin-password":pwd}}); const data=await res.json(); if(!res.ok||!data.ok){localStorage.removeItem(LS_PASSWORD_KEY); showLogin(); showLoginError(data.error||"Неверный пароль администратора"); return;} localStorage.setItem(LS_PASSWORD_KEY,pwd); records=data.records||[]; showApp(); render(); showMessage("Вход выполнен. Заявки загружены.","ok"); setTimeout(hideMessage,1400);}catch(err){localStorage.removeItem(LS_PASSWORD_KEY); showLogin(); showLoginError("Не удалось проверить пароль: "+err.message);}finally{els.loginBtn.disabled=false; els.loginBtn.textContent="Войти";}}
+function showApp(){els.loginPanel.style.display="none";els.appPanel.style.display="block";els.logoutBtn.style.display="inline-flex";}
+function showLogin(){els.appPanel.style.display="none";els.logoutBtn.style.display="none";els.loginPanel.style.display="block";}
+function showLoginError(t){els.loginMessage.style.display="block";els.loginMessage.textContent=t;}
+function hideLoginError(){els.loginMessage.style.display="none";els.loginMessage.textContent="";}
+function password(){return localStorage.getItem(LS_PASSWORD_KEY)||"";}
+async function loadRequests(){showMessage("Загружаю заявки...","ok"); try{const res=await fetch("/list-zayavki",{headers:{"x-admin-password":password()}}); const data=await res.json(); if(!res.ok||!data.ok){if(res.status===401){localStorage.removeItem(LS_PASSWORD_KEY);showLogin();return showLoginError(data.error||"Неверный пароль администратора");} throw new Error(detailedError(data,"Не удалось загрузить заявки"));} records=data.records||[]; render(); showMessage("Заявки обновлены","ok"); setTimeout(hideMessage,1300);}catch(err){showMessage(err.message,"error");}}
+function render(){const filtered=filterRecords(records); els.requestsBody.innerHTML=filtered.map(rowHtml).join("")||`<tr><td colspan="10">Заявок по текущим фильтрам нет.</td></tr>`; updateStats(records); document.querySelectorAll("[data-open-id]").forEach(btn=>btn.addEventListener("click",()=>openDialog(btn.dataset.openId)));}
+function filterRecords(items){const status=els.statusFilter.value,search=els.searchInput.value.trim().toLowerCase(),from=els.dateFrom.value,to=els.dateTo.value,today=todayYmd();return items.filter(r=>{const f=r.fields||{},date=String(f["Дата записи"]||""); if(activeTab==="new"&&String(f["Статус"]||"")!=="Новая заявка")return false;if(activeTab==="today"&&date!==today)return false;if(activeTab==="work"&&String(f["Статус"]||"")!=="В работе")return false;if(activeTab==="paid"&&String(f["Статус"]||"")!=="Оплачено")return false;if(status&&String(f["Статус"]||"")!==status)return false;if(from&&date&&date<from)return false;if(to&&date&&date>to)return false;if(search){const hay=[f["Имя клиента"],f["Телефон"],f["Услуга"],f["Адрес"],f["Комментарий клиента"],f["Комментарий"],f["Комментарий администратора"],f["Статус"],f["Монтажники"],f["Ответственный"]].join(" ").toLowerCase(); if(!hay.includes(search))return false;}return true;}).sort((a,b)=>{const af=a.fields||{},bf=b.fields||{};return (String(bf["Дата записи"]||"")+" "+String(bf["Время записи"]||"")).localeCompare(String(af["Дата записи"]||"")+" "+String(af["Время записи"]||""));});}
+function rowHtml(r){const f=r.fields||{};return `<tr><td>${esc(f["Дата записи"]||"—")}</td><td>${esc(f["Время записи"]||"—")}</td><td><b>${esc(f["Имя клиента"]||"—")}</b></td><td>${phoneLink(f["Телефон"])}</td><td>${esc(f["Услуга"]||"—")}</td><td>${esc(shorten(f["Адрес"],68)||"—")}</td><td>${esc(f["Итоговый м2"]||f["м2"]||"—")}</td><td>${esc(f["Монтажники"]||"—")}</td><td><span class="status" data-status="${attr(f["Статус"]||"")}">${esc(f["Статус"]||"—")}</span></td><td><button class="mini-btn" data-open-id="${attr(r.id)}">Открыть</button></td></tr>`;}
+function updateStats(items){const today=todayYmd();els.statTotal.textContent=items.length;els.statNew.textContent=items.filter(r=>(r.fields||{})["Статус"]==="Новая заявка").length;els.statToday.textContent=items.filter(r=>String((r.fields||{})["Дата записи"]||"")===today).length;els.statWork.textContent=items.filter(r=>(r.fields||{})["Статус"]==="В работе").length;els.statPaid.textContent=items.filter(r=>(r.fields||{})["Статус"]==="Оплачено").length;}
+function openDialog(id){currentRecord=records.find(r=>String(r.id)===String(id)); if(!currentRecord)return;const f=currentRecord.fields||{};els.dialogTitle.textContent=`Заявка #${currentRecord.id}`;els.dClient.textContent=f["Имя клиента"]||"—";els.dPhone.textContent=f["Телефон"]||"—";els.dDate.textContent=f["Дата записи"]||"—";els.dTime.textContent=f["Время записи"]||"—";els.dService.textContent=f["Услуга"]||"—";els.dAddress.textContent=f["Адрес"]||"—";els.dComment.textContent=f["Комментарий клиента"]||f["Комментарий"]||"—";els.editStatus.value=f["Статус"]||"Новая заявка";els.editM2.value=f["Итоговый м2"]||f["м2"]||"";els.editResponsible.value=f["Ответственный"]||"";els.editObjectCreated.value=truthy(f["Создан объект"])?"true":"false";els.editAdminComment.value=f["Комментарий администратора"]||"";setInstallerCheckboxes(splitInstallers(f["Монтажники"]||""));els.dialog.showModal();}
+async function saveCurrentRequest(){if(!currentRecord)return;const fields={"Статус":els.editStatus.value,"Ответственный":els.editResponsible.value.trim(),"Комментарий администратора":els.editAdminComment.value.trim(),"Монтажники":getSelectedInstallers().join(", "),"Создан объект":els.editObjectCreated.value==="true"};const m2=numOrNull(els.editM2.value);if(m2!==null)fields["Итоговый м2"]=m2;els.saveRequestBtn.disabled=true;els.saveRequestBtn.textContent="Сохраняю...";try{const res=await fetch("/update-zayavka",{method:"POST",headers:{"Content-Type":"application/json","x-admin-password":password()},body:JSON.stringify({id:currentRecord.id,fields})});const data=await res.json();if(!res.ok||!data.ok)throw new Error(detailedError(data,"Не удалось сохранить заявку"));els.dialog.close();await loadRequests();}catch(err){showMessage(err.message,"error");}finally{els.saveRequestBtn.disabled=false;els.saveRequestBtn.textContent="Сохранить";}}
+function getSelectedInstallers(){return [...document.querySelectorAll('input[name="installer"]:checked')].map(cb=>cb.value);}function setInstallerCheckboxes(names){document.querySelectorAll('input[name="installer"]').forEach(cb=>{cb.checked=names.includes(cb.value);});}function splitInstallers(value){return String(value||"").split(/[,;]+/).map(x=>x.trim()).filter(Boolean);}
+function openExportDialog(){const today=todayYmd();if(!els.exportFrom.value)els.exportFrom.value=today.slice(0,8)+"01";if(!els.exportTo.value)els.exportTo.value=today;els.exportDialog.showModal();}
+function toggleExportWorkers(){if(els.exportAllWorkers.checked)document.querySelectorAll('input[name="exportWorker"]').forEach(cb=>cb.checked=false);}function selectedExportWorkers(){if(els.exportAllWorkers.checked)return WORKERS.slice();const selected=[...document.querySelectorAll('input[name="exportWorker"]:checked')].map(cb=>cb.value);return selected.length?selected:WORKERS.slice();}
+function exportExcel(){const from=els.exportFrom.value,to=els.exportTo.value,allowed=selectedExportWorkers();const rows=recordsToPayrollRows(records,from,to,allowed);if(!rows.length){showMessage("Нет данных для выгрузки по выбранным условиям.","error");return;}const xml=buildExcelXml(rows,allowed);const blob=new Blob(["\uFEFF"+xml],{type:"application/vnd.ms-excel;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`solncanet_zp_${from||"start"}_${to||"end"}.xls`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);els.exportDialog.close();}
+function recordsToPayrollRows(items,from,to,allowedWorkers){const out=[];items.forEach(r=>{const f=r.fields||{},date=String(f["Дата записи"]||"");if(from&&date&&date<from)return;if(to&&date&&date>to)return;const installers=splitInstallers(f["Монтажники"]||"").filter(name=>allowedWorkers.includes(name));if(!installers.length)return;const m2=normalizeNumber(f["Итоговый м2"]||f["м2"]||"");installers.forEach(name=>out.push({date,time:String(f["Время записи"]||""),client:String(f["Имя клиента"]||""),phone:String(f["Телефон"]||""),address:String(f["Адрес"]||""),service:String(f["Услуга"]||""),worker:name,objectM2:m2,workerM2:m2,status:String(f["Статус"]||""),adminComment:String(f["Комментарий администратора"]||""),bookingId:String(f["Cal Booking ID"]||"")}));});return out;}
+function buildExcelXml(rows,workers){const headers=["Дата","Время","Клиент","Телефон","Адрес / объект","Услуга","Монтажник","М2 объекта","М2 сотрудника","Ставка","Сумма","Статус","Комментарий","Cal Booking ID"];const totals=workers.map(w=>({worker:w,m2Formula:`=SUMIF(Начисления!R2C7:R${rows.length+1}C7,"${xml(w)}",Начисления!R2C9:R${rows.length+1}C9)`,formula:`=SUMIF(Начисления!R2C7:R${rows.length+1}C7,"${xml(w)}",Начисления!R2C11:R${rows.length+1}C11)`}));return `<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles><Style ss:ID="Header"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#2563EB" ss:Pattern="Solid"/></Style><Style ss:ID="Money"><NumberFormat ss:Format="# ##0"/></Style><Style ss:ID="Number"><NumberFormat ss:Format="0.00"/></Style></Styles><Worksheet ss:Name="Начисления"><Table><Row>${headers.map(h=>`<Cell ss:StyleID="Header"><Data ss:Type="String">${xml(h)}</Data></Cell>`).join("")}</Row>${rows.map(r=>`<Row><Cell><Data ss:Type="String">${xml(r.date)}</Data></Cell><Cell><Data ss:Type="String">${xml(r.time)}</Data></Cell><Cell><Data ss:Type="String">${xml(r.client)}</Data></Cell><Cell><Data ss:Type="String">${xml(r.phone)}</Data></Cell><Cell><Data ss:Type="String">${xml(r.address)}</Data></Cell><Cell><Data ss:Type="String">${xml(r.service)}</Data></Cell><Cell><Data ss:Type="String">${xml(r.worker)}</Data></Cell><Cell ss:StyleID="Number"><Data ss:Type="Number">${r.objectM2||0}</Data></Cell><Cell ss:StyleID="Number"><Data ss:Type="Number">${r.workerM2||0}</Data></Cell><Cell ss:StyleID="Money"><Data ss:Type="Number">0</Data></Cell><Cell ss:StyleID="Money" ss:Formula="=RC[-2]*RC[-1]"><Data ss:Type="Number">0</Data></Cell><Cell><Data ss:Type="String">${xml(r.status)}</Data></Cell><Cell><Data ss:Type="String">${xml(r.adminComment)}</Data></Cell><Cell><Data ss:Type="String">${xml(r.bookingId)}</Data></Cell></Row>`).join("")}</Table><AutoFilter x:Range="R1C1:R${rows.length+1}C${headers.length}" xmlns="urn:schemas-microsoft-com:office:excel"/></Worksheet><Worksheet ss:Name="Итоги"><Table><Row><Cell ss:StyleID="Header"><Data ss:Type="String">Монтажник</Data></Cell><Cell ss:StyleID="Header"><Data ss:Type="String">Итого м2</Data></Cell><Cell ss:StyleID="Header"><Data ss:Type="String">Итого сумма</Data></Cell></Row>${totals.map(t=>`<Row><Cell><Data ss:Type="String">${xml(t.worker)}</Data></Cell><Cell ss:StyleID="Number" ss:Formula="${t.m2Formula}"><Data ss:Type="Number">0</Data></Cell><Cell ss:StyleID="Money" ss:Formula="${t.formula}"><Data ss:Type="Number">0</Data></Cell></Row>`).join("")}</Table></Worksheet></Workbook>`;}
+function detailedError(data,fallback){if(!data)return fallback;if(data.nocodbResponse)return `${data.error||fallback}: ${JSON.stringify(data.nocodbResponse)}`;return data.error||fallback;}function showMessage(text,type){els.message.style.display="block";els.message.className=`message message--${type}`;els.message.textContent=text;}function hideMessage(){els.message.style.display="none";}function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}function attr(v){return esc(v).replace(/`/g,"&#096;");}function xml(v){return String(v??"").replace(/[<>&"']/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;","'":"&apos;"}[c]));}function shorten(v,max){const s=String(v||"");return s.length>max?s.slice(0,max-1)+"…":s;}function phoneLink(v){const p=String(v||"").trim();return p?`<a href="tel:${attr(p)}">${esc(p)}</a>`:"—";}function numOrNull(v){if(v===""||v===null||v===undefined)return null;const n=Number(String(v).replace(",","."));return Number.isFinite(n)?n:null;}function normalizeNumber(v){const n=Number(String(v||"").replace(",","."));return Number.isFinite(n)?n:0;}function truthy(v){return v===true||v==="true"||v===1||v==="1"||v==="Да";}function todayYmd(){return new Date().toISOString().slice(0,10);}
