@@ -3,30 +3,43 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>СОЛНЦАНЕТ CRM</title>
+  <title>Онлайн-запись — СОЛНЦАНЕТ CRM</title>
   <link rel="stylesheet" href="assets/site.css" />
 </head>
 <body>
-  <main class="home">
-    <div class="home__card">
-      <div class="logo-row">
-        <span class="logo-mark">С</span>
-        <div>
-          <h1>СОЛНЦАНЕТ CRM</h1>
-          <p>Онлайн-запись, заявки и админ-панель</p>
-        </div>
-      </div>
+  <header class="header">
+    <a class="brand" href="index.html">
+      <span class="logo-mark">С</span>
+      <span><b>СОЛНЦАНЕТ CRM</b><small>онлайн-запись</small></span>
+    </a>
+    <nav><a href="admin.html">Админ-панель</a></nav>
+  </header>
 
-      <div class="home__actions">
-        <a class="btn" href="zapis.html">Онлайн-запись</a>
-        <a class="btn btn--ghost" href="admin.html">Админ-панель</a>
+  <main class="booking-page">
+    <section class="booking-info">
+      <span class="badge">Онлайн-запись</span>
+      <h1>Выберите удобную дату и свободное время</h1>
+      <p>Календарь показывает доступные слоты. Занятое время выбрать нельзя. После подтверждения запись попадает в Google Календарь и базу заявок.</p>
+      <div class="info-box">
+        <b>Как работает запись:</b>
+        <ul>
+          <li>клиент выбирает свободный слот;</li>
+          <li>заполняет данные по объекту;</li>
+          <li>заявка появляется в NocoDB и в админ-панели;</li>
+          <li>вы обрабатываете заявку уже внутри CRM.</li>
+        </ul>
       </div>
+    </section>
 
-      <div class="info">
-        <b>Рабочая схема:</b>
-        <span>Cal.com → Google Календарь → Cloudflare Function → NocoDB → Админ-панель</span>
-      </div>
-    </div>
+    <section class="cal-card">
+      <iframe
+        src="https://cal.com/solncanet?embed=true"
+        title="Онлайн-запись СОЛНЦАНЕТ"
+        loading="lazy"
+        allow="camera; microphone; fullscreen; autoplay; clipboard-write">
+      </iframe>
+      <p>Если календарь не открылся, перейдите напрямую: <a href="https://cal.com/solncanet" target="_blank" rel="noopener">https://cal.com/solncanet</a></p>
+    </section>
   </main>
 </body>
 </html>
