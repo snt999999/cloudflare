@@ -1,64 +1,64 @@
-# СОЛНЦАНЕТ CRM — версия для Cloudflare Pages
+# СОЛНЦАНЕТ CRM — финальная тестовая версия для показа
+
+## Что добавлено
+
+- Ровное оформление главной страницы.
+- Улучшенная страница онлайн-записи.
+- Обновленная админ-панель.
+- Проверка пароля без перехода в заявки при неверном пароле.
+- Быстрые статусы в карточке заявки.
+- Фильтры по статусу, дате, поиску.
+- Быстрые вкладки: все / новые / сегодня / в работе / оплачено.
+- Редактирование:
+  - статус;
+  - итоговый м2;
+  - ответственный;
+  - монтажники;
+  - комментарий администратора;
+  - создан объект.
+- Экспорт текущей выборки в CSV для Excel.
+- Исправлен PATCH для NocoDB v3: используется `id`, а не `id_fields`.
+- Webhook Cal.com записывает комментарий в поле `Комментарий клиента`.
 
 ## Структура
 
-В корне проекта должны лежать:
-
-- `index.html`
-- `zapis.html`
-- `admin.html`
-- `assets/`
-- `functions/`
-- `README.md`
-
-## Как залить
-
-1. Создай новый GitHub-репозиторий, например `solncanet-crm-cloudflare`.
-2. Распакуй архив.
-3. Загрузи **содержимое** распакованной папки в GitHub.
-4. В Cloudflare открой `Workers & Pages`.
-5. Нажми `Create application` → `Pages` → `Connect to Git`.
-6. Выбери репозиторий.
-7. Настройки:
-   - Framework preset: `None`
-   - Build command: пусто
-   - Build output directory: `/` или `.`
-8. Deploy.
+- index.html
+- zapis.html
+- admin.html
+- assets/site.css
+- assets/admin.css
+- assets/admin.js
+- functions/test.js
+- functions/nocodb-test.js
+- functions/cal-nocodb-v5.js
+- functions/list-zayavki.js
+- functions/update-zayavka.js
 
 ## Переменные Cloudflare Pages
 
-В проекте Cloudflare Pages добавь переменные:
+Нужны переменные:
 
-- `NOCODB_TOKEN` — токен NocoDB.
-- `ADMIN_PASSWORD` — пароль для входа в админку.
-- `NOCODB_ENDPOINT` — необязательно, endpoint уже прописан в функциях.
+- NOCODB_TOKEN
+- ADMIN_PASSWORD
 
-Если добавляешь переменные после первого deploy — сделай новый deploy.
+Необязательно:
 
-## Адреса после публикации
+- NOCODB_ENDPOINT
 
-Допустим Cloudflare дал адрес:
+## Проверка после deploy
 
-`https://solncanet-crm-cloudflare.pages.dev`
-
-Тогда:
-
-- Главная: `/`
-- Онлайн-запись: `/zapis.html`
-- Админка: `/admin.html`
-- Проверка функций: `/test`
-- Проверка NocoDB: `/nocodb-test`
-- Проверка Cal webhook: `/cal-nocodb-v5`
-- Список заявок: `/list-zayavki`
+1. /test
+2. /nocodb-test
+3. /cal-nocodb-v5
+4. /admin.html
 
 ## Webhook Cal.com
 
-В Cal.com замени URL webhook на:
-
-`https://ВАШ-ПРОЕКТ.pages.dev/cal-nocodb-v5`
+URL:
+https://ВАШ-ПРОЕКТ.pages.dev/cal-nocodb-v5
 
 Триггер:
-`Бронирование создано`
+Бронирование создано
 
 Секретный ключ:
 пусто
@@ -66,9 +66,10 @@
 Custom Payload Template:
 выключен
 
-## Поля таблицы Заявки
+## Поля NocoDB
 
-Обязательные:
+Эта версия рассчитана на текущие поля:
+
 - Имя клиента
 - Телефон
 - Услуга
@@ -76,15 +77,14 @@ Custom Payload Template:
 - Время записи
 - Адрес
 - м2
-- Комментарий
+- Комментарий клиента
+- Комментарий администратора
 - Статус
 - Cal Booking ID
-
-Желательные для редактирования в админке:
+- Монтажники
 - Итоговый м2
-- Ответственный
-- Комментарий администратора
 - Создан объект
+- Ответственный
 
-Endpoint заявок:
+Endpoint:
 https://app.nocodb.com/api/v3/data/ptvxn8nmuwc08y3/mgp2zjsuv4id5tp/records

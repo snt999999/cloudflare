@@ -15,15 +15,14 @@ export async function onRequest(context) {
   if (!token) return json({ ok:false, error:"NOCODB_TOKEN отсутствует" }, 500);
 
   const testRecord = {
-    "Дата создания": new Date().toISOString(),
     "Имя клиента": "ТЕСТ CLOUDFLARE",
     "Телефон": "+79999999999",
     "Услуга": "Проверка связи Cloudflare → NocoDB",
     "Дата записи": "2026-06-05",
     "Время записи": "12:00",
     "Адрес": "Тестовый адрес",
-    "м2": 10,
-    "Комментарий": "Если эта строка появилась, связь с NocoDB работает",
+    "м2": "10",
+    "Комментарий клиента": "Если эта строка появилась, связь с NocoDB работает",
     "Статус": "Новая заявка",
     "Cal Booking ID": "manual-cf-test-" + Date.now()
   };

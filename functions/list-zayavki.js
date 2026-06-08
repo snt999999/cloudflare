@@ -41,7 +41,7 @@ export async function onRequestGet(context) {
 
   try {
     const url = new URL(env.NOCODB_ENDPOINT || DEFAULT_NOCODB_ENDPOINT);
-    url.searchParams.set("limit", "200");
+    url.searchParams.set("limit", "500");
 
     const res = await fetch(url.toString(), {
       method: "GET",
@@ -51,7 +51,9 @@ export async function onRequestGet(context) {
     const text = await res.text();
     const data = parseJson(text);
 
-    if (!res.ok) return json({ ok:false, error:"NocoDB list error", status:res.status, nocodbResponse:data }, 500);
+    if (!res.ok) {
+      return json({ ok:false, error:"NocoDB list error", status:res.status, nocodbResponse:data }, 500);
+    }
 
     const rawRecords = Array.isArray(data) ? data : (data.records || data.list || []);
     const records = rawRecords.map(normalizeRecord);

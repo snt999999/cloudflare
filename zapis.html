@@ -7,38 +7,54 @@
   <link rel="stylesheet" href="assets/site.css" />
 </head>
 <body>
-  <header class="header">
+  <header class="site-header">
     <a class="brand" href="index.html">
-      <span class="logo-mark">С</span>
-      <span><b>СОЛНЦАНЕТ CRM</b><small>онлайн-запись</small></span>
+      <span class="brand-mark">С</span>
+      <span>
+        <b>СОЛНЦАНЕТ CRM</b>
+        <small>онлайн-запись</small>
+      </span>
     </a>
-    <nav><a href="admin.html">Админ-панель</a></nav>
+    <nav class="site-nav">
+      <a href="index.html">Главная</a>
+      <a href="admin.html">Админ-панель</a>
+    </nav>
   </header>
 
-  <main class="booking-page">
-    <section class="booking-info">
+  <main class="booking-layout">
+    <section class="booking-copy">
       <span class="badge">Онлайн-запись</span>
-      <h1>Выберите удобную дату и свободное время</h1>
-      <p>Календарь показывает доступные слоты. Занятое время выбрать нельзя. После подтверждения запись попадает в Google Календарь и базу заявок.</p>
-      <div class="info-box">
-        <b>Как работает запись:</b>
-        <ul>
-          <li>клиент выбирает свободный слот;</li>
-          <li>заполняет данные по объекту;</li>
-          <li>заявка появляется в NocoDB и в админ-панели;</li>
-          <li>вы обрабатываете заявку уже внутри CRM.</li>
-        </ul>
+      <h1>Выберите свободное время для заявки</h1>
+      <p>
+        Календарь показывает доступные слоты. После подтверждения запись попадает
+        в Google Календарь, NocoDB и админ-панель.
+      </p>
+
+      <div class="process-card">
+        <h2>Как проходит заявка</h2>
+        <div class="process-step"><b>1</b><span>Клиент выбирает дату и время</span></div>
+        <div class="process-step"><b>2</b><span>Заполняет телефон, адрес и описание объекта</span></div>
+        <div class="process-step"><b>3</b><span>Заявка появляется в админ-панели</span></div>
+        <div class="process-step"><b>4</b><span>Администратор переводит заявку по статусам</span></div>
+      </div>
+
+      <div class="notice">
+        <b>Важно:</b>
+        <span>Это тестовая версия интерфейса. После проверки можно подключить ваш домен и доработать дизайн под основной сайт.</span>
       </div>
     </section>
 
-    <section class="cal-card">
+    <section class="booking-widget">
       <iframe
         src="https://cal.com/solncanet?embed=true"
         title="Онлайн-запись СОЛНЦАНЕТ"
         loading="lazy"
         allow="camera; microphone; fullscreen; autoplay; clipboard-write">
       </iframe>
-      <p>Если календарь не открылся, перейдите напрямую: <a href="https://cal.com/solncanet" target="_blank" rel="noopener">https://cal.com/solncanet</a></p>
+      <p>
+        Если календарь не загрузился, откройте запись напрямую:
+        <a href="https://cal.com/solncanet" target="_blank" rel="noopener">https://cal.com/solncanet</a>
+      </p>
     </section>
   </main>
 </body>

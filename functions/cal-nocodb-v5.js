@@ -7,7 +7,6 @@ function json(body, status = 200) {
     headers: { "Content-Type": "application/json; charset=utf-8" }
   });
 }
-
 function parseJson(text) { try { return JSON.parse(text); } catch(e) { return text; } }
 
 export async function onRequest(context) {
@@ -16,7 +15,7 @@ export async function onRequest(context) {
   if (request.method === "GET") {
     return json({
       ok: true,
-      version: "cloudflare-v1",
+      version: "cloudflare-final-demo-v1",
       service: "SOLNCANET Cal.com to NocoDB",
       hasNocodbToken: Boolean(env.NOCODB_TOKEN),
       endpoint: env.NOCODB_ENDPOINT || DEFAULT_NOCODB_ENDPOINT
@@ -42,15 +41,14 @@ export async function onRequest(context) {
   const startDate = startRaw ? new Date(startRaw) : null;
 
   const record = {
-    "Дата создания": new Date().toISOString(),
     "Имя клиента": String(findAnswer(responses, ["имя", "name", "фио"]) || attendee.name || payload.name || ""),
     "Телефон": String(findAnswer(responses, ["телефон", "phone", "номер"]) || attendee.phoneNumber || attendee.phone || ""),
     "Услуга": String(getServiceName(payload)),
     "Дата записи": validDate(startDate) ? dateYekaterinburg(startDate) : "",
     "Время записи": validDate(startDate) ? timeYekaterinburg(startDate) : "",
     "Адрес": String(findAnswer(responses, ["адрес", "адрес объекта", "address", "location"]) || locationText(payload.location) || ""),
-    "м2": areaNumber(findAnswer(responses, ["м2", "м²", "площадь", "area"])),
-    "Комментарий": String(findAnswer(responses, ["комментарий", "comment", "описание", "что нужно сделать"]) || payload.description || ""),
+    "м2": String(findAnswer(responses, ["м2", "м²", "площадь", "area"]) || ""),
+    "Комментарий клиента": String(findAnswer(responses, ["комментарий", "comment", "описание", "что нужно сделать"]) || payload.description || ""),
     "Статус": "Новая заявка",
     "Cal Booking ID": String(payload.uid || payload.id || payload.bookingId || incoming.id || "")
   };
@@ -65,7 +63,7 @@ export async function onRequest(context) {
     const text = await nc.text();
     if (!nc.ok) return json({ ok:false, error:"NocoDB error", status:nc.status, nocodbResponse:parseJson(text), record }, 500);
 
-    return json({ ok:true, version:"cloudflare-v1", message:"Saved to NocoDB", record, nocodbResponse:parseJson(text) });
+    return json({ ok:true, version:"cloudflare-final-demo-v1", message:"Saved to NocoDB", record, nocodbResponse:parseJson(text) });
   } catch (error) {
     return json({ ok:false, error:error.message, record }, 500);
   }
@@ -97,7 +95,6 @@ function unwrap(value) {
 }
 function locationText(location) { if (!location) return ""; if (typeof location === "string") return location; if (typeof location === "object") return location.address || location.location || location.value || JSON.stringify(location); return ""; }
 function norm(value) { return String(value || "").toLowerCase().replace(/ё/g, "е").replace(/\s+/g, " ").trim(); }
-function areaNumber(value) { if (value === "" || value === null || value === undefined) return ""; const n = Number(String(value).replace(",", ".").replace(/[^\d.]/g, "")); return Number.isFinite(n) ? n : ""; }
 function validDate(date) { return date instanceof Date && !Number.isNaN(date.getTime()); }
 function dateYekaterinburg(date) {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone:"Asia/Yekaterinburg", year:"numeric", month:"2-digit", day:"2-digit" }).formatToParts(date);

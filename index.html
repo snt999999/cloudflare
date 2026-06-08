@@ -3,30 +3,69 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>СОЛНЦАНЕТ CRM</title>
+  <title>СОЛНЦАНЕТ CRM — тестовая версия</title>
   <link rel="stylesheet" href="assets/site.css" />
 </head>
 <body>
-  <main class="home">
-    <div class="home__card">
-      <div class="logo-row">
-        <span class="logo-mark">С</span>
-        <div>
-          <h1>СОЛНЦАНЕТ CRM</h1>
-          <p>Онлайн-запись, заявки и админ-панель</p>
+  <header class="site-header">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">С</span>
+      <span>
+        <b>СОЛНЦАНЕТ CRM</b>
+        <small>тестовая версия сервиса</small>
+      </span>
+    </a>
+    <nav class="site-nav">
+      <a href="zapis.html">Онлайн-запись</a>
+      <a href="admin.html">Админ-панель</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero__content">
+        <span class="badge">Тестовая версия</span>
+        <h1>Онлайн-запись и обработка заявок СОЛНЦАНЕТ</h1>
+        <p>
+          Клиент выбирает свободное время в календаре, заявка автоматически попадает в базу,
+          а администратор видит её в удобной панели управления.
+        </p>
+
+        <div class="hero__actions">
+          <a class="btn" href="zapis.html">Открыть онлайн-запись</a>
+          <a class="btn btn--light" href="admin.html">Открыть админ-панель</a>
         </div>
       </div>
 
-      <div class="home__actions">
-        <a class="btn" href="zapis.html">Онлайн-запись</a>
-        <a class="btn btn--ghost" href="admin.html">Админ-панель</a>
+      <div class="hero__panel">
+        <h2>Что уже работает</h2>
+        <ul class="check-list">
+          <li>Онлайн-запись через Cal.com</li>
+          <li>Блокировка занятых слотов в календаре</li>
+          <li>Передача заявок в NocoDB</li>
+          <li>Собственная админ-панель</li>
+          <li>Фильтры, статусы, поиск и экспорт CSV</li>
+        </ul>
       </div>
+    </section>
 
-      <div class="info">
-        <b>Рабочая схема:</b>
-        <span>Cal.com → Google Календарь → Cloudflare Function → NocoDB → Админ-панель</span>
-      </div>
-    </div>
+    <section class="cards">
+      <article class="card">
+        <span>01</span>
+        <h3>Клиент записывается</h3>
+        <p>Выбирает удобное время, заполняет контакты и данные по объекту.</p>
+      </article>
+      <article class="card">
+        <span>02</span>
+        <h3>Заявка попадает в CRM</h3>
+        <p>Данные сохраняются в NocoDB и отображаются в админ-панели.</p>
+      </article>
+      <article class="card">
+        <span>03</span>
+        <h3>Администратор обрабатывает</h3>
+        <p>Меняет статус, добавляет м², ответственного, монтажников и комментарии.</p>
+      </article>
+    </section>
   </main>
 </body>
 </html>

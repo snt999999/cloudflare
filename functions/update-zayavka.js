@@ -1,3 +1,4 @@
+
 const DEFAULT_NOCODB_ENDPOINT = "https://app.nocodb.com/api/v3/data/ptvxn8nmuwc08y3/mgp2zjsuv4id5tp/records";
 
 function json(body, status = 200) {
@@ -21,6 +22,12 @@ function checkAdminPassword(request, env) {
     return { ok:false, status:401, body:{ ok:false, error:"Неверный пароль администратора" } };
   }
   return { ok:true };
+}
+
+function normalizeRecord(rec) {
+  const fields = rec.fields || rec;
+  const id = rec.id || (rec.id_fields && (rec.id_fields.Id || rec.id_fields.id)) || fields.Id || fields.id || "";
+  return { id:String(id), id_fields: rec.id_fields || { Id: Number(id) || id }, fields };
 }
 
 export async function onRequestPost(context) {
@@ -48,10 +55,7 @@ export async function onRequestPost(context) {
     "Ответственный",
     "Комментарий администратора",
     "Создан объект",
-    "Монтажник 1",
-    "Монтажник 2",
-    "Монтажник 3",
-    "Монтажник 4"
+    "Монтажники"
   ];
 
   const fields = {};
@@ -72,18 +76,12 @@ export async function onRequestPost(context) {
     }
   }
 
-  const payload = [{
-    id_fields: { Id: Number(id) || id },
-    fields
-  }];
+  const payload = [{ id: Number(id) || id, fields }];
 
   try {
     const res = await fetch(env.NOCODB_ENDPOINT || DEFAULT_NOCODB_ENDPOINT, {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "xc-token": token
-      },
+      headers: { "Content-Type":"application/json", "xc-token": token },
       body: JSON.stringify(payload)
     });
 
@@ -100,15 +98,9 @@ export async function onRequestPost(context) {
       }, 500);
     }
 
-    return json({
-      ok:true,
-      updated:true,
-      sentPayload:payload,
-      nocodbResponse:data
-    });
-
+    return json({ ok:true, updated:true, sentPayload:payload, nocodbResponse:data });
   } catch(error) {
-    return json({ ok:false, error:error.message }, 500);
+    return json({ ok:false, error:error.message, sentPayload:payload }, 500);
   }
 }
 
