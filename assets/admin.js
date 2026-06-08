@@ -1,4 +1,4 @@
-const LS_PASSWORD_KEY = "solncanet_admin_password_cloudflare_v1";
+const LS_PASSWORD_KEY = "solncanet_admin_password_cloudflare_v2";
 const $ = (id) => document.getElementById(id);
 let records = [];
 let currentRecord = null;
@@ -69,7 +69,7 @@ async function loadRequests() {
     const data = await res.json();
     if (!res.ok || !data.ok) {
       if (res.status === 401) return showLoginError(data.error || "Неверный пароль");
-      throw new Error(data.error || "Не удалось загрузить заявки");
+      throw new Error(detailedError(data, "Не удалось загрузить заявки"));
     }
     records = data.records || [];
     render();
@@ -96,7 +96,7 @@ function filterRecords(items) {
     if (from && date && date < from) return false;
     if (to && date && date > to) return false;
     if (search) {
-      const haystack = [f["Имя клиента"], f["Телефон"], f["Услуга"], f["Адрес"], f["Комментарий"], f["Статус"]].join(" ").toLowerCase();
+      const haystack = [f["Имя клиента"], f["Телефон"], f["Услуга"], f["Адрес"], f["Комментарий"], f["Комментарий клиента"], f["Статус"]].join(" ").toLowerCase();
       if (!haystack.includes(search)) return false;
     }
     return true;
@@ -133,7 +133,7 @@ function openDialog(id) {
   els.dTime.textContent = f["Время записи"] || "—";
   els.dService.textContent = f["Услуга"] || "—";
   els.dAddress.textContent = f["Адрес"] || "—";
-  els.dComment.textContent = f["Комментарий"] || "—";
+  els.dComment.textContent = f["Комментарий"] || f["Комментарий клиента"] || "—";
   els.editStatus.value = f["Статус"] || "Новая заявка";
   els.editM2.value = f["Итоговый м2"] || f["м2"] || "";
   els.editResponsible.value = f["Ответственный"] || "";
@@ -143,30 +143,45 @@ function openDialog(id) {
 
 async function saveCurrentRequest() {
   if (!currentRecord) return;
+
   const fields = {
     "Статус": els.editStatus.value,
-    "Итоговый м2": numOrEmpty(els.editM2.value),
     "Ответственный": els.editResponsible.value.trim(),
     "Комментарий администратора": els.editAdminComment.value.trim()
   };
 
+  const m2 = numOrNull(els.editM2.value);
+  if (m2 !== null) fields["Итоговый м2"] = m2;
+
   els.saveRequestBtn.disabled = true;
   els.saveRequestBtn.textContent = "Сохраняю...";
+
   try {
     const res = await fetch("/update-zayavka", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-admin-password": password() },
       body: JSON.stringify({ id: currentRecord.id, fields })
     });
+
     const data = await res.json();
-    if (!res.ok || !data.ok) throw new Error(data.error || "Не удалось сохранить заявку");
+    if (!res.ok || !data.ok) {
+      throw new Error(detailedError(data, "Не удалось сохранить заявку"));
+    }
+
     els.dialog.close();
     await loadRequests();
-  } catch (err) { showMessage(err.message, "error"); }
-  finally {
+  } catch (err) {
+    showMessage(err.message, "error");
+  } finally {
     els.saveRequestBtn.disabled = false;
     els.saveRequestBtn.textContent = "Сохранить";
   }
+}
+
+function detailedError(data, fallback) {
+  if (!data) return fallback;
+  if (data.nocodbResponse) return `${data.error || fallback}: ${JSON.stringify(data.nocodbResponse)}`;
+  return data.error || fallback;
 }
 
 function showMessage(text, type){ els.message.style.display="block"; els.message.className=`message message--${type}`; els.message.textContent=text; }
@@ -175,4 +190,4 @@ function esc(v){ return String(v ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;",
 function attr(v){ return esc(v).replace(/`/g,"&#096;"); }
 function shorten(v,max){ const s=String(v||""); return s.length>max ? s.slice(0,max-1)+"…" : s; }
 function phoneLink(v){ const p=String(v||"").trim(); return p ? `<a href="tel:${attr(p)}">${esc(p)}</a>` : "—"; }
-function numOrEmpty(v){ if(v===""||v==null) return ""; const n=Number(String(v).replace(",",".")); return Number.isFinite(n)?n:""; }
+function numOrNull(v){ if(v==="" || v===null || v===undefined) return null; const n=Number(String(v).replace(",",".")); return Number.isFinite(n) ? n : null; }
