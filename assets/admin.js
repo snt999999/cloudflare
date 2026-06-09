@@ -1,5 +1,12 @@
 const LS_PASSWORD_KEY = "solncanet_admin_password_showcase_v3";
 const WORKERS = ["Никита П", "Андрей Ш", "Никита К", "Дмитрий П", "Роман З"];
+const WORKER_FULL_NAMES = {
+  "Никита П": "Пахнев Никита",
+  "Андрей Ш": "Шолохов Андрей",
+  "Никита К": "Кислов Никита",
+  "Дмитрий П": "Петухов Дмитрий",
+  "Роман З": "Зинченко Роман"
+};
 const $ = (id) => document.getElementById(id);
 let records = [];
 let currentRecord = null;
@@ -326,7 +333,7 @@ function exportExcel() {
   const from = els.exportFrom.value;
   const to = els.exportTo.value;
   const allowedWorkers = selectedExportWorkers();
-  const rows = recordsToPayrollRows(records, from, to, allowedWorkers);
+  const rows = recordsToObjectRows(records, from, to, allowedWorkers);
 
   if (!rows.length) {
     showMessage("Нет данных для выгрузки по выбранным условиям.", "error");
@@ -334,8 +341,9 @@ function exportExcel() {
   }
 
   const files = buildXlsxFiles(rows, allowedWorkers);
-  const blob = zipStore(files);
-  const url = URL.createObjectURL(new Blob([blob], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+  const blobBytes = zipStore(files);
+  const blob = new Blob([blobBytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const url = URL.createObjectURL(blob);
 
   const a = document.createElement("a");
   a.href = url;
@@ -347,7 +355,7 @@ function exportExcel() {
   els.exportDialog.close();
 }
 
-function recordsToPayrollRows(items, from, to, allowedWorkers) {
+function recordsToObjectRows(items, from, to, allowedWorkers) {
   const out = [];
 
   items.forEach(r => {
@@ -356,27 +364,22 @@ function recordsToPayrollRows(items, from, to, allowedWorkers) {
     if (from && date && date < from) return;
     if (to && date && date > to) return;
 
-    const installers = splitInstallers(f["Монтажники"] || "").filter(name => allowedWorkers.includes(name));
-    if (!installers.length) return;
+    const installers = splitInstallers(f["Монтажники"] || "");
+    const hasAllowed = installers.some(name => allowedWorkers.includes(name));
+    if (!hasAllowed) return;
 
-    const m2 = normalizeNumber(f["Итоговый м2"] || f["м2"] || "");
-
-    installers.forEach(name => {
-      out.push({
-        date,
-        time: String(f["Время записи"] || ""),
-        client: String(f["Имя клиента"] || ""),
-        phone: String(f["Телефон"] || ""),
-        address: String(f["Адрес"] || ""),
-        service: String(f["Услуга"] || ""),
-        worker: name,
-        objectM2: m2,
-        workerM2: m2,
-        rate: 0,
-        status: String(f["Статус"] || ""),
-        adminComment: String(f["Комментарий администратора"] || ""),
-        bookingId: String(f["Cal Booking ID"] || "")
-      });
+    out.push({
+      date,
+      time: String(f["Время записи"] || ""),
+      client: String(f["Имя клиента"] || ""),
+      phone: String(f["Телефон"] || ""),
+      address: String(f["Адрес"] || ""),
+      service: String(f["Услуга"] || ""),
+      objectM2: normalizeNumber(f["Итоговый м2"] || f["м2"] || ""),
+      installers,
+      status: String(f["Статус"] || ""),
+      adminComment: String(f["Комментарий администратора"] || ""),
+      bookingId: String(f["Cal Booking ID"] || "")
     });
   });
 
@@ -384,13 +387,10 @@ function recordsToPayrollRows(items, from, to, allowedWorkers) {
 }
 
 /* -----------------------------
-   НАСТОЯЩИЙ .XLSX БЕЗ БИБЛИОТЕК
+   НАСТОЯЩИЙ .XLSX: Объекты + Ставки + Итоги
    ----------------------------- */
 
-function buildXlsxFiles(rows, workers) {
-  const sheet1 = buildAccrualsSheet(rows);
-  const sheet2 = buildTotalsSheet(rows, workers);
-
+function buildXlsxFiles(rows, selectedWorkers) {
   return {
     "[Content_Types].xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -399,6 +399,7 @@ function buildXlsxFiles(rows, workers) {
   <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
   <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
   <Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
   <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
   <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
   <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
@@ -409,127 +410,94 @@ function buildXlsxFiles(rows, workers) {
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
   <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
 </Relationships>`,
-    "docProps/core.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <dc:title>СОЛНЦАНЕТ ЗП</dc:title>
-  <dc:creator>СОЛНЦАНЕТ CRM</dc:creator>
-  <cp:lastModifiedBy>СОЛНЦАНЕТ CRM</cp:lastModifiedBy>
-  <dcterms:created xsi:type="dcterms:W3CDTF">${new Date().toISOString()}</dcterms:created>
-  <dcterms:modified xsi:type="dcterms:W3CDTF">${new Date().toISOString()}</dcterms:modified>
-</cp:coreProperties>`,
-    "docProps/app.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
-  <Application>СОЛНЦАНЕТ CRM</Application>
-</Properties>`,
+    "docProps/core.xml": coreXml(),
+    "docProps/app.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>СОЛНЦАНЕТ CRM</Application></Properties>`,
     "xl/workbook.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
   <sheets>
-    <sheet name="Начисления" sheetId="1" r:id="rId1"/>
-    <sheet name="Итоги" sheetId="2" r:id="rId2"/>
+    <sheet name="Объекты" sheetId="1" r:id="rId1"/>
+    <sheet name="Ставки" sheetId="2" r:id="rId2"/>
+    <sheet name="Итоги" sheetId="3" r:id="rId3"/>
   </sheets>
 </workbook>`,
     "xl/_rels/workbook.xml.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>
-  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/>
+  <Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 </Relationships>`,
-    "xl/styles.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <fonts count="2">
-    <font><sz val="11"/><name val="Calibri"/></font>
-    <font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>
-  </fonts>
-  <fills count="3">
-    <fill><patternFill patternType="none"/></fill>
-    <fill><patternFill patternType="gray125"/></fill>
-    <fill><patternFill patternType="solid"><fgColor rgb="FF2563EB"/><bgColor indexed="64"/></patternFill></fill>
-  </fills>
-  <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
-  <cellXfs count="3">
-    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
-    <xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
-    <xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
-  </cellXfs>
-</styleSheet>`,
-    "xl/worksheets/sheet1.xml": sheet1,
-    "xl/worksheets/sheet2.xml": sheet2
+    "xl/styles.xml": stylesXml(),
+    "xl/worksheets/sheet1.xml": objectsSheetXml(rows),
+    "xl/worksheets/sheet2.xml": ratesSheetXml(),
+    "xl/worksheets/sheet3.xml": totalsSheetXml(selectedWorkers)
   };
 }
 
-function buildAccrualsSheet(rows) {
-  const headers = ["Дата", "Время", "Клиент", "Телефон", "Адрес / объект", "Услуга", "Монтажник", "М2 объекта", "М2 сотрудника", "Ставка", "Сумма", "Статус", "Комментарий", "Cal Booking ID"];
-  const rowXml = [];
-  rowXml.push(rowXmlCells(1, headers.map(v => ({ v, type: "s", style: 1 }))));
+function coreXml() {
+  const now = new Date().toISOString();
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>СОЛНЦАНЕТ ЗП</dc:title><dc:creator>СОЛНЦАНЕТ CRM</dc:creator><cp:lastModifiedBy>СОЛНЦАНЕТ CRM</cp:lastModifiedBy>
+  <dcterms:created xsi:type="dcterms:W3CDTF">${now}</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">${now}</dcterms:modified>
+</cp:coreProperties>`;
+}
 
+function stylesXml() {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>
+  <fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2563EB"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE11D2E"/><bgColor indexed="64"/></patternFill></fill></fills>
+  <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+  <cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>
+</styleSheet>`;
+}
+
+function objectsSheetXml(rows) {
+  const headers = ["Дата","Время","Клиент","Телефон","Адрес / объект","Услуга","Общий м2","Никита П","Андрей Ш","Никита К","Дмитрий П","Роман З","Кол-во монтажников","М2 на человека","Ставка Никита П","Сумма Никита П","Ставка Андрей Ш","Сумма Андрей Ш","Ставка Никита К","Сумма Никита К","Ставка Дмитрий П","Сумма Дмитрий П","Ставка Роман З","Сумма Роман З","Статус","Комментарий","Cal Booking ID"];
+  const rateSum = {"Никита П":["O","P","H"],"Андрей Ш":["Q","R","I"],"Никита К":["S","T","J"],"Дмитрий П":["U","V","K"],"Роман З":["W","X","L"]};
+  const xmlRows = [rowXmlCells(1, headers.map(v => ({ v, type:"s", style:1 })))];
   rows.forEach((r, idx) => {
     const n = idx + 2;
-    rowXml.push(rowXmlCells(n, [
-      { v: r.date, type: "s" },
-      { v: r.time, type: "s" },
-      { v: r.client, type: "s" },
-      { v: r.phone, type: "s" },
-      { v: r.address, type: "s" },
-      { v: r.service, type: "s" },
-      { v: r.worker, type: "s" },
-      { v: r.objectM2, type: "n" },
-      { v: r.workerM2, type: "n" },
-      { v: r.rate, type: "n", style: 2 },
-      { formula: `I${n}*J${n}`, v: 0, type: "n", style: 2 },
-      { v: r.status, type: "s" },
-      { v: r.adminComment, type: "s" },
-      { v: r.bookingId, type: "s" }
-    ]));
+    const cells = [{v:r.date,type:"s"},{v:r.time,type:"s"},{v:r.client,type:"s"},{v:r.phone,type:"s"},{v:r.address,type:"s"},{v:r.service,type:"s"},{v:r.objectM2,type:"n",style:2}];
+    WORKERS.forEach(w => cells.push({ v:r.installers.includes(w) ? "Да" : "Нет", type:"s" }));
+    cells.push({ formula:`COUNTIF(H${n}:L${n},"Да")`, v:0, type:"n", style:4 });
+    cells.push({ formula:`IF(M${n}>0,G${n}/M${n},0)`, v:0, type:"n", style:2 });
+    WORKERS.forEach(w => {
+      const [rateCol, sumCol, workerCol] = rateSum[w];
+      cells.push({ formula:`IF(${workerCol}${n}="Да",VLOOKUP("${w}",Ставки!$A$2:$G$6,$M${n}+2,FALSE),0)`, v:0, type:"n", style:2 });
+      cells.push({ formula:`IF(${workerCol}${n}="Да",$N${n}*${rateCol}${n},0)`, v:0, type:"n", style:2 });
+    });
+    cells.push({v:r.status,type:"s"},{v:r.adminComment,type:"s"},{v:r.bookingId,type:"s"});
+    xmlRows.push(rowXmlCells(n, cells));
   });
-
   const lastRow = rows.length + 1;
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <dimension ref="A1:N${lastRow}"/>
-  <sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
-  <sheetFormatPr defaultRowHeight="15"/>
-  <cols>
-    <col min="1" max="1" width="13" customWidth="1"/>
-    <col min="2" max="2" width="10" customWidth="1"/>
-    <col min="3" max="6" width="22" customWidth="1"/>
-    <col min="7" max="7" width="15" customWidth="1"/>
-    <col min="8" max="11" width="14" customWidth="1"/>
-    <col min="12" max="14" width="20" customWidth="1"/>
-  </cols>
-  <sheetData>${rowXml.join("")}</sheetData>
-  <autoFilter ref="A1:N${lastRow}"/>
+  <dimension ref="A1:AA${lastRow}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>
+  <cols><col min="1" max="2" width="12" customWidth="1"/><col min="3" max="6" width="22" customWidth="1"/><col min="7" max="7" width="12" customWidth="1"/><col min="8" max="12" width="13" customWidth="1"/><col min="13" max="24" width="16" customWidth="1"/><col min="25" max="27" width="20" customWidth="1"/></cols>
+  <sheetData>${xmlRows.join("")}</sheetData><autoFilter ref="A1:AA${lastRow}"/>
+  <dataValidations count="5"><dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="H2:H1048576"><formula1>"Да,Нет"</formula1></dataValidation><dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="I2:I1048576"><formula1>"Да,Нет"</formula1></dataValidation><dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="J2:J1048576"><formula1>"Да,Нет"</formula1></dataValidation><dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="K2:K1048576"><formula1>"Да,Нет"</formula1></dataValidation><dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="L2:L1048576"><formula1>"Да,Нет"</formula1></dataValidation></dataValidations>
 </worksheet>`;
 }
 
-function buildTotalsSheet(rows, workers) {
-  const rowXml = [];
-  rowXml.push(rowXmlCells(1, [
-    { v: "Монтажник", type: "s", style: 1 },
-    { v: "Итого м2", type: "s", style: 1 },
-    { v: "Итого сумма", type: "s", style: 1 }
-  ]));
+function ratesSheetXml() {
+  const headers = ["Монтажник", "ФИО", "Ставка 1 чел, ₽/м2", "Ставка 2 чел, ₽/м2", "Ставка 3 чел, ₽/м2", "Ставка 4 чел, ₽/м2", "Ставка 5 чел, ₽/м2"];
+  const rates = [["Никита П","Пахнев Никита",500,300,300,300,300],["Андрей Ш","Шолохов Андрей",500,300,250,250,250],["Никита К","Кислов Никита",500,250,200,200,200],["Дмитрий П","Петухов Дмитрий",400,200,200,200,200],["Роман З","Зинченко Роман",400,200,200,200,200]];
+  const xmlRows = [rowXmlCells(1, headers.map(v => ({v,type:"s",style:3})))];
+  rates.forEach((row, idx) => xmlRows.push(rowXmlCells(idx + 2, row.map((v, i) => ({v, type:i < 2 ? "s" : "n", style:i < 2 ? 0 : 2})))));
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:G6"/><sheetFormatPr defaultRowHeight="15"/><cols><col min="1" max="2" width="20" customWidth="1"/><col min="3" max="7" width="20" customWidth="1"/></cols><sheetData>${xmlRows.join("")}</sheetData><autoFilter ref="A1:G6"/></worksheet>`;
+}
 
-  workers.forEach((w, idx) => {
-    const n = idx + 2;
-    rowXml.push(rowXmlCells(n, [
-      { v: w, type: "s" },
-      { formula: `SUMIF(Начисления!G:G,A${n},Начисления!I:I)`, v: 0, type: "n" },
-      { formula: `SUMIF(Начисления!G:G,A${n},Начисления!K:K)`, v: 0, type: "n", style: 2 }
-    ]));
+function totalsSheetXml(selectedWorkers) {
+  const cols = {"Никита П":["H","N","P"],"Андрей Ш":["I","N","R"],"Никита К":["J","N","T"],"Дмитрий П":["K","N","V"],"Роман З":["L","N","X"]};
+  const xmlRows = [rowXmlCells(1, [{v:"Монтажник",type:"s",style:1},{v:"ФИО",type:"s",style:1},{v:"Кол-во объектов",type:"s",style:1},{v:"Итого м2 к оплате",type:"s",style:1},{v:"Итого сумма",type:"s",style:1}])];
+  selectedWorkers.forEach((w, idx) => {
+    const n = idx + 2, [workerCol, m2Col, sumCol] = cols[w];
+    xmlRows.push(rowXmlCells(n, [{v:w,type:"s"},{v:WORKER_FULL_NAMES[w] || w,type:"s"},{formula:`COUNTIF(Объекты!${workerCol}:${workerCol},"Да")`,v:0,type:"n"},{formula:`SUMIF(Объекты!${workerCol}:${workerCol},"Да",Объекты!${m2Col}:${m2Col})`,v:0,type:"n",style:2},{formula:`SUM(Объекты!${sumCol}:${sumCol})`,v:0,type:"n",style:2}]));
   });
-
-  const lastRow = workers.length + 1;
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <dimension ref="A1:C${lastRow}"/>
-  <sheetFormatPr defaultRowHeight="15"/>
-  <cols>
-    <col min="1" max="1" width="18" customWidth="1"/>
-    <col min="2" max="3" width="16" customWidth="1"/>
-  </cols>
-  <sheetData>${rowXml.join("")}</sheetData>
-  <autoFilter ref="A1:C${lastRow}"/>
-</worksheet>`;
+  const lastRow = selectedWorkers.length + 1;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:E${lastRow}"/><sheetFormatPr defaultRowHeight="15"/><cols><col min="1" max="2" width="20" customWidth="1"/><col min="3" max="5" width="18" customWidth="1"/></cols><sheetData>${xmlRows.join("")}</sheetData><autoFilter ref="A1:E${lastRow}"/></worksheet>`;
 }
 
 function rowXmlCells(rowNumber, cells) {
