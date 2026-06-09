@@ -18,3 +18,19 @@ document.addEventListener("DOMContentLoaded", () => {
     window.open("https://wa.me/79126629235?text=" + encodeURIComponent(text), "_blank", "noopener");
   });
 });
+
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".floating-contact__main").forEach((button) => {
+    button.addEventListener("click", () => {
+      const root = button.closest(".floating-contact");
+      if (root) root.classList.toggle("is-open");
+    });
+  });
+
+  document.addEventListener("click", (event) => {
+    document.querySelectorAll(".floating-contact.is-open").forEach((root) => {
+      if (!root.contains(event.target)) root.classList.remove("is-open");
+    });
+  });
+});
