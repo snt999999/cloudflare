@@ -1,1 +1,117 @@
-<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Админ-панель — СОЛНЦАНЕТ CRM</title><link rel="stylesheet" href="assets/admin.css"></head><body><header class="topbar"><a class="logo-link" href="index.html"><img src="assets/logo-solncanet.svg" alt="СОЛНЦАНЕТ"></a><div class="topbar__actions"><a href="zapis.html" target="_blank">Онлайн-запись</a><button id="logoutBtn" class="btn btn--ghost" style="display:none;">Выйти</button></div></header><main class="layout"><section id="loginPanel" class="login-card"><img class="login-logo" src="assets/logo-solncanet.svg" alt="СОЛНЦАНЕТ"><h1>Вход в админ-панель</h1><p>Введите пароль администратора. При неверном пароле вы останетесь на этой странице.</p><form id="loginForm"><label>Пароль администратора<input id="passwordInput" type="password" placeholder="Введите пароль" required></label><button id="loginBtn" class="btn" type="submit">Войти</button></form><div id="loginMessage" class="message message--error" style="display:none;"></div></section><section id="appPanel" class="app" style="display:none;"><div class="page-head"><div><span class="eyebrow">Панель управления</span><h1>Заявки</h1><p>Обработка заявок, статусы, монтажники и выгрузка Excel для расчёта оплаты.</p></div><div class="page-actions"><button id="exportOpenBtn" class="btn btn--red">Экспорт Excel</button><button id="refreshBtn" class="btn">Обновить</button></div></div><section class="stats"><button class="stat active" data-tab="all"><small>Всего</small><b id="statTotal">0</b></button><button class="stat" data-tab="new"><small>Новые</small><b id="statNew">0</b></button><button class="stat" data-tab="today"><small>Сегодня</small><b id="statToday">0</b></button><button class="stat" data-tab="work"><small>В работе</small><b id="statWork">0</b></button><button class="stat" data-tab="paid"><small>Оплачено</small><b id="statPaid">0</b></button></section><section class="filters"><label>Статус<select id="statusFilter"><option value="">Все статусы</option><option>Новая заявка</option><option>Связались</option><option>Замер</option><option>Согласовано</option><option>В работе</option><option>Выполнено</option><option>Оплачено</option><option>Отказ</option></select></label><label>Поиск<input id="searchInput" placeholder="Клиент, телефон, адрес, услуга"></label><label>С даты<input id="dateFrom" type="date"></label><label>По дату<input id="dateTo" type="date"></label></section><div id="message" class="message" style="display:none;"></div><section class="table-card"><div class="table-scroll"><table><thead><tr><th>Дата</th><th>Время</th><th>Клиент</th><th>Телефон</th><th>Услуга</th><th>Адрес</th><th>м²</th><th>Монтажники</th><th>Статус</th><th></th></tr></thead><tbody id="requestsBody"></tbody></table></div></section></section></main><dialog id="requestDialog" class="dialog"><form method="dialog" class="dialog__content"><div class="dialog__head"><div><span class="eyebrow">Карточка заявки</span><h2 id="dialogTitle">Заявка</h2></div><button class="icon-btn" value="cancel" aria-label="Закрыть">×</button></div><div class="quick-status"><button type="button" data-status-set="Связались">Связались</button><button type="button" data-status-set="Замер">Замер</button><button type="button" data-status-set="Согласовано">Согласовано</button><button type="button" data-status-set="В работе">В работе</button><button type="button" data-status-set="Выполнено">Выполнено</button><button type="button" data-status-set="Оплачено">Оплачено</button></div><div class="dialog-grid"><div><small>Клиент</small><b id="dClient">—</b></div><div><small>Телефон</small><b id="dPhone">—</b></div><div><small>Дата записи</small><b id="dDate">—</b></div><div><small>Время</small><b id="dTime">—</b></div><div class="wide"><small>Услуга</small><b id="dService">—</b></div><div class="wide"><small>Адрес</small><b id="dAddress">—</b></div><div class="wide"><small>Комментарий клиента</small><p id="dComment">—</p></div></div><div class="edit-grid"><label>Статус<select id="editStatus"><option>Новая заявка</option><option>Связались</option><option>Замер</option><option>Согласовано</option><option>В работе</option><option>Выполнено</option><option>Оплачено</option><option>Отказ</option></select></label><label>Итоговый м²<input id="editM2" type="number" step="0.01" placeholder="Например, 42"></label><label>Ответственный<input id="editResponsible" placeholder="Например, Сергей"></label><label>Создан объект<select id="editObjectCreated"><option value="false">Нет</option><option value="true">Да</option></select></label><fieldset class="wide installer-box"><legend>Монтажники</legend><label><input type="checkbox" name="installer" value="Никита П"> Никита П</label><label><input type="checkbox" name="installer" value="Андрей Ш"> Андрей Ш</label><label><input type="checkbox" name="installer" value="Никита К"> Никита К</label><label><input type="checkbox" name="installer" value="Дмитрий П"> Дмитрий П</label><label><input type="checkbox" name="installer" value="Роман З"> Роман З</label></fieldset><label class="wide">Комментарий администратора<textarea id="editAdminComment" placeholder="Внутренние заметки по заявке"></textarea></label></div><div class="dialog__actions"><button id="saveRequestBtn" class="btn" type="button">Сохранить</button><button class="btn btn--ghost" value="cancel">Закрыть</button></div></form></dialog><dialog id="exportDialog" class="dialog export-dialog"><form method="dialog" class="dialog__content"><div class="dialog__head"><div><span class="eyebrow">Выгрузка</span><h2>Экспорт Excel</h2></div><button class="icon-btn" value="cancel" aria-label="Закрыть">×</button></div><div class="export-body"><div class="export-grid"><label>С даты<input id="exportFrom" type="date"></label><label>По дату<input id="exportTo" type="date"></label></div><fieldset class="installer-box"><legend>Кого выгрузить</legend><label><input type="checkbox" id="exportAllWorkers" checked> Все монтажники</label><label><input type="checkbox" name="exportWorker" value="Никита П"> Никита П</label><label><input type="checkbox" name="exportWorker" value="Андрей Ш"> Андрей Ш</label><label><input type="checkbox" name="exportWorker" value="Никита К"> Никита К</label><label><input type="checkbox" name="exportWorker" value="Дмитрий П"> Дмитрий П</label><label><input type="checkbox" name="exportWorker" value="Роман З"> Роман З</label></fieldset><div class="export-note">В Excel будет лист «Начисления» с фильтрами по дате и монтажнику. Поля «М2 сотрудника» и «Ставка» можно редактировать вручную, сумма считается формулой.</div></div><div class="dialog__actions"><button id="exportExcelBtn" class="btn btn--red" type="button">Скачать Excel</button><button class="btn btn--ghost" value="cancel">Отмена</button></div></form></dialog><script src="assets/admin.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Админ-панель — СОЛНЦАНЕТ</title>
+  <link rel="stylesheet" href="assets/admin.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <img src="assets/logo-solncanet.svg" alt="СОЛНЦАНЕТ" />
+    <nav>
+      <a class="active">Заявки</a>
+      <a>Календарь</a>
+      <a>Клиенты</a>
+      <a>Объекты</a>
+      <a>Монтажники</a>
+      <a>Уведомления</a>
+      <a>Файлы</a>
+      <a>Отчёты</a>
+      <a>Настройки</a>
+    </nav>
+  </aside>
+  <main class="admin-main">
+    <section id="loginPanel" class="login">
+      <img src="assets/logo-solncanet.svg" alt="СОЛНЦАНЕТ" />
+      <h1>Вход в админ-панель</h1>
+      <form id="loginForm">
+        <input id="passwordInput" type="password" placeholder="Пароль администратора" required />
+        <button>Войти</button>
+      </form>
+      <p id="loginMessage"></p>
+    </section>
+
+    <section id="appPanel" style="display:none">
+      <header class="admin-head">
+        <div><h1>Заявки</h1><p>Список, календарь, файлы, SMS-уведомления и отчёты.</p></div>
+        <div class="actions">
+          <button id="listBtn" class="active">Список</button>
+          <button id="calendarBtn">Календарь</button>
+          <button id="exportBtn">Экспорт / Отчёты</button>
+          <button id="logoutBtn">Выйти</button>
+        </div>
+      </header>
+
+      <section class="stats">
+        <div><span>Всего</span><b id="statTotal">0</b></div>
+        <div><span>Новые</span><b id="statNew">0</b></div>
+        <div><span>Сегодня</span><b id="statToday">0</b></div>
+        <div><span>В работе</span><b id="statWork">0</b></div>
+      </section>
+
+      <section class="filters">
+        <input id="searchInput" placeholder="Поиск: клиент, телефон, адрес, услуга" />
+        <select id="statusFilter">
+          <option value="">Все статусы</option>
+          <option>Новая заявка</option><option>Связались</option><option>Замер</option><option>Согласовано</option><option>В работе</option><option>Выполнено</option><option>Оплачено</option><option>Отказ</option>
+        </select>
+        <button id="refreshBtn">Обновить</button>
+      </section>
+
+      <div id="message"></div>
+
+      <section id="listView" class="card">
+        <table>
+          <thead><tr><th>Дата</th><th>Время</th><th>Клиент</th><th>Телефон</th><th>Услуга</th><th>Адрес</th><th>м²</th><th>Монтажники</th><th>Статус</th><th></th></tr></thead>
+          <tbody id="requestsBody"></tbody>
+        </table>
+      </section>
+
+      <section id="calendarView" class="card calendar" style="display:none">
+        <div class="monthbar"><button id="prevMonth">←</button><h2 id="monthTitle">Месяц</h2><button id="nextMonth">→</button></div>
+        <div class="weekdays"><b>Пн</b><b>Вт</b><b>Ср</b><b>Чт</b><b>Пт</b><b>Сб</b><b>Вс</b></div>
+        <div id="calendarGrid" class="grid"></div>
+      </section>
+
+      <section class="sms-panel">
+        <h2>Автоматические SMS-уведомления</h2>
+        <div class="sms-grid">
+          <div><b>Напоминание о записи</b><p>За 1 день и за 2 часа до визита.</p><label><input type="checkbox" checked /> Включено</label></div>
+          <div><b>Перенос записи</b><p>SMS при изменении даты и времени.</p><label><input type="checkbox" checked /> Включено</label></div>
+          <div><b>Отмена записи</b><p>SMS при отмене записи.</p><label><input type="checkbox" checked /> Включено</label></div>
+          <div><b>Опрос клиента</b><p>Сообщение после выполненных работ.</p><label><input type="checkbox" /> Позже</label></div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="requestDialog">
+    <form method="dialog">
+      <button class="close">×</button>
+      <h2 id="dialogTitle">Заявка</h2>
+      <div class="dialog-grid">
+        <label>Статус<select id="editStatus"><option>Новая заявка</option><option>Связались</option><option>Замер</option><option>Согласовано</option><option>В работе</option><option>Выполнено</option><option>Оплачено</option><option>Отказ</option></select></label>
+        <label>Итоговый м²<input id="editM2" type="number" step="0.01"/></label>
+        <label>Ответственный<input id="editResponsible"/></label>
+        <label>Комментарий администратора<textarea id="editAdminComment"></textarea></label>
+      </div>
+      <fieldset><legend>Монтажники</legend>
+        <label><input type="checkbox" name="installer" value="Никита П"> Никита П</label>
+        <label><input type="checkbox" name="installer" value="Андрей Ш"> Андрей Ш</label>
+        <label><input type="checkbox" name="installer" value="Никита К"> Никита К</label>
+        <label><input type="checkbox" name="installer" value="Дмитрий П"> Дмитрий П</label>
+        <label><input type="checkbox" name="installer" value="Роман З"> Роман З</label>
+      </fieldset>
+      <section class="files-box">
+        <h3>Файлы / Фото / Видео</h3>
+        <input type="file" multiple />
+        <p>Поддержка интерфейса готова. Хранилище Cloudflare R2 подключим позже.</p>
+      </section>
+      <button id="saveRequestBtn" type="button">Сохранить</button>
+    </form>
+  </dialog>
+
+  <script src="assets/admin.js"></script>
+</body>
+</html>

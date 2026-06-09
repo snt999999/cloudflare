@@ -1,0 +1,19 @@
+<svg width="900" height="520" viewBox="0 0 900 520" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eaf4ff"/><stop offset="1" stop-color="#c7ddff"/></linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#dff3ff" stop-opacity="0.95"/><stop offset="1" stop-color="#1d4ed8" stop-opacity="0.6"/></linearGradient>
+  </defs>
+  <rect width="900" height="520" fill="url(#bg)"/>
+  <g opacity="0.28">
+    <rect x="600" y="0" width="70" height="520" fill="#fff"/>
+    <rect x="705" y="0" width="40" height="520" fill="#fff"/>
+    <rect x="0" y="90" width="900" height="22" fill="#fff"/>
+    <rect x="0" y="250" width="900" height="12" fill="#fff"/>
+  </g>
+  <path d='M130 335 C190 205 620 185 750 320 L810 370 L90 370 Z' fill='#ffffff' opacity='0.95'/><path d='M250 245 C350 205 520 210 610 265 L575 315 L210 315 Z' fill='url(#glass)'/><circle cx='245' cy='375' r='48' fill='#101827'/><circle cx='640' cy='375' r='48' fill='#101827'/><rect x='95' y='338' width='140' height='20' rx='10' fill='#e11d2e' opacity='0.9'/>
+  
+  
+  
+  <rect x="0" y="405" width="900" height="115" fill="rgba(5,18,46,.58)"/>
+  <text x="36" y="462" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="900" fill="#fff">Плёнки для авто, окон и зданий</text>
+</svg>
