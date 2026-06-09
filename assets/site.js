@@ -13,9 +13,8 @@ document.addEventListener("DOMContentLoaded", () => {
       "Адрес: " + data.address,
       "Информация об объекте: " + data.objectInfo,
       "Что нужно сделать: " + data.task
-    ].join("\\n");
-    note.textContent = "Заявка подготовлена. Сейчас откроется WhatsApp/телефон для отправки.";
-    const url = "https://wa.me/79126629235?text=" + encodeURIComponent(text);
-    window.open(url, "_blank");
+    ].join("\n");
+    note.textContent = "Заявка подготовлена. Открываю WhatsApp.";
+    window.open("https://wa.me/79126629235?text=" + encodeURIComponent(text), "_blank", "noopener");
   });
 });

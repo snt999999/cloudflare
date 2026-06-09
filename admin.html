@@ -8,27 +8,24 @@
 </head>
 <body>
   <aside class="sidebar">
-    <img src="assets/logo-solncanet.svg" alt="СОЛНЦАНЕТ" />
+    <img src="assets/logo-solncanet.png" alt="СОЛНЦАНЕТ" />
     <nav>
-      <a class="active">Заявки</a>
-      <a>Календарь</a>
-      <a>Клиенты</a>
-      <a>Объекты</a>
-      <a>Монтажники</a>
-      <a>Уведомления</a>
-      <a>Файлы</a>
-      <a>Отчёты</a>
-      <a>Настройки</a>
+      <a class="active" href="#requests">Заявки</a>
+      <a href="#calendarView">Календарь</a>
+      <a href="#clients">Клиенты</a>
+      <a href="#objects">Объекты</a>
+      <a href="#installers">Монтажники</a>
+      <a href="#sms">Уведомления</a>
+      <a href="#files">Файлы</a>
+      <a href="#reports">Отчёты</a>
+      <a href="#settings">Настройки</a>
     </nav>
   </aside>
   <main class="admin-main">
     <section id="loginPanel" class="login">
-      <img src="assets/logo-solncanet.svg" alt="СОЛНЦАНЕТ" />
+      <img src="assets/logo-solncanet.png" alt="СОЛНЦАНЕТ" />
       <h1>Вход в админ-панель</h1>
-      <form id="loginForm">
-        <input id="passwordInput" type="password" placeholder="Пароль администратора" required />
-        <button>Войти</button>
-      </form>
+      <form id="loginForm"><input id="passwordInput" type="password" placeholder="Пароль администратора" required /><button>Войти</button></form>
       <p id="loginMessage"></p>
     </section>
 
@@ -43,75 +40,18 @@
         </div>
       </header>
 
-      <section class="stats">
-        <div><span>Всего</span><b id="statTotal">0</b></div>
-        <div><span>Новые</span><b id="statNew">0</b></div>
-        <div><span>Сегодня</span><b id="statToday">0</b></div>
-        <div><span>В работе</span><b id="statWork">0</b></div>
-      </section>
-
-      <section class="filters">
-        <input id="searchInput" placeholder="Поиск: клиент, телефон, адрес, услуга" />
-        <select id="statusFilter">
-          <option value="">Все статусы</option>
-          <option>Новая заявка</option><option>Связались</option><option>Замер</option><option>Согласовано</option><option>В работе</option><option>Выполнено</option><option>Оплачено</option><option>Отказ</option>
-        </select>
-        <button id="refreshBtn">Обновить</button>
-      </section>
-
+      <section class="stats"><div><span>Всего</span><b id="statTotal">0</b></div><div><span>Новые</span><b id="statNew">0</b></div><div><span>Сегодня</span><b id="statToday">0</b></div><div><span>В работе</span><b id="statWork">0</b></div></section>
+      <section class="filters"><input id="searchInput" placeholder="Поиск: клиент, телефон, адрес, услуга" /><select id="statusFilter"><option value="">Все статусы</option><option>Новая заявка</option><option>Связались</option><option>Замер</option><option>Согласовано</option><option>В работе</option><option>Выполнено</option><option>Оплачено</option><option>Отказ</option></select><button id="refreshBtn">Обновить</button></section>
       <div id="message"></div>
 
-      <section id="listView" class="card">
-        <table>
-          <thead><tr><th>Дата</th><th>Время</th><th>Клиент</th><th>Телефон</th><th>Услуга</th><th>Адрес</th><th>м²</th><th>Монтажники</th><th>Статус</th><th></th></tr></thead>
-          <tbody id="requestsBody"></tbody>
-        </table>
-      </section>
+      <section id="listView" class="card"><table><thead><tr><th>Дата</th><th>Время</th><th>Клиент</th><th>Телефон</th><th>Услуга</th><th>Адрес</th><th>м²</th><th>Монтажники</th><th>Статус</th><th></th></tr></thead><tbody id="requestsBody"></tbody></table></section>
+      <section id="calendarView" class="card calendar" style="display:none"><div class="monthbar"><button id="prevMonth">←</button><h2 id="monthTitle">Месяц</h2><button id="nextMonth">→</button></div><div class="weekdays"><b>Пн</b><b>Вт</b><b>Ср</b><b>Чт</b><b>Пт</b><b>Сб</b><b>Вс</b></div><div id="calendarGrid" class="grid"></div></section>
 
-      <section id="calendarView" class="card calendar" style="display:none">
-        <div class="monthbar"><button id="prevMonth">←</button><h2 id="monthTitle">Месяц</h2><button id="nextMonth">→</button></div>
-        <div class="weekdays"><b>Пн</b><b>Вт</b><b>Ср</b><b>Чт</b><b>Пт</b><b>Сб</b><b>Вс</b></div>
-        <div id="calendarGrid" class="grid"></div>
-      </section>
-
-      <section class="sms-panel">
-        <h2>Автоматические SMS-уведомления</h2>
-        <div class="sms-grid">
-          <div><b>Напоминание о записи</b><p>За 1 день и за 2 часа до визита.</p><label><input type="checkbox" checked /> Включено</label></div>
-          <div><b>Перенос записи</b><p>SMS при изменении даты и времени.</p><label><input type="checkbox" checked /> Включено</label></div>
-          <div><b>Отмена записи</b><p>SMS при отмене записи.</p><label><input type="checkbox" checked /> Включено</label></div>
-          <div><b>Опрос клиента</b><p>Сообщение после выполненных работ.</p><label><input type="checkbox" /> Позже</label></div>
-        </div>
-      </section>
+      <section id="sms" class="sms-panel"><h2>Автоматические SMS-уведомления</h2><div class="sms-grid"><div><b>Напоминание о записи</b><p>За 1 день и за 2 часа до визита.</p><label><input type="checkbox" checked /> Включено</label></div><div><b>Перенос записи</b><p>SMS при изменении даты и времени.</p><label><input type="checkbox" checked /> Включено</label></div><div><b>Отмена записи</b><p>SMS при отмене записи.</p><label><input type="checkbox" checked /> Включено</label></div><div><b>Опрос клиента</b><p>Сообщение после выполненных работ.</p><label><input type="checkbox" /> Позже</label></div></div></section>
     </section>
   </main>
 
-  <dialog id="requestDialog">
-    <form method="dialog">
-      <button class="close">×</button>
-      <h2 id="dialogTitle">Заявка</h2>
-      <div class="dialog-grid">
-        <label>Статус<select id="editStatus"><option>Новая заявка</option><option>Связались</option><option>Замер</option><option>Согласовано</option><option>В работе</option><option>Выполнено</option><option>Оплачено</option><option>Отказ</option></select></label>
-        <label>Итоговый м²<input id="editM2" type="number" step="0.01"/></label>
-        <label>Ответственный<input id="editResponsible"/></label>
-        <label>Комментарий администратора<textarea id="editAdminComment"></textarea></label>
-      </div>
-      <fieldset><legend>Монтажники</legend>
-        <label><input type="checkbox" name="installer" value="Никита П"> Никита П</label>
-        <label><input type="checkbox" name="installer" value="Андрей Ш"> Андрей Ш</label>
-        <label><input type="checkbox" name="installer" value="Никита К"> Никита К</label>
-        <label><input type="checkbox" name="installer" value="Дмитрий П"> Дмитрий П</label>
-        <label><input type="checkbox" name="installer" value="Роман З"> Роман З</label>
-      </fieldset>
-      <section class="files-box">
-        <h3>Файлы / Фото / Видео</h3>
-        <input type="file" multiple />
-        <p>Поддержка интерфейса готова. Хранилище Cloudflare R2 подключим позже.</p>
-      </section>
-      <button id="saveRequestBtn" type="button">Сохранить</button>
-    </form>
-  </dialog>
-
+  <dialog id="requestDialog"><form method="dialog"><button class="close">×</button><h2 id="dialogTitle">Заявка</h2><div class="dialog-grid"><label>Статус<select id="editStatus"><option>Новая заявка</option><option>Связались</option><option>Замер</option><option>Согласовано</option><option>В работе</option><option>Выполнено</option><option>Оплачено</option><option>Отказ</option></select></label><label>Итоговый м²<input id="editM2" type="number" step="0.01"/></label><label>Ответственный<input id="editResponsible"/></label><label>Комментарий администратора<textarea id="editAdminComment"></textarea></label></div><fieldset><legend>Монтажники</legend><label><input type="checkbox" name="installer" value="Никита П"> Никита П</label><label><input type="checkbox" name="installer" value="Андрей Ш"> Андрей Ш</label><label><input type="checkbox" name="installer" value="Никита К"> Никита К</label><label><input type="checkbox" name="installer" value="Дмитрий П"> Дмитрий П</label><label><input type="checkbox" name="installer" value="Роман З"> Роман З</label></fieldset><section class="files-box"><h3>Файлы / Фото / Видео</h3><input type="file" multiple /><p>Интерфейс готов. Хранилище Cloudflare R2 подключим позже.</p></section><button id="saveRequestBtn" type="button">Сохранить</button></form></dialog>
   <script src="assets/admin.js"></script>
 </body>
 </html>

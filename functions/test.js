@@ -1,1 +1,1 @@
-export async function onRequest(){return new Response(JSON.stringify({ok:true,message:"Cloudflare Pages Functions работают",version:"solncanet-final-site"},null,2),{headers:{"Content-Type":"application/json; charset=utf-8"}})}
+export async function onRequest(){return new Response(JSON.stringify({ok:true,message:"Cloudflare Pages Functions работают",version:"solncanet-real-v2"},null,2),{headers:{"Content-Type":"application/json; charset=utf-8"}})}
