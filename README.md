@@ -68,3 +68,15 @@
   - Telegram: https://t.me/infosnt
   - MAX: https://max.ru/u/f9LHodD0cOJzCTZONeauAnUFGMjW4PM404PirE-rPHovceQ9714S84993z8
   - Телефон: tel:+79221812244
+
+
+## Исправление v6 — полностью убран WhatsApp
+
+Исправлено:
+- убрана старая кнопка/логика WhatsApp на клиентском сайте;
+- форма заявки больше не открывает WhatsApp;
+- после отправки формы текст заявки копируется, а клиент выбирает Telegram или MAX;
+- добавлены явные кнопки:
+  - Telegram: https://t.me/infosnt
+  - MAX: https://max.ru/u/f9LHodD0cOJzCTZONeauAnUFGMjW4PM404PirE-rPHovceQ9714S84993z8
+  - Позвонить: tel:+79221812244
