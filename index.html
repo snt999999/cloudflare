@@ -55,33 +55,66 @@
       <div class="booking-form">
         <h2>Онлайн-запись / заявка на консультацию</h2>
         <p>Заполните форму или выберите свободное время в календаре. Мы свяжемся с вами и уточним детали.</p>
-        <form id="leadForm">
+        <form id="leadForm" class="lead-form-v7">
+          <input type="text" name="company" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true" />
+          <input type="hidden" name="formStartedAt" id="formStartedAt" />
+
           <label>Фамилия и имя
-            <input name="name" placeholder="Например: Иванов Сергей" required />
+            <input name="name" placeholder="Например: Иванов Сергей" autocomplete="name" required />
           </label>
+
           <label>Телефон
-            <input name="phone" placeholder="+7 (___) ___-__-__" required />
+            <input name="phone" placeholder="+7 (___) ___-__-__" autocomplete="tel" required />
           </label>
+
+          <label>Услуга
+            <select name="service" required>
+              <option value="">Выберите услугу</option>
+              <option>Тонировка стекол автомобиля</option>
+              <option>Атермальная тонировка автомобиля</option>
+              <option>Тонировка балконов и окон</option>
+              <option>Бронирование стекол и витрин</option>
+              <option>Бронирование фар</option>
+              <option>Защита авто полиуретановой пленкой</option>
+              <option>Тонирование витрин</option>
+              <option>Декоративное тонирование офисных перегородок</option>
+              <option>Замер / консультация</option>
+              <option>Другое</option>
+            </select>
+          </label>
+
+          <div class="form-row-2">
+            <label>Желаемая дата
+              <input name="preferredDate" type="date" />
+            </label>
+            <label>Желаемое время
+              <input name="preferredTime" type="time" />
+            </label>
+          </div>
+
           <label>Адрес объекта
             <input name="address" placeholder="Город, улица, дом, офис / квартира" required />
           </label>
+
           <label>Информация об объекте
             <textarea name="objectInfo" placeholder="Автомобиль, квартира, балкон, витрина, офис. Укажите площадь, количество стекол или особенности." required></textarea>
           </label>
-          <label>Что нужно сделать?
+
+          <label>Комментарий / что нужно сделать
             <textarea name="task" placeholder="Например: тонировка авто, бронирование фар, тонировка балкона, защита витрин." required></textarea>
           </label>
-          <button class="btn btn--red" type="submit">Отправить в Telegram</button>
+
+          <button class="btn btn--red" id="leadSubmitBtn" type="submit">Отправить заявку</button>
         </form>
         <div class="contact-choice" id="messengerChoice">
-          <b>Выберите, куда написать:</b>
+          <b>Дополнительно можно связаться напрямую:</b>
           <div>
             <a class="messenger messenger--tg" href="https://t.me/infosnt" target="_blank" rel="noopener">Написать в Telegram</a>
             <a class="messenger messenger--max" href="https://max.ru/u/f9LHodD0cOJzCTZONeauAnUFGMjW4PM404PirE-rPHovceQ9714S84993z8" target="_blank" rel="noopener">Написать в MAX</a>
             <a class="messenger messenger--phone" href="tel:+79221812244">Позвонить</a>
           </div>
         </div>
-        <p class="form-note" id="formNote">Кнопка подготовит сообщение и откроет Telegram.</p>
+        <p class="form-note" id="formNote">После отправки заявка появится в админ-панели. При подключённом Web3Forms копия придёт на почту.</p>
       </div>
 
       <div class="calendar-widget">
