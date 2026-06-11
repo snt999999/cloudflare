@@ -16,6 +16,7 @@ let current = null;
 let cal = new Date();
 let currentReportType = "requests";
 let selectedInstaller = null;
+let filesCache = [];
 
 const storage = {
   password: "solncanet_admin_password_v9",
@@ -62,6 +63,7 @@ function init() {
   els.quickSaveBtn.addEventListener("click", saveQuickAdd);
   els.filesSearchInput.addEventListener("input", renderFiles);
   els.filesTypeFilter.addEventListener("change", renderFiles);
+  initFileServiceEvents();
   els.historySearchInput.addEventListener("input", renderHistorySection);
   els.clearHistoryLocalBtn.addEventListener("click", clearLocalHistory);
 
@@ -119,6 +121,7 @@ async function login(password) {
     if (!response.ok || !data.ok) { els.loginMessage.textContent = data.error || "Неверный пароль"; return showLogin(); }
     localStorage.setItem(storage.password, password);
     records = data.records || [];
+    await loadFiles(true);
     showApp();
     renderAll();
   } catch (error) {
@@ -138,6 +141,7 @@ async function load() {
     const data = await response.json();
     if (!response.ok || !data.ok) throw new Error(data.error || "Ошибка загрузки");
     records = data.records || [];
+    await loadFiles(true);
     renderAll();
     msg("Готово");
   } catch (error) { msg(error.message); }
@@ -201,7 +205,12 @@ function renderCalendar(arr) {
   bindActionButtons();
 }
 function renderStats(all, arr) { const t = today(); const active = activeRecords(); els.statTotal.textContent = active.length; els.statNew.textContent = active.filter((r) => (r.fields || {})["Статус"] === "Новая заявка").length; els.statToday.textContent = active.filter((r) => (r.fields || {})["Дата записи"] === t).length; els.statWork.textContent = active.filter((r) => (r.fields || {})["Статус"] === "В работе").length; els.statFiltered.textContent = arr.length; els.statVolume.textContent = moneyNumber(arr.reduce((s, r) => s + getM2(r.fields || {}), 0)); }
-function bindActionButtons() { document.querySelectorAll("[data-open]").forEach((button) => button.onclick = () => openRequest(button.dataset.open)); document.querySelectorAll("[data-restore]").forEach((button) => button.onclick = () => restoreRequest(button.dataset.restore)); }
+function bindActionButtons() {
+  document.querySelectorAll("[data-open]").forEach((button) => button.onclick = () => openRequest(button.dataset.open));
+  document.querySelectorAll("[data-restore]").forEach((button) => button.onclick = () => restoreRequest(button.dataset.restore));
+  document.querySelectorAll("[data-file-download]").forEach((button) => button.onclick = () => downloadAdminFile(button.dataset.fileDownload));
+  document.querySelectorAll("[data-file-delete]").forEach((button) => button.onclick = () => deleteAdminFile(button.dataset.fileDelete));
+}
 
 function openRequest(id) {
   current = records.find((r) => String(r.id) === String(id));
@@ -220,6 +229,7 @@ function openRequest(id) {
   els.cancelReason.value = "";
   const names = splitInstallers(f["Монтажники"]);
   document.querySelectorAll('[name="installer"]').forEach((c) => c.checked = names.includes(c.value));
+  renderRequestFiles(current.id);
   renderRequestHistory(current);
   els.dialog.showModal();
 }
@@ -437,7 +447,29 @@ function renderInstallerDetails() {
   bindActionButtons();
 }
 function renderTrash() { const arr = records.filter(isTrashRecord).sort(sortByDateDesc); els.trashBody.innerHTML = arr.map((r) => { const f = r.fields || {}; return `<tr><td>${e(f["Дата записи"] || "")}</td><td><b>${e(f["Имя клиента"] || "—")}</b></td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Услуга"] || "")}</td><td>${e(f["Адрес"] || "")}</td><td>${nl2br(f["Причина отмены"] || lastCancelReason(f) || f["Комментарий администратора"] || "")}</td><td class="status-cell"><span class="status" data-status="${e(f["Статус"] || "")}">${e(f["Статус"] || "—")}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button> <button class="restore-btn" data-restore="${e(r.id)}">Восстановить</button></td></tr>`; }).join("") || '<tr><td colspan="8">Корзина пустая</td></tr>'; bindActionButtons(); }
-function renderFiles() { const q = norm(els.filesSearchInput?.value || ""), type = norm(els.filesTypeFilter?.value || ""); const rows = records.filter((r) => { const f = r.fields || {}, files = String(f["Файлы"] || ""); const hay = norm(["#" + r.id, f["Имя клиента"], f["Телефон"], f["Адрес"], f["Услуга"], f["Статус"], f["Комментарий клиента"], f["Комментарий администратора"], files].join(" ")); if (q && !hay.includes(q)) return false; if (type && !norm(files).includes(type)) return false; return true; }); els.filesBody.innerHTML = rows.map((r) => { const f = r.fields || {}; return `<tr><td>#${e(r.id)}</td><td>${e(f["Имя клиента"] || "—")}</td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Адрес"] || "—")}</td><td>${e(f["Файлы"] || "Пока нет файлов")}</td><td class="status-cell"><span class="status" data-status="${e(f["Статус"] || "")}">${e(f["Статус"] || "—")}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`; }).join("") || '<tr><td colspan="7">Файлы не найдены</td></tr>'; bindActionButtons(); }
+function renderFiles() {
+  renderFilesRequestSelect();
+  const q = norm(els.filesSearchInput?.value || ""), type = norm(els.filesTypeFilter?.value || "");
+  const byRequest = groupFilesByRequest(filesCache);
+  const ids = new Set([...records.map((r) => String(r.id)), ...Object.keys(byRequest)]);
+  const rows = [...ids].map((id) => ({ record: records.find((r) => String(r.id) === String(id)), id, files: byRequest[id] || [] }))
+    .filter(({ record, id, files }) => {
+      const f = record?.fields || {};
+      const filesText = files.map((file) => [file.originalName, file.fileType, file.contentType, file.client, file.phone, file.address, file.service].join(" ")).join(" ");
+      const hay = norm(["#" + id, f["Имя клиента"], f["Телефон"], f["Адрес"], f["Услуга"], f["Статус"], f["Комментарий клиента"], f["Комментарий администратора"], f["Файлы"], filesText].join(" "));
+      if (q && !hay.includes(q)) return false;
+      if (type && !files.some((file) => fileMatchesType(file, type)) && !norm(f["Файлы"] || "").includes(type)) return false;
+      return true;
+    })
+    .sort((a, b) => String(b.id).localeCompare(String(a.id), "ru", { numeric: true }));
+
+  els.filesBody.innerHTML = rows.map(({ record, id, files }) => {
+    const f = record?.fields || {};
+    const fileHtml = files.length ? files.map(fileMiniHtml).join("") : e(f["Файлы"] || "Пока нет файлов");
+    return `<tr><td>#${e(id)}</td><td>${e(f["Имя клиента"] || files[0]?.client || "—")}</td><td>${phoneLink(f["Телефон"] || files[0]?.phone || "")}</td><td>${e(f["Адрес"] || files[0]?.address || "—")}</td><td>${fileHtml}</td><td class="status-cell"><span class="status" data-status="${e(f["Статус"] || files[0]?.status || "")}">${e(f["Статус"] || files[0]?.status || "—")}</span></td><td>${record ? `<button class="open-btn" data-open="${e(id)}">Открыть</button>` : "—"}</td></tr>`;
+  }).join("") || '<tr><td colspan="7">Файлы не найдены</td></tr>';
+  bindActionButtons();
+}
 
 function getHistoryForRecord(record) {
   const f = record.fields || {};
@@ -657,3 +689,206 @@ function moneyNumber(value) { return Math.round((Number(value) || 0) * 100) / 10
 function money(value) { return moneyNumber(value).toLocaleString("ru-RU") + " ₽"; }
 function norm(value) { return String(value || "").toLowerCase().replace(/ё/g, "е").trim(); }
 function downloadText(filename, content, type = "text/plain;charset=utf-8") { const blob = new Blob([content], { type }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href); }
+
+
+// === V13: бесплатное файловое хранилище через Google Drive + Apps Script ===
+function initFileServiceEvents() {
+  const uploadBtn = $("filesUploadBtn");
+  const refreshBtn = $("filesRefreshBtn");
+  const requestUploadBtn = $("requestUploadBtn");
+  const requestFilesRefreshBtn = $("requestFilesRefreshBtn");
+  const zone = $("filesDropZone");
+  if (uploadBtn) uploadBtn.addEventListener("click", () => uploadFilesFromPanel());
+  if (refreshBtn) refreshBtn.addEventListener("click", () => loadFiles(false));
+  if (requestUploadBtn) requestUploadBtn.addEventListener("click", () => uploadFilesForCurrentRequest());
+  if (requestFilesRefreshBtn) requestFilesRefreshBtn.addEventListener("click", () => loadFiles(false).then(() => current && renderRequestFiles(current.id)));
+  if (zone) {
+    zone.addEventListener("dragover", (event) => { event.preventDefault(); zone.classList.add("is-dragover"); });
+    zone.addEventListener("dragleave", () => zone.classList.remove("is-dragover"));
+    zone.addEventListener("drop", (event) => {
+      event.preventDefault();
+      zone.classList.remove("is-dragover");
+      const input = $("filesUploadInput");
+      if (input && event.dataTransfer?.files?.length) input.files = event.dataTransfer.files;
+    });
+  }
+}
+async function loadFiles(silent = false) {
+  filesCache = parseFilesFromRecords(records);
+  renderFiles();
+  if (current) renderRequestFiles(current.id);
+  if (!silent) setFilesStatus(`Файлов в заявках: ${filesCache.length}`);
+}
+function setFilesStatus(text) {
+  const el = $("filesStatus");
+  if (el) el.textContent = text || "";
+}
+function renderFilesRequestSelect() {
+  const select = $("filesRequestSelect");
+  if (!select) return;
+  const currentValue = select.value;
+  select.innerHTML = records.slice().sort(sortByDateDesc).map((r) => {
+    const f = r.fields || {};
+    const label = `#${r.id} — ${f["Имя клиента"] || "без имени"} — ${f["Адрес"] || f["Услуга"] || "без адреса"}`;
+    return `<option value="${e(r.id)}">${e(label)}</option>`;
+  }).join("") || '<option value="">Нет заявок</option>';
+  if (currentValue && [...select.options].some((o) => o.value === currentValue)) select.value = currentValue;
+}
+function parseRecordFiles(record) {
+  const f = record?.fields || {};
+  const raw = f["Файлы"] || "";
+  if (!raw) return [];
+  let list = [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) list = parsed;
+    else if (parsed && typeof parsed === "object") list = [parsed];
+  } catch (_) {
+    list = String(raw).split(/\n+/).map((line) => ({ originalName: line.trim(), url: line.trim() })).filter((x) => x.originalName);
+  }
+  return list.map((file) => normalizeFileMeta(file, record.id, f));
+}
+function parseFilesFromRecords(sourceRecords) {
+  return (sourceRecords || []).flatMap((record) => parseRecordFiles(record)).sort((a, b) => String(b.uploadedAt || "").localeCompare(String(a.uploadedAt || "")));
+}
+function normalizeFileMeta(file, requestId, fields = {}) {
+  const id = file.id || file.fileId || String(file.key || "").replace(/^drive:/, "");
+  const key = file.key || (id ? `drive:${id}` : `${requestId}-${file.originalName || file.name || Date.now()}`);
+  return {
+    ...file,
+    id,
+    key,
+    requestId: String(file.requestId || requestId || ""),
+    originalName: file.originalName || file.name || "Файл",
+    name: file.name || file.originalName || "Файл",
+    contentType: file.contentType || file.mimeType || "",
+    fileType: file.fileType || fileTypeByMime(file.contentType || file.mimeType || "", file.originalName || file.name || ""),
+    size: Number(file.size || 0),
+    uploadedAt: file.uploadedAt || "",
+    client: file.client || fields["Имя клиента"] || "",
+    phone: file.phone || fields["Телефон"] || "",
+    address: file.address || fields["Адрес"] || "",
+    service: file.service || fields["Услуга"] || "",
+    status: file.status || fields["Статус"] || "",
+    url: file.url || file.webViewLink || "",
+    downloadUrl: file.downloadUrl || file.webContentLink || file.url || file.webViewLink || ""
+  };
+}
+function groupFilesByRequest(files) {
+  return (files || []).reduce((acc, file) => {
+    const id = String(file.requestId || "");
+    if (!id) return acc;
+    (acc[id] ||= []).push(file);
+    return acc;
+  }, {});
+}
+function fileTypeByMime(mime, name) {
+  const m = String(mime || "").toLowerCase();
+  const n = String(name || "").toLowerCase();
+  if (m.startsWith("image/") || /\.(jpg|jpeg|png|webp|gif|heic)$/i.test(n)) return "фото";
+  if (m.startsWith("video/") || /\.(mp4|mov|avi|mkv|webm)$/i.test(n)) return "видео";
+  if (m.includes("pdf") || /\.pdf$/i.test(n)) return "pdf";
+  return "документ";
+}
+function fileMatchesType(file, type) {
+  const t = norm(type);
+  const hay = norm([file.fileType, file.contentType, file.originalName, file.name].join(" "));
+  if (t === "фото") return hay.includes("фото") || hay.includes("image") || /\.(jpg|jpeg|png|webp|gif|heic)$/i.test(file.originalName || "");
+  if (t === "видео") return hay.includes("видео") || hay.includes("video") || /\.(mp4|mov|avi|mkv|webm)$/i.test(file.originalName || "");
+  if (t === "pdf") return hay.includes("pdf") || /\.pdf$/i.test(file.originalName || "");
+  return hay.includes(t);
+}
+function fileMiniHtml(file) {
+  const isImage = fileMatchesType(file, "фото") && (file.url || file.downloadUrl);
+  const preview = isImage ? `<a class="file-thumb" href="${e(file.url || file.downloadUrl)}" target="_blank" rel="noopener"><img src="${e(file.downloadUrl || file.url)}" alt="${e(file.originalName || "Файл")}" loading="lazy"></a>` : "";
+  return `<div class="file-chip">${preview}<span><b>${e(file.originalName || file.name || "Файл")}</b><small>${e(file.fileType || "файл")} · ${formatFileSize(file.size)} · ${e(formatDateTime(file.uploadedAt))}</small></span><button type="button" data-file-download="${e(file.key)}">Открыть</button><button type="button" class="danger-mini" data-file-delete="${e(file.key)}">Удалить</button></div>`;
+}
+function renderRequestFiles(requestId) {
+  const box = $("requestFilesBox");
+  if (!box) return;
+  const files = filesCache.filter((file) => String(file.requestId) === String(requestId));
+  box.innerHTML = files.length ? files.map(fileMiniHtml).join("") : '<p class="muted-text">К этой заявке файлы пока не загружены.</p>';
+  bindActionButtons();
+}
+async function uploadFilesFromPanel() {
+  const requestId = $("filesRequestSelect")?.value;
+  const input = $("filesUploadInput");
+  if (!requestId) return setFilesStatus("Выберите заявку для привязки файлов");
+  await uploadFiles(requestId, input?.files, input, setFilesStatus);
+}
+async function uploadFilesForCurrentRequest() {
+  if (!current) return;
+  const input = $("requestFileInput");
+  await uploadFiles(current.id, input?.files, input, (text) => {
+    const box = $("requestFilesBox");
+    if (box) box.innerHTML = `<p class="muted-text">${e(text)}</p>`;
+  });
+}
+async function uploadFiles(requestId, fileList, input, statusFn = setFilesStatus) {
+  const files = [...(fileList || [])];
+  if (!files.length) return statusFn("Выберите файлы для загрузки");
+  const record = records.find((r) => String(r.id) === String(requestId));
+  if (!record) return statusFn("Заявка не найдена. Обновите список заявок.");
+  const f = record.fields || {};
+  const form = new FormData();
+  form.append("requestId", String(requestId));
+  form.append("client", f["Имя клиента"] || "");
+  form.append("phone", f["Телефон"] || "");
+  form.append("address", f["Адрес"] || "");
+  form.append("service", f["Услуга"] || "");
+  form.append("status", f["Статус"] || "");
+  files.forEach((file) => form.append("files", file, file.name));
+  statusFn(`Загружаю в Google Drive: ${files.length}...`);
+  try {
+    const response = await fetch("/upload-file", { method: "POST", headers: { "x-admin-password": pwd() }, body: form });
+    const data = await response.json();
+    if (!response.ok || !data.uploaded?.length) throw new Error(data.error || "Ошибка загрузки");
+    const uploaded = data.uploaded.map((file) => normalizeFileMeta(file, requestId, f));
+    const merged = [...parseRecordFiles(record), ...uploaded];
+    let history = getHistoryForRecord(record);
+    history = addHistory(record, "Загрузка файлов в Google Drive", uploaded.map((x) => x.originalName).join(", "), history);
+    await updateRecord(requestId, { "Файлы": JSON.stringify(merged), "История изменений": JSON.stringify(history) }, "Файлы загружены");
+    if (input) input.value = "";
+    await load();
+    statusFn(`Загружено файлов: ${uploaded.length}. Данные сохранены в заявке.`);
+  } catch (error) {
+    statusFn("Ошибка загрузки: " + error.message);
+  }
+}
+async function downloadAdminFile(key) {
+  const file = filesCache.find((x) => x.key === key);
+  if (!file) return msg("Файл не найден в заявках. Обновите страницу.");
+  const url = file.downloadUrl || file.url;
+  if (!url) return msg("У файла нет ссылки Google Drive");
+  window.open(url, "_blank", "noopener");
+}
+async function deleteAdminFile(key) {
+  const file = filesCache.find((x) => x.key === key);
+  if (!file) return msg("Файл не найден в заявках. Обновите страницу.");
+  if (!confirm("Удалить файл из Google Drive и убрать его из заявки?")) return;
+  try {
+    const response = await fetch("/delete-file", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pwd() }, body: JSON.stringify({ fileId: file.id, key: file.key }) });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || "Не удалось удалить файл");
+    const record = records.find((r) => String(r.id) === String(file.requestId));
+    if (record) {
+      const kept = parseRecordFiles(record).filter((x) => x.key !== key);
+      let history = getHistoryForRecord(record);
+      history = addHistory(record, "Удаление файла", file.originalName || file.name || "Файл", history);
+      await updateRecord(record.id, { "Файлы": JSON.stringify(kept), "История изменений": JSON.stringify(history) }, "Файл удалён");
+    }
+    await load();
+  } catch (error) { msg(error.message); }
+}
+function formatFileSize(bytes) {
+  const n = Number(bytes || 0);
+  if (!n) return "0 Б";
+  if (n < 1024) return n + " Б";
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1).replace(".", ",") + " КБ";
+  if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1).replace(".", ",") + " МБ";
+  return (n / 1024 / 1024 / 1024).toFixed(1).replace(".", ",") + " ГБ";
+}
+function formatDateTime(value) {
+  if (!value) return "";
+  try { return new Intl.DateTimeFormat("ru-RU", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Yekaterinburg" }).format(new Date(value)); } catch (_) { return value; }
+}

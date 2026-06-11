@@ -171,3 +171,45 @@ WEB3FORMS_ACCESS_KEY=ключ_web3forms
 
 - Вкладка «Монтажники»: при нажатии на монтажника открывается история работ с поиском, фильтрами и быстрым редактированием объекта.
 - Клиентская страница: изображения услуг заменены на уникальные, без визуальных дублей.
+
+## V12: попытка подключения файлов через Cloudflare R2
+
+Вариант с R2 больше не используем, потому что R2 недоступен без подписки в вашем аккаунте. Актуальный вариант — V13 через Google Drive + Apps Script.
+
+## V13: Бесплатные файлы через Google Drive вместо R2
+
+Cloudflare R2 больше не требуется. Файлы можно хранить бесплатно в Google Drive через Google Apps Script.
+
+Файлы работают так:
+
+```text
+Админка сайта
+→ /upload-file Cloudflare Function
+→ Google Apps Script Web App
+→ Google Drive
+→ ссылка на файл сохраняется в поле «Файлы» заявки в NocoDB
+```
+
+Что нужно настроить:
+
+1. Создать папку Google Drive для файлов.
+2. Создать Google Apps Script из файла `google-drive-files-appsscript.gs`.
+3. Вставить ID папки Google Drive в `FILES_FOLDER_ID`.
+4. Вставить секретный токен в `UPLOAD_TOKEN`.
+5. Развернуть Apps Script как Web App.
+6. В Cloudflare Pages добавить переменные:
+
+```text
+GOOGLE_DRIVE_UPLOAD_URL=ссылка_Web_App_из_Apps_Script
+GOOGLE_DRIVE_UPLOAD_TOKEN=тот_же_секретный_токен
+```
+
+7. Сделать Redeploy проекта.
+
+Подробная инструкция находится в файле:
+
+```text
+FILES_GOOGLE_DRIVE_SETUP.txt
+```
+
+Важно: в NocoDB у таблицы заявок должно быть поле `Файлы`. Лучше тип поля — Long text / многострочный текст.

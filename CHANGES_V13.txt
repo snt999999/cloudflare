@@ -1,0 +1,12 @@
+V13 — файлы без Cloudflare R2
+
+- Убрана зависимость от Cloudflare R2 и FILES_BUCKET.
+- Добавлена бесплатная схема хранения файлов через Google Drive + Google Apps Script.
+- Вкладка «Файлы» продолжает работать: загрузка, поиск, фильтры, привязка к заявке.
+- В карточке заявки файлы отображаются из поля «Файлы» NocoDB.
+- Метаданные файлов сохраняются в поле «Файлы» самой заявки, поэтому список файлов не зависит от R2.
+- Добавлен файл google-drive-files-appsscript.gs для создания Google Apps Script Web App.
+- Для работы нужны переменные Cloudflare Pages:
+  GOOGLE_DRIVE_UPLOAD_URL
+  GOOGLE_DRIVE_UPLOAD_TOKEN
+- Удаление файла переносит файл в корзину Google Drive и убирает ссылку из заявки.

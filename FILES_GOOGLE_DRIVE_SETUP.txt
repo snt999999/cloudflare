@@ -1,0 +1,61 @@
+КАК ПОДКЛЮЧИТЬ ФАЙЛЫ БЕСПЛАТНО ЧЕРЕЗ GOOGLE DRIVE
+
+1. Откройте Google Drive.
+2. Создайте папку, например:
+   SOLNCANET_FILES
+
+3. Откройте папку и скопируйте ID из ссылки.
+   Пример ссылки:
+   https://drive.google.com/drive/folders/1AbCDefGhijk123456
+   ID папки:
+   1AbCDefGhijk123456
+
+4. Откройте Google Apps Script:
+   https://script.google.com/
+
+5. Создайте новый проект.
+
+6. Удалите старый код и вставьте код из файла:
+   google-drive-files-appsscript.gs
+
+7. В коде замените:
+   PASTE_GOOGLE_DRIVE_FOLDER_ID_HERE
+   на ID вашей папки Google Drive.
+
+8. Придумайте секретный токен, например:
+   solncanet-files-2026-secret
+
+9. В коде замените:
+   PASTE_SECRET_TOKEN_HERE
+   на этот токен.
+
+10. Нажмите Deploy → New deployment.
+
+11. Тип выберите:
+   Web app
+
+12. Настройки:
+   Execute as: Me
+   Who has access: Anyone
+
+13. Нажмите Deploy.
+
+14. Разрешите доступ к Google Drive.
+
+15. Скопируйте Web App URL.
+
+16. В Cloudflare Pages откройте проект сайта:
+   Settings → Variables
+
+17. Добавьте переменные:
+   GOOGLE_DRIVE_UPLOAD_URL = Web App URL из Apps Script
+   GOOGLE_DRIVE_UPLOAD_TOKEN = тот же секретный токен
+
+18. Сделайте Redeploy проекта.
+
+ВАЖНО:
+- R2 больше не нужен.
+- Файлы физически хранятся в Google Drive.
+- Ссылки на файлы сохраняются в поле «Файлы» в NocoDB.
+- Если в NocoDB нет поля «Файлы», его нужно добавить как Long text / многострочный текст.
+- Google Drive имеет ограничения по объёму аккаунта. Для фото, PDF, документов этого достаточно. Большие видео лучше грузить осторожно.
