@@ -1,108 +1,148 @@
-// Google Apps Script для бесплатного хранения файлов сайта СОЛНЦАНЕТ в Google Drive.
-//
-// ВАЖНО ДЛЯ ПУБЛИКАЦИИ:
-// 1) Создайте папку на Google Drive, например: SOLNCANET_FILES.
-// 2) Скопируйте ID папки из ссылки Google Drive и вставьте ниже в FILES_FOLDER_ID.
-// 3) Придумайте секретный токен и вставьте в UPLOAD_TOKEN.
-// 4) Apps Script → Deploy → New deployment → Web app.
-//    Execute as: Me / Запуск от имени: Меня.
-//    Who has access: Anyone / Доступ: Все.
-// 5) Скопируйте Web App URL, который заканчивается на /exec.
-//    Именно его вставьте в Cloudflare Pages Variable: GOOGLE_DRIVE_UPLOAD_URL.
-// 6) Этот же токен добавьте в Cloudflare Pages Variable: GOOGLE_DRIVE_UPLOAD_TOKEN.
-// 7) После любой правки кода Apps Script нужно: Deploy → Manage deployments → Edit → Version: New version → Deploy.
-
-const FILES_FOLDER_ID = 'PASTE_GOOGLE_DRIVE_FOLDER_ID_HERE';
-const UPLOAD_TOKEN = 'PASTE_SECRET_TOKEN_HERE';
+const UPLOAD_TOKEN = 'SOLNCANET_FILES_2026_8F9D3B7A';
+const ROOT_FOLDER_NAME = 'SOLNCANET — файлы заявок';
 const MAKE_FILES_AVAILABLE_BY_LINK = true;
 
 function doGet(e) {
-  return health_({ action: 'health', token: (e && e.parameter && e.parameter.token) || '' });
+  try {
+    const token = getParam_(e, 'token');
+
+    if (token && token !== UPLOAD_TOKEN) {
+      return json_({
+        ok: false,
+        error: 'Неверный GOOGLE_DRIVE_UPLOAD_TOKEN'
+      });
+    }
+
+    const folder = getRootFolder_();
+
+    return json_({
+      ok: true,
+      success: true,
+      service: 'SOLNCANET Google Drive files',
+      method: 'GET',
+      message: 'Apps Script работает. Google Drive доступен.',
+      folderId: folder.getId(),
+      folderName: folder.getName()
+    });
+
+  } catch (err) {
+    return json_({
+      ok: false,
+      success: false,
+      error: String(err && err.message ? err.message : err)
+    });
+  }
 }
 
 function doPost(e) {
   try {
     const body = readBody_(e);
 
-    if (UPLOAD_TOKEN && body.token !== UPLOAD_TOKEN) {
-      return json_({ ok: false, error: 'Неверный GOOGLE_DRIVE_UPLOAD_TOKEN' });
+    if (body.token !== UPLOAD_TOKEN) {
+      return json_({
+        ok: false,
+        success: false,
+        error: 'Неверный GOOGLE_DRIVE_UPLOAD_TOKEN'
+      });
     }
 
-    if (body.action === 'health') return health_(body);
-    if (body.action === 'delete') return deleteFile_(body);
+    if (body.action === 'health' || body.action === 'test' || body.action === 'check') {
+      return health_();
+    }
+
+    if (body.action === 'delete') {
+      return deleteFile_(body);
+    }
+
     return uploadFiles_(body);
-  } catch (error) {
-    return json_({ ok: false, error: String(error && error.message ? error.message : error), stack: String(error && error.stack ? error.stack : '') });
+
+  } catch (err) {
+    return json_({
+      ok: false,
+      success: false,
+      error: String(err && err.message ? err.message : err),
+      stack: String(err && err.stack ? err.stack : '')
+    });
   }
 }
 
 function readBody_(e) {
-  const raw = (e && e.postData && e.postData.contents) || (e && e.parameter && e.parameter.payload) || '{}';
+  const raw = e && e.postData && e.postData.contents ? e.postData.contents : '';
+  if (!raw) return {};
   try {
-    return JSON.parse(raw || '{}');
-  } catch (error) {
-    throw new Error('Apps Script не смог разобрать JSON: ' + error.message);
+    return JSON.parse(raw);
+  } catch (err) {
+    throw new Error('Apps Script не смог разобрать JSON: ' + err.message);
   }
 }
 
-function health_(body) {
-  if (!FILES_FOLDER_ID || FILES_FOLDER_ID === 'PASTE_GOOGLE_DRIVE_FOLDER_ID_HERE') {
-    return json_({ ok: false, error: 'В Apps Script не указан FILES_FOLDER_ID' });
-  }
-  let folder;
-  try {
-    folder = DriveApp.getFolderById(FILES_FOLDER_ID);
-  } catch (error) {
-    return json_({ ok: false, error: 'Не удалось открыть папку Google Drive по FILES_FOLDER_ID: ' + error.message });
-  }
+function health_() {
+  const folder = getRootFolder_();
   return json_({
     ok: true,
+    success: true,
     service: 'SOLNCANET Google Drive files',
-    folderId: FILES_FOLDER_ID,
-    folderName: folder.getName(),
-    tokenEnabled: !!UPLOAD_TOKEN,
-    time: new Date().toISOString()
+    method: 'POST',
+    message: 'Проверка прошла успешно. Google Drive доступен.',
+    folderId: folder.getId(),
+    folderName: folder.getName()
   });
 }
 
 function uploadFiles_(body) {
-  if (!FILES_FOLDER_ID || FILES_FOLDER_ID === 'PASTE_GOOGLE_DRIVE_FOLDER_ID_HERE') {
-    return json_({ ok: false, error: 'В Apps Script не указан FILES_FOLDER_ID' });
-  }
+  const root = getRootFolder_();
+  const requestId = safeName_(body.requestId || body.leadId || body.zayavkaId || 'Без номера заявки');
+  const client = safeName_(body.client || body.clientName || body.name || 'Без клиента');
+  const phone = safeName_(body.phone || '');
+  const address = safeName_(body.address || 'Без адреса');
+  const service = safeName_(body.service || '');
+  const status = safeName_(body.status || '');
 
-  const root = DriveApp.getFolderById(FILES_FOLDER_ID);
-  const requestId = clean_(body.requestId || 'no-request');
-  const client = clean_(body.client || 'Без клиента');
-  const address = clean_(body.address || 'Без адреса');
-  const service = clean_(body.service || '');
-  const status = clean_(body.status || '');
-  const phone = clean_(body.phone || '');
-  const folderName = clean_('Заявка ' + requestId + ' — ' + client + ' — ' + address).slice(0, 180);
-  const folder = getOrCreateFolder_(root, folderName);
-  const uploaded = [];
-  const warnings = [];
-  const files = Array.isArray(body.files) ? body.files : [];
+  let files = [];
+  if (Array.isArray(body.files)) files = body.files;
+
+  if (!files.length && (body.base64 || body.fileBase64)) {
+    files = [{
+      name: body.fileName || body.filename || 'file',
+      originalName: body.fileName || body.filename || 'file',
+      contentType: body.mimeType || body.type || 'application/octet-stream',
+      size: body.size || 0,
+      base64: body.base64 || body.fileBase64
+    }];
+  }
 
   if (!files.length) {
-    return json_({ ok: false, error: 'Файлы не переданы в Apps Script' });
+    return json_({ ok: false, success: false, error: 'Файлы не переданы в Apps Script' });
   }
 
+  const folderName = safeName_('Заявка ' + requestId + ' — ' + client + ' — ' + address).slice(0, 180);
+  const folder = getOrCreateChildFolder_(root, folderName);
+  const uploaded = [];
+  const warnings = [];
+
   files.forEach(function(file) {
-    const name = clean_(file.originalName || file.name || 'file');
-    const contentType = file.contentType || 'application/octet-stream';
-    const bytes = Utilities.base64Decode(file.base64 || '');
+    const name = safeName_(file.originalName || file.name || file.fileName || 'file');
+    const contentType = file.contentType || file.mimeType || file.type || 'application/octet-stream';
+    let base64 = file.base64 || file.fileBase64 || '';
+
+    if (!base64) throw new Error('У файла "' + name + '" нет base64');
+
+    base64 = String(base64).replace(/^data:[^;]+;base64,/, '');
+    const bytes = Utilities.base64Decode(base64);
     const blob = Utilities.newBlob(bytes, contentType, name);
     const driveFile = folder.createFile(blob);
 
     if (MAKE_FILES_AVAILABLE_BY_LINK) {
       try {
         driveFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      } catch (shareError) {
-        warnings.push('Файл загружен, но общий доступ по ссылке не включился: ' + shareError.message);
+      } catch (shareErr) {
+        warnings.push('Файл загружен, но доступ по ссылке не включился: ' + shareErr.message);
       }
     }
 
     const id = driveFile.getId();
+    const uploadedAt = new Date().toISOString();
+
     uploaded.push({
       id: id,
       key: 'drive:' + id,
@@ -110,54 +150,74 @@ function uploadFiles_(body) {
       originalName: name,
       name: name,
       contentType: contentType,
+      mimeType: driveFile.getMimeType(),
       fileType: file.fileType || detectType_(contentType, name),
       size: Number(file.size || bytes.length || 0),
-      uploadedAt: new Date().toISOString(),
+      uploadedAt: uploadedAt,
       client: client,
       phone: phone,
       address: address,
       service: service,
       status: status,
       url: driveFile.getUrl(),
+      webViewLink: driveFile.getUrl(),
       downloadUrl: 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(id),
-      previewUrl: 'https://drive.google.com/file/d/' + encodeURIComponent(id) + '/view'
+      previewUrl: 'https://drive.google.com/file/d/' + encodeURIComponent(id) + '/preview',
+      folderId: folder.getId(),
+      folderName: folder.getName()
     });
   });
 
-  return json_({ ok: true, uploaded: uploaded, warning: warnings.join(' | ') });
+  return json_({
+    ok: true,
+    success: true,
+    message: 'Файлы успешно загружены в Google Drive',
+    uploaded: uploaded,
+    warning: warnings.join(' | ')
+  });
 }
 
 function deleteFile_(body) {
-  const fileId = String(body.fileId || '').replace(/^drive:/, '').trim();
-  if (!fileId) return json_({ ok: false, error: 'Не указан fileId' });
+  const fileId = String(body.fileId || body.id || '').replace(/^drive:/, '').trim();
+  if (!fileId) return json_({ ok: false, success: false, error: 'Не указан fileId' });
   DriveApp.getFileById(fileId).setTrashed(true);
-  return json_({ ok: true, deleted: fileId });
+  return json_({ ok: true, success: true, deleted: fileId });
 }
 
-function getOrCreateFolder_(parent, name) {
-  const folders = parent.getFoldersByName(name);
+function getRootFolder_() {
+  const folders = DriveApp.getFoldersByName(ROOT_FOLDER_NAME);
   if (folders.hasNext()) return folders.next();
-  return parent.createFolder(name);
+  return DriveApp.createFolder(ROOT_FOLDER_NAME);
 }
 
-function clean_(value) {
+function getOrCreateChildFolder_(parentFolder, folderName) {
+  const folders = parentFolder.getFoldersByName(folderName);
+  if (folders.hasNext()) return folders.next();
+  return parentFolder.createFolder(folderName);
+}
+
+function getParam_(e, name) {
+  if (!e || !e.parameter) return '';
+  return e.parameter[name] || '';
+}
+
+function safeName_(value) {
   return String(value || '')
-    .replace(/[\\/\0<>:"|?*]+/g, '-')
+    .replace(/[\\/:*?"<>|#%{}~&]/g, ' ')
     .replace(/\s+/g, ' ')
-    .trim() || 'Без названия';
+    .trim()
+    .slice(0, 120) || 'Без названия';
 }
 
 function detectType_(mime, name) {
   const m = String(mime || '').toLowerCase();
   const n = String(name || '').toLowerCase();
-  if (m.indexOf('image/') === 0 || /\.(jpg|jpeg|png|webp|gif|heic)$/.test(n)) return 'фото';
-  if (m.indexOf('video/') === 0 || /\.(mp4|mov|avi|mkv|webm)$/.test(n)) return 'видео';
-  if (m.indexOf('pdf') !== -1 || /\.pdf$/.test(n)) return 'pdf';
+  if (m.indexOf('image/') === 0 || /\.(jpg|jpeg|png|webp|gif|heic)$/i.test(n)) return 'фото';
+  if (m.indexOf('video/') === 0 || /\.(mp4|mov|avi|mkv|webm)$/i.test(n)) return 'видео';
+  if (m.indexOf('pdf') !== -1 || /\.pdf$/i.test(n)) return 'pdf';
   return 'документ';
 }
 
 function json_(obj) {
-  return ContentService
-    .createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify(obj, null, 2)).setMimeType(ContentService.MimeType.JSON);
 }

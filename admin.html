@@ -297,6 +297,21 @@
     </form>
   </dialog>
 
+
+  <dialog id="filePreviewDialog" class="wide-dialog file-preview-dialog">
+    <form method="dialog">
+      <button class="close" value="cancel">×</button>
+      <h2 id="filePreviewTitle">Просмотр файла</h2>
+      <p id="filePreviewMeta" class="modal-note">Информация о файле</p>
+      <div id="filePreviewContent" class="file-preview-content"></div>
+      <div class="dialog-actions">
+        <a id="filePreviewOpenLink" class="dialog-link-button" href="#" target="_blank" rel="noopener">Открыть в Google Drive</a>
+        <a id="filePreviewDownloadLink" class="dialog-link-button" href="#" target="_blank" rel="noopener">Скачать</a>
+        <button class="ghost" value="cancel">Закрыть</button>
+      </div>
+    </form>
+  </dialog>
+
   <script src="assets/admin.js"></script>
 </body>
 </html>

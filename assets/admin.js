@@ -208,6 +208,8 @@ function renderStats(all, arr) { const t = today(); const active = activeRecords
 function bindActionButtons() {
   document.querySelectorAll("[data-open]").forEach((button) => button.onclick = () => openRequest(button.dataset.open));
   document.querySelectorAll("[data-restore]").forEach((button) => button.onclick = () => restoreRequest(button.dataset.restore));
+  document.querySelectorAll("[data-file-preview]").forEach((button) => button.onclick = () => openFilePreview(button.dataset.filePreview));
+  document.querySelectorAll("[data-file-open]").forEach((button) => button.onclick = () => openFileInDrive(button.dataset.fileOpen));
   document.querySelectorAll("[data-file-download]").forEach((button) => button.onclick = () => downloadAdminFile(button.dataset.fileDownload));
   document.querySelectorAll("[data-file-delete]").forEach((button) => button.onclick = () => deleteAdminFile(button.dataset.fileDelete));
 }
@@ -809,8 +811,10 @@ function fileMatchesType(file, type) {
 }
 function fileMiniHtml(file) {
   const isImage = fileMatchesType(file, "фото") && (file.url || file.downloadUrl);
-  const preview = isImage ? `<a class="file-thumb" href="${e(file.url || file.downloadUrl)}" target="_blank" rel="noopener"><img src="${e(file.downloadUrl || file.url)}" alt="${e(file.originalName || "Файл")}" loading="lazy"></a>` : "";
-  return `<div class="file-chip">${preview}<span><b>${e(file.originalName || file.name || "Файл")}</b><small>${e(file.fileType || "файл")} · ${formatFileSize(file.size)} · ${e(formatDateTime(file.uploadedAt))}</small></span><button type="button" data-file-download="${e(file.key)}">Открыть</button><button type="button" class="danger-mini" data-file-delete="${e(file.key)}">Удалить</button></div>`;
+  const thumb = isImage
+    ? `<button type="button" class="file-thumb file-thumb-btn" data-file-preview="${e(file.key)}" title="Посмотреть файл"><img src="${e(file.downloadUrl || file.url)}" alt="${e(file.originalName || "Файл")}" loading="lazy"></button>`
+    : `<button type="button" class="file-thumb file-thumb-btn file-thumb-icon" data-file-preview="${e(file.key)}" title="Посмотреть файл">${fileIcon(file)}</button>`;
+  return `<div class="file-chip"><div class="file-chip__main">${thumb}<span><button type="button" class="file-title-button" data-file-preview="${e(file.key)}">${e(file.originalName || file.name || "Файл")}</button><small>${e(file.fileType || "файл")} · ${formatFileSize(file.size)} · ${e(formatDateTime(file.uploadedAt))}</small></span></div><div class="file-chip__actions"><button type="button" data-file-preview="${e(file.key)}">Посмотреть</button><button type="button" data-file-open="${e(file.key)}">Drive</button><button type="button" data-file-download="${e(file.key)}">Скачать</button><button type="button" class="danger-mini" data-file-delete="${e(file.key)}">Удалить</button></div></div>`;
 }
 function renderRequestFiles(requestId) {
   const box = $("requestFilesBox");
@@ -867,10 +871,75 @@ async function uploadFiles(requestId, fileList, input, statusFn = setFilesStatus
     statusFn("Ошибка загрузки: " + error.message);
   }
 }
+
+function fileIcon(file) {
+  const type = String(file.fileType || "").toLowerCase();
+  if (type.includes("pdf")) return "PDF";
+  if (type.includes("видео")) return "▶";
+  if (type.includes("фото")) return "IMG";
+  return "DOC";
+}
+function getDriveFileId(file) {
+  return String(file.id || file.fileId || String(file.key || "").replace(/^drive:/, "") || "").trim();
+}
+function fileDrivePreviewUrl(file) {
+  const id = getDriveFileId(file);
+  if (file.previewUrl) return file.previewUrl;
+  if (id) return `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`;
+  return file.url || file.webViewLink || file.downloadUrl || "";
+}
+function fileOpenUrl(file) {
+  return file.url || file.webViewLink || fileDrivePreviewUrl(file) || file.downloadUrl || "";
+}
+function fileDownloadUrl(file) {
+  const id = getDriveFileId(file);
+  return file.downloadUrl || (id ? `https://drive.google.com/uc?export=download&id=${encodeURIComponent(id)}` : fileOpenUrl(file));
+}
+function openFileInDrive(key) {
+  const file = filesCache.find((x) => x.key === key);
+  if (!file) return msg("Файл не найден. Обновите страницу.");
+  const url = fileOpenUrl(file);
+  if (!url) return msg("У файла нет ссылки Google Drive");
+  window.open(url, "_blank", "noopener");
+}
+function openFilePreview(key) {
+  const file = filesCache.find((x) => x.key === key);
+  if (!file) return msg("Файл не найден. Обновите страницу.");
+  const dialog = $("filePreviewDialog");
+  const title = $("filePreviewTitle");
+  const meta = $("filePreviewMeta");
+  const content = $("filePreviewContent");
+  const openLink = $("filePreviewOpenLink");
+  const downloadLink = $("filePreviewDownloadLink");
+  if (!dialog || !title || !content) return openFileInDrive(key);
+
+  title.textContent = file.originalName || file.name || "Просмотр файла";
+  meta.innerHTML = `Заявка: <b>#${e(file.requestId || "—")}</b> · Клиент: <b>${e(file.client || "—")}</b> · Тип: <b>${e(file.fileType || "файл")}</b> · Размер: <b>${formatFileSize(file.size)}</b><br>Адрес: ${e(file.address || "—")}`;
+
+  const previewUrl = fileDrivePreviewUrl(file);
+  const downloadUrl = fileDownloadUrl(file);
+  const openUrl = fileOpenUrl(file);
+  if (openLink) openLink.href = openUrl || previewUrl || "#";
+  if (downloadLink) downloadLink.href = downloadUrl || openUrl || previewUrl || "#";
+
+  if (fileMatchesType(file, "фото")) {
+    content.innerHTML = `<img src="${e(downloadUrl || openUrl || previewUrl)}" alt="${e(file.originalName || "Файл")}">`;
+  } else if (fileMatchesType(file, "видео")) {
+    if (getDriveFileId(file)) content.innerHTML = `<iframe class="file-preview-frame" src="${e(previewUrl)}" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
+    else content.innerHTML = `<video class="file-preview-video" controls src="${e(downloadUrl || openUrl)}"></video>`;
+  } else if (fileMatchesType(file, "pdf") || getDriveFileId(file)) {
+    content.innerHTML = `<iframe class="file-preview-frame" src="${e(previewUrl)}" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
+  } else {
+    content.innerHTML = `<div class="file-preview-empty">Предпросмотр для этого типа файла может быть недоступен.<br><br><a class="dialog-link-button" href="${e(openUrl || downloadUrl)}" target="_blank" rel="noopener">Открыть файл</a></div>`;
+  }
+
+  dialog.showModal();
+}
+
 async function downloadAdminFile(key) {
   const file = filesCache.find((x) => x.key === key);
   if (!file) return msg("Файл не найден в заявках. Обновите страницу.");
-  const url = file.downloadUrl || file.url;
+  const url = fileDownloadUrl(file);
   if (!url) return msg("У файла нет ссылки Google Drive");
   window.open(url, "_blank", "noopener");
 }
