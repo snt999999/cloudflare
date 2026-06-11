@@ -4,6 +4,7 @@ function json(body, status = 200) {
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }
   });
 }
+
 function checkAdmin(request, env) {
   const required = env.ADMIN_PASSWORD;
   if (!required) return { ok: false, status: 500, body: { ok: false, error: "ADMIN_PASSWORD is not set" } };
@@ -11,7 +12,11 @@ function checkAdmin(request, env) {
   if (provided !== required) return { ok: false, status: 401, body: { ok: false, error: "Неверный пароль администратора" } };
   return { ok: true };
 }
-function safeText(value, max = 300) { return String(value || "").replace(/[<>]/g, "").trim().slice(0, max); }
+
+function safeText(value, max = 300) {
+  return String(value || "").replace(/[<>]/g, "").trim().slice(0, max);
+}
+
 function fileTypeByMime(mime, name) {
   const m = String(mime || "").toLowerCase();
   const n = String(name || "").toLowerCase();
@@ -20,6 +25,7 @@ function fileTypeByMime(mime, name) {
   if (m.includes("pdf") || /\.pdf$/i.test(n)) return "pdf";
   return "документ";
 }
+
 function arrayBufferToBase64(buffer) {
   const bytes = new Uint8Array(buffer);
   let binary = "";
@@ -29,11 +35,59 @@ function arrayBufferToBase64(buffer) {
   }
   return btoa(binary);
 }
+
+function isLikelyHtml(text) {
+  return /<\s*!doctype html|<\s*html|<\s*head|<\s*body/i.test(String(text || ""));
+}
+
+function stripHtml(text) {
+  return String(text || "")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 900);
+}
+
+function explainNonJson(text, response) {
+  const raw = String(text || "").slice(0, 1200);
+  const plain = isLikelyHtml(raw) ? stripHtml(raw) : raw.slice(0, 900);
+  let hint = "Apps Script вернул не JSON. Обычно это значит, что указан не Web App URL /exec, доступ Web App не стоит Anyone, либо после правки Apps Script не была опубликована новая версия.";
+  if (/accounts\.google|ServiceLogin|Sign in|Войдите|Авториз/i.test(raw)) {
+    hint = "Google вернул страницу входа. В Apps Script надо Deploy → Manage deployments → Web app: Execute as Me, Who has access: Anyone, затем New version / Deploy. В Cloudflare вставлять URL, который заканчивается на /exec.";
+  } else if (/not found|404|не найден/i.test(raw)) {
+    hint = "Google вернул 404. Скорее всего, в GOOGLE_DRIVE_UPLOAD_URL вставлена неправильная ссылка. Нужен Web App URL из Apps Script, обычно он заканчивается на /exec.";
+  } else if (/Authorization is required|У вас нет доступа|You need access|Access denied|permission/i.test(raw)) {
+    hint = "Недостаточно доступа к Apps Script. Разверните Web App с доступом Anyone и выполнением от имени Me.";
+  }
+  return {
+    ok: false,
+    error: "Apps Script вернул не JSON",
+    hint,
+    status: response.status,
+    contentType: response.headers.get("content-type") || "",
+    rawSnippet: plain
+  };
+}
+
+async function parseAppsScriptResponse(response) {
+  const text = await response.text();
+  const cleaned = String(text || "").replace(/^\uFEFF/, "").trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch (_) {
+    return explainNonJson(cleaned, response);
+  }
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
   const auth = checkAdmin(request, env);
   if (!auth.ok) return json(auth.body, auth.status);
-  if (!env.GOOGLE_DRIVE_UPLOAD_URL) return json({ ok: false, error: "GOOGLE_DRIVE_UPLOAD_URL is not set. Подключите Google Apps Script Web App." }, 500);
+  if (!env.GOOGLE_DRIVE_UPLOAD_URL) {
+    return json({ ok: false, error: "GOOGLE_DRIVE_UPLOAD_URL is not set. Подключите Google Apps Script Web App URL, который заканчивается на /exec." }, 500);
+  }
 
   let form;
   try { form = await request.formData(); } catch (_) { return json({ ok: false, error: "Нужен multipart/form-data" }, 400); }
@@ -41,6 +95,12 @@ export async function onRequestPost(context) {
   if (!requestId) return json({ ok: false, error: "Не указан номер заявки" }, 400);
   const formFiles = form.getAll("files").filter((x) => x && typeof x === "object" && "name" in x);
   if (!formFiles.length) return json({ ok: false, error: "Файлы не выбраны" }, 400);
+
+  // Apps Script имеет лимиты на размер запроса. Для бесплатной схемы лучше грузить умеренные файлы.
+  const totalSize = formFiles.reduce((sum, f) => sum + Number(f.size || 0), 0);
+  if (totalSize > 25 * 1024 * 1024) {
+    return json({ ok: false, error: "Слишком большой объём файлов за один раз. Для Google Apps Script загружайте партиями до 20–25 МБ." }, 413);
+  }
 
   const payload = {
     action: "upload",
@@ -72,6 +132,7 @@ export async function onRequestPost(context) {
   try {
     driveResponse = await fetch(env.GOOGLE_DRIVE_UPLOAD_URL, {
       method: "POST",
+      redirect: "follow",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload)
     });
@@ -79,12 +140,18 @@ export async function onRequestPost(context) {
     return json({ ok: false, error: "Не удалось отправить файл в Google Apps Script: " + error.message }, 502);
   }
 
-  const text = await driveResponse.text();
-  let data;
-  try { data = JSON.parse(text); } catch (_) { data = { ok: false, error: "Apps Script вернул не JSON", raw: text.slice(0, 500) }; }
-  if (!driveResponse.ok || !data.ok) return json({ ok: false, error: data.error || "Ошибка Google Drive", details: data }, 500);
+  const data = await parseAppsScriptResponse(driveResponse);
+  if (!driveResponse.ok || !data.ok) {
+    return json({
+      ok: false,
+      error: data.error || "Ошибка Google Drive",
+      hint: data.hint || "Проверьте Apps Script deployment и переменные Cloudflare.",
+      details: data
+    }, 500);
+  }
   return json({ ok: true, uploaded: data.uploaded || [], warning: data.warning || "" });
 }
+
 export async function onRequest(context) {
   if (context.request.method !== "POST") return json({ ok: false, error: "Only POST" }, 405);
   return onRequestPost(context);

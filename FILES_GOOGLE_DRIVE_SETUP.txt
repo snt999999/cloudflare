@@ -1,61 +1,73 @@
-КАК ПОДКЛЮЧИТЬ ФАЙЛЫ БЕСПЛАТНО ЧЕРЕЗ GOOGLE DRIVE
+Подключение бесплатного хранения файлов через Google Drive + Apps Script
 
-1. Откройте Google Drive.
-2. Создайте папку, например:
+1. Создайте папку на Google Drive, например:
    SOLNCANET_FILES
 
-3. Откройте папку и скопируйте ID из ссылки.
+2. Откройте папку и скопируйте ID из ссылки.
    Пример ссылки:
-   https://drive.google.com/drive/folders/1AbCDefGhijk123456
-   ID папки:
-   1AbCDefGhijk123456
+   https://drive.google.com/drive/folders/1AbCdEfG...
+   ID папки — это часть после /folders/
 
-4. Откройте Google Apps Script:
+3. Откройте Google Apps Script:
    https://script.google.com/
 
-5. Создайте новый проект.
+4. Создайте новый проект.
 
-6. Удалите старый код и вставьте код из файла:
+5. Вставьте туда код из файла:
    google-drive-files-appsscript.gs
 
-7. В коде замените:
-   PASTE_GOOGLE_DRIVE_FOLDER_ID_HERE
+6. В начале файла замените:
+   FILES_FOLDER_ID = 'PASTE_GOOGLE_DRIVE_FOLDER_ID_HERE'
    на ID вашей папки Google Drive.
 
-8. Придумайте секретный токен, например:
-   solncanet-files-2026-secret
+7. Придумайте секретный токен и замените:
+   UPLOAD_TOKEN = 'PASTE_SECRET_TOKEN_HERE'
+   например:
+   UPLOAD_TOKEN = 'solncanet-secret-2026'
 
-9. В коде замените:
-   PASTE_SECRET_TOKEN_HERE
-   на этот токен.
+8. Опубликуйте Apps Script:
+   Deploy → New deployment → Select type: Web app
 
-10. Нажмите Deploy → New deployment.
+   Обязательно:
+   Execute as / Запуск от имени: Me / Меня
+   Who has access / У кого есть доступ: Anyone / Все
 
-11. Тип выберите:
-   Web app
+9. Нажмите Deploy.
+   Google попросит разрешения на доступ к Drive — разрешите.
 
-12. Настройки:
-   Execute as: Me
-   Who has access: Anyone
+10. Скопируйте Web App URL.
+    Нужна именно ссылка, которая заканчивается на:
+    /exec
 
-13. Нажмите Deploy.
+    НЕЛЬЗЯ вставлять ссылку редактора script.google.com/.../edit
+    НЕЛЬЗЯ вставлять ссылку /dev
+    НУЖНА именно Web App ссылка /exec
 
-14. Разрешите доступ к Google Drive.
+11. В Cloudflare Pages добавьте переменные:
 
-15. Скопируйте Web App URL.
+   GOOGLE_DRIVE_UPLOAD_URL=ссылка_Web_App_которая_заканчивается_на_/exec
+   GOOGLE_DRIVE_UPLOAD_TOKEN=тот_же_секретный_токен
 
-16. В Cloudflare Pages откройте проект сайта:
-   Settings → Variables
+12. Важно: после добавления переменных сделайте Redeploy проекта в Cloudflare Pages.
 
-17. Добавьте переменные:
-   GOOGLE_DRIVE_UPLOAD_URL = Web App URL из Apps Script
-   GOOGLE_DRIVE_UPLOAD_TOKEN = тот же секретный токен
+13. В админке откройте вкладку «Файлы» и нажмите:
+   Проверить Google Drive
 
-18. Сделайте Redeploy проекта.
+Если появляется ошибка «Apps Script вернул не JSON», причины почти всегда такие:
 
-ВАЖНО:
-- R2 больше не нужен.
-- Файлы физически хранятся в Google Drive.
-- Ссылки на файлы сохраняются в поле «Файлы» в NocoDB.
-- Если в NocoDB нет поля «Файлы», его нужно добавить как Long text / многострочный текст.
-- Google Drive имеет ограничения по объёму аккаунта. Для фото, PDF, документов этого достаточно. Большие видео лучше грузить осторожно.
+1) В GOOGLE_DRIVE_UPLOAD_URL вставлена неправильная ссылка.
+   Должна быть ссылка Web App, заканчивающаяся на /exec.
+
+2) Web App опубликован не для всех.
+   Нужно: Execute as Me, Who has access Anyone.
+
+3) После правки Apps Script не опубликована новая версия.
+   Нужно: Deploy → Manage deployments → Edit → Version: New version → Deploy.
+
+4) В Apps Script не заменён FILES_FOLDER_ID.
+
+5) Токен в Apps Script и GOOGLE_DRIVE_UPLOAD_TOKEN в Cloudflare не совпадают.
+
+Ограничение бесплатной схемы:
+- Большие файлы лучше грузить партиями.
+- Для Google Apps Script безопаснее загружать за один раз до 20–25 МБ.

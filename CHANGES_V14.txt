@@ -1,0 +1,7 @@
+V14
+- Исправлена диагностика ошибки «Apps Script вернул не JSON».
+- Cloudflare Function теперь показывает реальную причину: неправильный URL, вход Google, доступ не Anyone, ошибка публикации Apps Script.
+- Добавлена функция /google-drive-test для проверки связи Cloudflare Pages → Apps Script → Google Drive.
+- В админке во вкладке «Файлы» добавлена кнопка «Проверить Google Drive».
+- Обновлён google-drive-files-appsscript.gs: добавлен health-check, более понятные ошибки, проверка папки Google Drive, обработка предупреждений по доступу к файлам.
+- Обновлена инструкция FILES_GOOGLE_DRIVE_SETUP.txt.

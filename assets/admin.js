@@ -695,11 +695,15 @@ function downloadText(filename, content, type = "text/plain;charset=utf-8") { co
 function initFileServiceEvents() {
   const uploadBtn = $("filesUploadBtn");
   const refreshBtn = $("filesRefreshBtn");
+  const testBtn = $("googleDriveTestBtn");
+  const testBtnSettings = $("googleDriveTestBtnSettings");
   const requestUploadBtn = $("requestUploadBtn");
   const requestFilesRefreshBtn = $("requestFilesRefreshBtn");
   const zone = $("filesDropZone");
   if (uploadBtn) uploadBtn.addEventListener("click", () => uploadFilesFromPanel());
   if (refreshBtn) refreshBtn.addEventListener("click", () => loadFiles(false));
+  if (testBtn) testBtn.addEventListener("click", openGoogleDriveTest);
+  if (testBtnSettings) testBtnSettings.addEventListener("click", openGoogleDriveTest);
   if (requestUploadBtn) requestUploadBtn.addEventListener("click", () => uploadFilesForCurrentRequest());
   if (requestFilesRefreshBtn) requestFilesRefreshBtn.addEventListener("click", () => loadFiles(false).then(() => current && renderRequestFiles(current.id)));
   if (zone) {
@@ -722,6 +726,11 @@ async function loadFiles(silent = false) {
 function setFilesStatus(text) {
   const el = $("filesStatus");
   if (el) el.textContent = text || "";
+}
+
+function openGoogleDriveTest() {
+  const password = encodeURIComponent(pwd());
+  window.open(`/google-drive-test?password=${password}`, "_blank", "noopener");
 }
 function renderFilesRequestSelect() {
   const select = $("filesRequestSelect");
@@ -841,8 +850,11 @@ async function uploadFiles(requestId, fileList, input, statusFn = setFilesStatus
   statusFn(`Загружаю в Google Drive: ${files.length}...`);
   try {
     const response = await fetch("/upload-file", { method: "POST", headers: { "x-admin-password": pwd() }, body: form });
-    const data = await response.json();
-    if (!response.ok || !data.uploaded?.length) throw new Error(data.error || "Ошибка загрузки");
+    const data = await response.json().catch(() => ({ ok: false, error: "Cloudflare Function вернула не JSON" }));
+    if (!response.ok || !data.uploaded?.length) {
+      const details = [data.hint, data.details?.hint, data.details?.rawSnippet].filter(Boolean).join(" | ");
+      throw new Error((data.error || "Ошибка загрузки") + (details ? " — " + details : ""));
+    }
     const uploaded = data.uploaded.map((file) => normalizeFileMeta(file, requestId, f));
     const merged = [...parseRecordFiles(record), ...uploaded];
     let history = getHistoryForRecord(record);
@@ -868,8 +880,11 @@ async function deleteAdminFile(key) {
   if (!confirm("Удалить файл из Google Drive и убрать его из заявки?")) return;
   try {
     const response = await fetch("/delete-file", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pwd() }, body: JSON.stringify({ fileId: file.id, key: file.key }) });
-    const data = await response.json();
-    if (!response.ok || !data.ok) throw new Error(data.error || "Не удалось удалить файл");
+    const data = await response.json().catch(() => ({ ok: false, error: "Cloudflare Function вернула не JSON" }));
+    if (!response.ok || !data.ok) {
+      const details = [data.hint, data.details?.hint, data.details?.rawSnippet].filter(Boolean).join(" | ");
+      throw new Error((data.error || "Не удалось удалить файл") + (details ? " — " + details : ""));
+    }
     const record = records.find((r) => String(r.id) === String(file.requestId));
     if (record) {
       const kept = parseRecordFiles(record).filter((x) => x.key !== key);

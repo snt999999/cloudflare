@@ -1,31 +1,68 @@
 // Google Apps Script для бесплатного хранения файлов сайта СОЛНЦАНЕТ в Google Drive.
+//
+// ВАЖНО ДЛЯ ПУБЛИКАЦИИ:
 // 1) Создайте папку на Google Drive, например: SOLNCANET_FILES.
 // 2) Скопируйте ID папки из ссылки Google Drive и вставьте ниже в FILES_FOLDER_ID.
 // 3) Придумайте секретный токен и вставьте в UPLOAD_TOKEN.
 // 4) Apps Script → Deploy → New deployment → Web app.
-//    Execute as: Me. Who has access: Anyone.
-// 5) Скопируйте Web App URL в Cloudflare Pages Variable: GOOGLE_DRIVE_UPLOAD_URL.
+//    Execute as: Me / Запуск от имени: Меня.
+//    Who has access: Anyone / Доступ: Все.
+// 5) Скопируйте Web App URL, который заканчивается на /exec.
+//    Именно его вставьте в Cloudflare Pages Variable: GOOGLE_DRIVE_UPLOAD_URL.
 // 6) Этот же токен добавьте в Cloudflare Pages Variable: GOOGLE_DRIVE_UPLOAD_TOKEN.
+// 7) После любой правки кода Apps Script нужно: Deploy → Manage deployments → Edit → Version: New version → Deploy.
 
 const FILES_FOLDER_ID = 'PASTE_GOOGLE_DRIVE_FOLDER_ID_HERE';
 const UPLOAD_TOKEN = 'PASTE_SECRET_TOKEN_HERE';
 const MAKE_FILES_AVAILABLE_BY_LINK = true;
 
+function doGet(e) {
+  return health_({ action: 'health', token: (e && e.parameter && e.parameter.token) || '' });
+}
+
 function doPost(e) {
   try {
-    const body = JSON.parse(e.postData.contents || '{}');
+    const body = readBody_(e);
+
     if (UPLOAD_TOKEN && body.token !== UPLOAD_TOKEN) {
       return json_({ ok: false, error: 'Неверный GOOGLE_DRIVE_UPLOAD_TOKEN' });
     }
 
-    if (body.action === 'delete') {
-      return deleteFile_(body);
-    }
-
+    if (body.action === 'health') return health_(body);
+    if (body.action === 'delete') return deleteFile_(body);
     return uploadFiles_(body);
   } catch (error) {
-    return json_({ ok: false, error: String(error && error.message ? error.message : error) });
+    return json_({ ok: false, error: String(error && error.message ? error.message : error), stack: String(error && error.stack ? error.stack : '') });
   }
+}
+
+function readBody_(e) {
+  const raw = (e && e.postData && e.postData.contents) || (e && e.parameter && e.parameter.payload) || '{}';
+  try {
+    return JSON.parse(raw || '{}');
+  } catch (error) {
+    throw new Error('Apps Script не смог разобрать JSON: ' + error.message);
+  }
+}
+
+function health_(body) {
+  if (!FILES_FOLDER_ID || FILES_FOLDER_ID === 'PASTE_GOOGLE_DRIVE_FOLDER_ID_HERE') {
+    return json_({ ok: false, error: 'В Apps Script не указан FILES_FOLDER_ID' });
+  }
+  let folder;
+  try {
+    folder = DriveApp.getFolderById(FILES_FOLDER_ID);
+  } catch (error) {
+    return json_({ ok: false, error: 'Не удалось открыть папку Google Drive по FILES_FOLDER_ID: ' + error.message });
+  }
+  return json_({
+    ok: true,
+    service: 'SOLNCANET Google Drive files',
+    folderId: FILES_FOLDER_ID,
+    folderName: folder.getName(),
+    tokenEnabled: !!UPLOAD_TOKEN,
+    time: new Date().toISOString()
+  });
 }
 
 function uploadFiles_(body) {
@@ -43,7 +80,12 @@ function uploadFiles_(body) {
   const folderName = clean_('Заявка ' + requestId + ' — ' + client + ' — ' + address).slice(0, 180);
   const folder = getOrCreateFolder_(root, folderName);
   const uploaded = [];
+  const warnings = [];
   const files = Array.isArray(body.files) ? body.files : [];
+
+  if (!files.length) {
+    return json_({ ok: false, error: 'Файлы не переданы в Apps Script' });
+  }
 
   files.forEach(function(file) {
     const name = clean_(file.originalName || file.name || 'file');
@@ -53,7 +95,11 @@ function uploadFiles_(body) {
     const driveFile = folder.createFile(blob);
 
     if (MAKE_FILES_AVAILABLE_BY_LINK) {
-      driveFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      try {
+        driveFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      } catch (shareError) {
+        warnings.push('Файл загружен, но общий доступ по ссылке не включился: ' + shareError.message);
+      }
     }
 
     const id = driveFile.getId();
@@ -78,7 +124,7 @@ function uploadFiles_(body) {
     });
   });
 
-  return json_({ ok: true, uploaded: uploaded });
+  return json_({ ok: true, uploaded: uploaded, warning: warnings.join(' | ') });
 }
 
 function deleteFile_(body) {

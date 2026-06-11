@@ -205,7 +205,7 @@
 
       <section id="filesSection" class="workspace-section" style="display:none">
         <header class="admin-head"><div><h1>Файлы</h1><p>Поиск по номеру заявки, названию файла, клиенту, телефону, адресу, объекту, услуге и статусу.</p></div></header>
-        <section class="file-search-panel file-search-panel--wide"><input id="filesSearchInput" placeholder="Быстрый поиск: номер заявки, файл, телефон, адрес, объект, клиент..." /><select id="filesTypeFilter"><option value="">Все типы</option><option value="фото">Фото</option><option value="видео">Видео</option><option value="pdf">PDF / документы</option><option value="документ">Другие документы</option></select><button id="filesRefreshBtn" type="button">Обновить файлы</button></section>
+        <section class="file-search-panel file-search-panel--wide"><input id="filesSearchInput" placeholder="Быстрый поиск: номер заявки, файл, телефон, адрес, объект, клиент..." /><select id="filesTypeFilter"><option value="">Все типы</option><option value="фото">Фото</option><option value="видео">Видео</option><option value="pdf">PDF / документы</option><option value="документ">Другие документы</option></select><button id="filesRefreshBtn" type="button">Обновить файлы</button><button id="googleDriveTestBtn" type="button">Проверить Google Drive</button></section>
         <section class="files-dashboard"><div class="upload-zone" id="filesDropZone"><b>Загрузка файлов в Google Drive</b><p>Выберите заявку, прикрепите фото/видео/PDF/документы. Файлы сохраняются в Google Drive через Apps Script, а ссылки автоматически привязываются к номеру заявки.</p><label>Заявка<select id="filesRequestSelect"><option value="">Сначала загрузите заявки</option></select></label><input id="filesUploadInput" type="file" multiple /><button id="filesUploadBtn" type="button">Загрузить файлы</button><p id="filesStatus" class="muted-text"></p></div><div class="card"><table><thead><tr><th>Заявка</th><th>Клиент</th><th>Телефон</th><th>Адрес / объект</th><th>Файлы</th><th>Статус</th><th></th></tr></thead><tbody id="filesBody"></tbody></table></div></section>
       </section>
 
@@ -225,7 +225,7 @@
           <a href="/test" target="_blank">Проверить Cloudflare Functions</a>
           <a href="/nocodb-test" target="_blank">Проверить NocoDB</a>
           <a href="/cal-nocodb-v5" target="_blank">Проверить Cal.com Webhook</a>
-          <a href="/list-files" target="_blank">Проверить файлы Google Drive</a>
+          <a href="/list-files" target="_blank">Проверить список файлов</a><button id="googleDriveTestBtnSettings" type="button">Проверить Google Drive</button>
           <a href="zapis.html" target="_blank">Открыть страницу записи</a>
         </section>
         <section class="card settings-note">
@@ -234,7 +234,7 @@
         </section>
         <section class="card settings-note">
           <h2>Для хранения файлов</h2>
-          <p>R2 не используется. Для бесплатного варианта создайте Google Apps Script из файла <b>google-drive-files-appsscript.gs</b>, разверните его как Web App и добавьте в Cloudflare Pages переменную <b>GOOGLE_DRIVE_UPLOAD_URL</b>. Дополнительно можно добавить <b>GOOGLE_DRIVE_UPLOAD_TOKEN</b>.</p>
+          <p>R2 не используется. Для бесплатного варианта создайте Google Apps Script из файла <b>google-drive-files-appsscript.gs</b>, разверните его как Web App и добавьте в Cloudflare Pages переменную <b>GOOGLE_DRIVE_UPLOAD_URL</b>. Ссылка должна заканчиваться на <b>/exec</b>. В Web App должно быть: <b>Execute as Me</b> и <b>Who has access: Anyone</b>. Дополнительно добавьте <b>GOOGLE_DRIVE_UPLOAD_TOKEN</b>.</p>
         </section>
       </section>
     </section>
