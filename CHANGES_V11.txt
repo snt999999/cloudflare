@@ -1,0 +1,6 @@
+V11
+- Replaced the hero illustration with a real photo from СОЛНЦАНЕТ assets.
+- Prepared the hero block for video: if assets/video/hero.mp4 is added later, the site automatically shows it instead of the photo.
+- Added assets/video/README.txt with video requirements.
+- Replaced the service-card photo for "Бронирование фар" with the URL provided by Sergey.
+- Kept all v10 lead form, admin, payroll, trash, and history functionality unchanged.

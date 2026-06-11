@@ -55,6 +55,40 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+
+  async function initHeroVideo() {
+    const media = document.querySelector("[data-hero-media]");
+    if (!media) return;
+
+    const videoSrc = media.dataset.videoSrc || "assets/video/hero.mp4";
+    const poster = media.dataset.videoPoster || "assets/img/hero-solncanet.webp";
+
+    try {
+      const response = await fetch(videoSrc, { method: "HEAD", cache: "no-store" });
+      if (!response.ok) return;
+
+      const video = document.createElement("video");
+      video.autoplay = true;
+      video.muted = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.poster = poster;
+      video.setAttribute("aria-label", "СОЛНЦАНЕТ — видео о продаже и установке плёнок");
+
+      const source = document.createElement("source");
+      source.src = videoSrc;
+      source.type = "video/mp4";
+      video.appendChild(source);
+
+      media.innerHTML = "";
+      media.appendChild(video);
+    } catch (_) {
+      // Если видео ещё не загружено в проект, показываем обычное фото.
+    }
+  }
+
+  initHeroVideo();
+
   document.querySelectorAll(".floating-contact__main").forEach((button) => {
     button.addEventListener("click", () => {
       const root = button.closest(".floating-contact");
