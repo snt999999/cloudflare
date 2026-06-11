@@ -1,0 +1,5 @@
+V10
+- Replaced service-card illustrations with real unique photos from solncanet.ru.
+- Updated service card image sources in index.html to use optimized .webp files.
+- Each service card now has a distinct relevant photo: auto tinting, balconies/windows, athermal tint, glass strengthening, headlight protection, office partitions, PPF, and storefront tinting.
+- If old images still appear after deploy, purge Cloudflare cache / hard refresh the browser.
