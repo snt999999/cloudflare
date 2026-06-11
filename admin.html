@@ -77,11 +77,11 @@
           </select>
           <select id="installerFilter">
             <option value="">Все монтажники</option>
-            <option>Никита П</option>
-            <option>Андрей Ш</option>
-            <option>Никита К</option>
-            <option>Дмитрий П</option>
-            <option>Роман З</option>
+            <option value="Никита П">Пахнев Никита</option>
+            <option value="Андрей Ш">Шолохов Андрей</option>
+            <option value="Никита К">Кислов Никита</option>
+            <option value="Дмитрий П">Петухов Дмитрий</option>
+            <option value="Роман З">Зинченко Роман</option>
           </select>
           <input id="dateFrom" type="date" />
           <input id="dateTo" type="date" />
@@ -109,18 +109,49 @@
       </section>
 
       <section id="clientsSection" class="workspace-section" style="display:none">
-        <header class="admin-head"><div><h1>Клиенты</h1><p>Клиенты автоматически собираются из заявок.</p></div></header>
-        <section class="card"><table><thead><tr><th>Клиент</th><th>Телефон</th><th>Заявок</th><th>Объём, м²</th><th>Последняя дата</th><th></th></tr></thead><tbody id="clientsBody"></tbody></table></section>
+        <header class="admin-head"><div><h1>Клиенты</h1><p>Быстрый поиск по имени, телефону, услуге, плёнке, адресу и датам обращений.</p></div></header>
+        <section class="section-filters clients-filters">
+          <input id="clientsSearchInput" placeholder="Поиск: имя, телефон, услуга, плёнка, адрес, комментарий..." />
+          <input id="clientsDateFrom" type="date" title="С даты" />
+          <input id="clientsDateTo" type="date" title="По дату" />
+          <select id="clientsServiceFilter"><option value="">Все услуги</option><option>Тонировка стекол автомобиля</option><option>Атермальная тонировка автомобиля</option><option>Тонировка балконов и окон</option><option>Бронирование стекол и витрин</option><option>Бронирование фар</option><option>Защита авто полиуретановой пленкой</option><option>Тонирование витрин</option><option>Декоративное тонирование офисных перегородок</option><option>Замер / консультация</option></select>
+          <input id="clientsFilmFilter" placeholder="Плёнка / материал: XPEL, Silver, Safety..." />
+          <select id="clientsStatusFilter"><option value="">Все статусы</option><option>Новая заявка</option><option>Связались</option><option>Замер</option><option>Согласовано</option><option>В работе</option><option>Выполнено</option><option>Оплачено</option><option>Отказ</option><option>Отменена</option></select>
+          <button id="clientsClearFiltersBtn" type="button">Сбросить</button>
+        </section>
+        <section class="stats stats-four compact-stats"><div><span>Клиентов</span><b id="clientsStatCount">0</b></div><div><span>Заявок</span><b id="clientsStatRequests">0</b></div><div><span>Объём, м²</span><b id="clientsStatM2">0</b></div><div><span>Повторных</span><b id="clientsStatRepeat">0</b></div></section>
+        <section class="card table-card"><table><thead><tr><th>Клиент</th><th>Телефон</th><th>Заявок</th><th>Последняя услуга</th><th>Последний адрес</th><th>Объём, м²</th><th>Последняя дата</th><th></th></tr></thead><tbody id="clientsBody"></tbody></table></section>
       </section>
 
       <section id="objectsSection" class="workspace-section" style="display:none">
-        <header class="admin-head"><div><h1>Объекты</h1><p>Адреса и объекты из заявок. Используется текущий фильтр по датам.</p></div></header>
-        <section class="card"><table><thead><tr><th>Адрес / объект</th><th>Услуга</th><th>м²</th><th>Статус</th><th>Дата</th><th></th></tr></thead><tbody id="objectsBody"></tbody></table></section>
+        <header class="admin-head"><div><h1>Объекты</h1><p>Интерактивный поиск по адресу, объекту, клиенту, услуге, монтажнику, статусу и объёму.</p></div></header>
+        <section class="section-filters objects-filters">
+          <input id="objectsSearchInput" placeholder="Поиск: адрес, объект, клиент, телефон, комментарий..." />
+          <input id="objectsDateFrom" type="date" title="С даты" />
+          <input id="objectsDateTo" type="date" title="По дату" />
+          <select id="objectsServiceFilter"><option value="">Все услуги</option><option>Тонировка стекол автомобиля</option><option>Атермальная тонировка автомобиля</option><option>Тонировка балконов и окон</option><option>Бронирование стекол и витрин</option><option>Бронирование фар</option><option>Защита авто полиуретановой пленкой</option><option>Тонирование витрин</option><option>Декоративное тонирование офисных перегородок</option><option>Замер / консультация</option></select>
+          <select id="objectsStatusFilter"><option value="">Все статусы</option><option>Новая заявка</option><option>Связались</option><option>Замер</option><option>Согласовано</option><option>В работе</option><option>Выполнено</option><option>Оплачено</option><option>Отказ</option><option>Отменена</option></select>
+          <select id="objectsInstallerFilter"><option value="">Все монтажники</option><option value="Никита П">Пахнев Никита</option><option value="Андрей Ш">Шолохов Андрей</option><option value="Никита К">Кислов Никита</option><option value="Дмитрий П">Петухов Дмитрий</option><option value="Роман З">Зинченко Роман</option></select>
+          <input id="objectsM2Min" type="number" step="0.01" placeholder="м² от" />
+          <input id="objectsM2Max" type="number" step="0.01" placeholder="м² до" />
+          <button id="objectsClearFiltersBtn" type="button">Сбросить</button>
+        </section>
+        <section class="stats stats-four compact-stats"><div><span>Объектов</span><b id="objectsStatCount">0</b></div><div><span>Объём, м²</span><b id="objectsStatM2">0</b></div><div><span>Выполнено</span><b id="objectsStatDone">0</b></div><div><span>В работе</span><b id="objectsStatWork">0</b></div></section>
+        <section class="card table-card"><table><thead><tr><th>Дата</th><th>Клиент</th><th>Адрес / объект</th><th>Услуга</th><th>м²</th><th>Монтажники</th><th>Статус</th><th></th></tr></thead><tbody id="objectsBody"></tbody></table></section>
       </section>
 
       <section id="installersSection" class="workspace-section" style="display:none">
-        <header class="admin-head"><div><h1>Монтажники</h1><p>Сводка по участию сотрудников с учётом фильтров.</p></div></header>
-        <section class="card"><table><thead><tr><th>Монтажник</th><th>Объектов</th><th>Всего м²</th><th>Последний объект</th><th>Заработано по ставкам</th></tr></thead><tbody id="installersBody"></tbody></table></section>
+        <header class="admin-head"><div><h1>Монтажники</h1><p>Гибкая сводка по сотрудникам: даты, статус, услуга, поиск и быстрый переход к расчёту зарплаты.</p></div><div class="actions"><button data-report="payroll" type="button">Отчёт по зарплате</button></div></header>
+        <section class="section-filters installers-filters">
+          <input id="installersSearchInput" placeholder="Поиск: монтажник, клиент, адрес, услуга..." />
+          <input id="installersDateFrom" type="date" title="С даты" />
+          <input id="installersDateTo" type="date" title="По дату" />
+          <select id="installersStatusFilter"><option value="">Все статусы</option><option>Выполнено</option><option>Оплачено</option><option>В работе</option><option>Согласовано</option><option>Замер</option></select>
+          <select id="installersServiceFilter"><option value="">Все услуги</option><option>Тонировка стекол автомобиля</option><option>Атермальная тонировка автомобиля</option><option>Тонировка балконов и окон</option><option>Бронирование стекол и витрин</option><option>Бронирование фар</option><option>Защита авто полиуретановой пленкой</option><option>Тонирование витрин</option><option>Декоративное тонирование офисных перегородок</option></select>
+          <button id="installersClearFiltersBtn" type="button">Сбросить</button>
+        </section>
+        <section class="stats stats-four compact-stats"><div><span>Объектов</span><b id="installersStatJobs">0</b></div><div><span>Объём, м²</span><b id="installersStatM2">0</b></div><div><span>Начислено</span><b id="installersStatAmount">0 ₽</b></div><div><span>К выплате</span><b id="installersStatTotal">0 ₽</b></div></section>
+        <section class="card table-card"><table><thead><tr><th>Монтажник</th><th>Объектов</th><th>Всего м²</th><th>Начислено</th><th>Доплата</th><th>Аванс / удержание</th><th>Итого к выплате</th><th>Последний объект</th></tr></thead><tbody id="installersBody"></tbody></table></section>
       </section>
 
       <section id="trashSection" class="workspace-section" style="display:none">
@@ -191,7 +222,7 @@
         <label class="wide">Адрес<input id="editAddress" /></label>
         <label class="wide">Комментарий администратора<textarea id="editAdminComment"></textarea></label>
       </div>
-      <fieldset><legend>Монтажники</legend><label><input type="checkbox" name="installer" value="Никита П" /> Никита П</label><label><input type="checkbox" name="installer" value="Андрей Ш" /> Андрей Ш</label><label><input type="checkbox" name="installer" value="Никита К" /> Никита К</label><label><input type="checkbox" name="installer" value="Дмитрий П" /> Дмитрий П</label><label><input type="checkbox" name="installer" value="Роман З" /> Роман З</label></fieldset>
+      <fieldset><legend>Монтажники</legend><label><input type="checkbox" name="installer" value="Никита П" /> Пахнев Никита</label><label><input type="checkbox" name="installer" value="Андрей Ш" /> Шолохов Андрей</label><label><input type="checkbox" name="installer" value="Никита К" /> Кислов Никита</label><label><input type="checkbox" name="installer" value="Дмитрий П" /> Петухов Дмитрий</label><label><input type="checkbox" name="installer" value="Роман З" /> Зинченко Роман</label></fieldset>
       <section class="files-box"><h3>История этой заявки</h3><div id="requestHistoryBox" class="history-box"></div></section>
       <section class="cancel-box"><h3>Отмена / удаление в корзину</h3><p>Физически заявка не удаляется, а переносится в корзину отмен со статусом «Отменена».</p><textarea id="cancelReason" placeholder="Причина отмены или удаления"></textarea></section>
       <div class="dialog-actions"><button id="saveRequestBtn" type="button">Сохранить</button><button id="cancelRequestBtn" class="danger" type="button">Отменить / в корзину</button><button class="ghost" value="cancel">Закрыть</button></div>
@@ -216,15 +247,15 @@
         <label>С даты<input id="reportDateFrom" type="date" /></label>
         <label>По дату<input id="reportDateTo" type="date" /></label>
         <label>Статус<select id="reportStatus"><option value="">Все статусы</option><option>Новая заявка</option><option>Связались</option><option>Замер</option><option>Согласовано</option><option>В работе</option><option>Выполнено</option><option>Оплачено</option><option>Отказ</option><option>Отменена</option></select></label>
-        <label>Формат<select id="reportFormat"><option value="csv">CSV для Excel</option></select></label>
+        <label>Формат<select id="reportFormat"><option value="xls">Excel .xls с расчётом</option><option value="csv">CSV для Excel</option></select></label>
       </div>
-      <fieldset><legend>Монтажники</legend><label><input type="checkbox" id="reportAllInstallers" checked /> Все монтажники</label><label><input type="checkbox" name="reportInstaller" value="Никита П" /> Никита П</label><label><input type="checkbox" name="reportInstaller" value="Андрей Ш" /> Андрей Ш</label><label><input type="checkbox" name="reportInstaller" value="Никита К" /> Никита К</label><label><input type="checkbox" name="reportInstaller" value="Дмитрий П" /> Дмитрий П</label><label><input type="checkbox" name="reportInstaller" value="Роман З" /> Роман З</label></fieldset>
+      <fieldset><legend>Монтажники</legend><label><input type="checkbox" id="reportAllInstallers" checked /> Все монтажники</label><label><input type="checkbox" name="reportInstaller" value="Никита П" /> Пахнев Никита</label><label><input type="checkbox" name="reportInstaller" value="Андрей Ш" /> Шолохов Андрей</label><label><input type="checkbox" name="reportInstaller" value="Никита К" /> Кислов Никита</label><label><input type="checkbox" name="reportInstaller" value="Дмитрий П" /> Петухов Дмитрий</label><label><input type="checkbox" name="reportInstaller" value="Роман З" /> Зинченко Роман</label></fieldset>
 
       <section id="payrollOptions" class="payroll-options" style="display:none">
         <h3>Расчёт зарплаты монтажников</h3>
-        <div class="dialog-grid"><label>Как делить м²<select id="payrollSplitMode"><option value="equal">Поровну между монтажниками в заявке</option><option value="full">Полный объём каждому монтажнику</option></select></label><label>Статусы для зарплаты<select id="payrollStatusMode"><option value="completed">Только Выполнено и Оплачено</option><option value="all-active">Все, кроме Отказ / Отменена</option><option value="report-filter">Как выбран статус выше</option></select></label></div>
+        <div class="dialog-grid"><label>Метод расчёта<select id="payrollSplitMode"><option value="crew-rate">Основной: полный м² каждому, ставка зависит от числа монтажников</option><option value="equal-m2">Делить м² поровну, ставка зависит от числа монтажников</option><option value="one-rate-full">Полный м² каждому, ставка как за 1 человека</option></select></label><label>Статусы для зарплаты<select id="payrollStatusMode"><option value="completed">Только Выполнено и Оплачено</option><option value="all-active">Все, кроме Отказ / Отменена</option><option value="report-filter">Как выбран статус выше</option></select></label></div><p class="modal-note payroll-guide" id="payrollGuide">Основной режим подходит под вашу таблицу: если на объекте 3 монтажника, каждому берётся его ставка из колонки «3 чел» и умножается на общий м² объекта.</p>
         <div class="payroll-toolbar"><button id="savePayrollSettingsBtn" type="button">Сохранить ставки</button><button id="previewPayrollBtn" type="button">Показать предварительный расчёт</button></div>
-        <div class="payroll-table-wrap"><table class="payroll-settings-table"><thead><tr><th>Монтажник</th><th>Ставка за м², ₽</th><th>Доплата, ₽</th><th>Аванс / удержание, ₽</th><th>Комментарий</th></tr></thead><tbody id="payrollSettingsBody"></tbody></table></div>
+        <div class="payroll-table-wrap"><table class="payroll-settings-table"><thead><tr><th>Сотрудник</th><th>1 чел, ₽/м²</th><th>2 чел, ₽/м²</th><th>3 чел, ₽/м²</th><th>4 чел, ₽/м²</th><th>5 чел, ₽/м²</th><th>Доплата, ₽</th><th>Аванс / удержание, ₽</th><th>Комментарий</th></tr></thead><tbody id="payrollSettingsBody"></tbody></table></div>
       </section>
 
       <section id="reportPreview" class="report-preview"></section>
