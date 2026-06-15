@@ -545,12 +545,12 @@ function downloadCsv(filename, rows, fields) { const csv = [fields.join(";"), ..
 function defaultPayrollSettings() {
   const rates = {};
   WORKER_PROFILES.forEach((w) => rates[w.key] = { ...w.defaultRates, bonus: 0, advance: 0, comment: "" });
-  return { splitMode: "crew-rate", statusMode: "completed", rates };
+  return { splitMode: "equal-m2", statusMode: "completed", rates };
 }
 function migratePayrollSettings(saved) {
   const base = defaultPayrollSettings();
   if (!saved || typeof saved !== "object") return base;
-  base.splitMode = saved.splitMode === "equal" ? "equal-m2" : saved.splitMode === "full" ? "one-rate-full" : (saved.splitMode || base.splitMode);
+  base.splitMode = "equal-m2";
   base.statusMode = saved.statusMode || base.statusMode;
   WORKERS.forEach((w) => {
     const old = saved.rates?.[w] || {};
@@ -567,14 +567,14 @@ function getPayrollSettings() { try { return migratePayrollSettings(JSON.parse(l
 function savePayrollSettings(settings) { localStorage.setItem(storage.payroll, JSON.stringify(settings)); }
 function renderPayrollSettings() {
   const settings = getPayrollSettings();
-  if (els.payrollSplitMode) els.payrollSplitMode.value = settings.splitMode || "crew-rate";
+  if (els.payrollSplitMode) els.payrollSplitMode.value = "equal-m2";
   if (els.payrollStatusMode) els.payrollStatusMode.value = settings.statusMode || "completed";
   if (!els.payrollSettingsBody) return;
   els.payrollSettingsBody.innerHTML = WORKER_PROFILES.map((w) => { const r = settings.rates?.[w.key] || {}; return `<tr><td><b>${e(w.full)}</b><br><small>${e(w.key)}</small></td><td><input data-payroll-rate="${w.key}" data-crew="1" type="number" step="1" value="${e(r[1] ?? 0)}"></td><td><input data-payroll-rate="${w.key}" data-crew="2" type="number" step="1" value="${e(r[2] ?? 0)}"></td><td><input data-payroll-rate="${w.key}" data-crew="3" type="number" step="1" value="${e(r[3] ?? 0)}"></td><td><input data-payroll-rate="${w.key}" data-crew="4" type="number" step="1" value="${e(r[4] ?? 0)}"></td><td><input data-payroll-rate="${w.key}" data-crew="5" type="number" step="1" value="${e(r[5] ?? 0)}"></td><td><input data-payroll-bonus="${w.key}" type="number" step="1" value="${e(r.bonus || 0)}"></td><td><input data-payroll-advance="${w.key}" type="number" step="1" value="${e(r.advance || 0)}"></td><td><input data-payroll-comment="${w.key}" value="${e(r.comment || "")}"></td></tr>`; }).join("");
 }
 function savePayrollSettingsFromForm() {
   const settings = defaultPayrollSettings();
-  settings.splitMode = els.payrollSplitMode?.value || "crew-rate";
+  settings.splitMode = "equal-m2";
   settings.statusMode = els.payrollStatusMode?.value || "completed";
   WORKERS.forEach((w) => {
     const current = settings.rates[w];
@@ -601,7 +601,7 @@ function getWorkerRate(settings, worker, crewSize, mode) {
 }
 function buildPayroll(sourceRows = payrollRecordsForReport(), options = {}) {
   const settings = getPayrollSettings();
-  const mode = options.splitModeOverride || (options.useUi === false ? settings.splitMode : (els.payrollSplitMode?.value || settings.splitMode || "crew-rate"));
+  const mode = "equal-m2";
   const selected = options.selectedWorkers || reportSelectedInstallers();
   const statusMode = options.statusModeOverride || (options.useUi === false ? "all-active" : (els.payrollStatusMode?.value || settings.statusMode || "completed"));
   const source = statusMode === "completed" ? sourceRows.filter((r) => PAYROLL_STATUSES.has((r.fields || {})["Статус"] || "")) : statusMode === "all-active" ? sourceRows.filter((r) => !TRASH_STATUSES.has((r.fields || {})["Статус"] || "")) : sourceRows;
@@ -615,7 +615,7 @@ function buildPayroll(sourceRows = payrollRecordsForReport(), options = {}) {
     const totalM2 = getM2(f);
     const crewSize = Math.min(Math.max(allNames.length || names.length || 1, 1), 5);
     names.forEach((name) => {
-      const shareM2 = mode === "equal-m2" ? totalM2 / Math.max(allNames.length || names.length, 1) : totalM2;
+      const shareM2 = totalM2 / Math.max(allNames.length || names.length, 1);
       const rate = getWorkerRate(settings, name, crewSize, mode);
       const amount = shareM2 * rate;
       const item = summary[name] || emptyPayrollSummary(name);
@@ -635,9 +635,7 @@ function renderPayrollPreview() {
   const payroll = buildPayroll();
   const summaryRows = WORKERS.map((w) => payroll.summary[w]).filter((x) => x.jobs || x.bonus || x.advance);
   const total = summaryRows.reduce((s, x) => s + x.total, 0);
-  const modeText = payrollModeText(payroll.mode);
-  const smartExcelNote = `<p class="modal-note"><b>Скачиваемый Excel будет нормальным:</b> лист «Монтажи» для правок, лист «Ставки», лист «Сводка» и отдельные листы по каждому сотруднику. Меняешь данные на листе «Монтажи» — остальные листы пересчитываются формулами Excel.</p>`;
-  const summaryHtml = summaryRows.length ? `<h3>Итого к выплате: ${money(total)}</h3>${smartExcelNote}<p class="modal-note"><b>Метод:</b> ${e(modeText)}. В детализации показана ставка по количеству монтажников на каждом объекте.</p><div class="table-mini-wrap"><table class="table-mini"><thead><tr><th>Монтажник</th><th>Объектов</th><th>м² к оплате</th><th>Начислено</th><th>Доплата</th><th>Аванс/удерж.</th><th>Итого</th></tr></thead><tbody>${summaryRows.map((x) => `<tr><td><b>${e(workerLabel(x.worker))}</b></td><td>${x.jobs}</td><td>${moneyNumber(x.m2)}</td><td>${money(x.amount)}</td><td>${money(x.bonus)}</td><td>${money(x.advance)}</td><td><b>${money(x.total)}</b></td></tr>`).join("")}</tbody></table></div>` : smartExcelNote + '<p class="modal-note">По выбранным условиям нет работ для расчёта зарплаты.</p>';
+  const summaryHtml = summaryRows.length ? `<h3>Итого к выплате: ${money(total)}</h3><div class="table-mini-wrap"><table class="table-mini"><thead><tr><th>Монтажник</th><th>Объектов</th><th>м² к оплате</th><th>Начислено</th><th>Доплата</th><th>Аванс/удерж.</th><th>Итого</th></tr></thead><tbody>${summaryRows.map((x) => `<tr><td><b>${e(workerLabel(x.worker))}</b></td><td>${x.jobs}</td><td>${moneyNumber(x.m2)}</td><td>${money(x.amount)}</td><td>${money(x.bonus)}</td><td>${money(x.advance)}</td><td><b>${money(x.total)}</b></td></tr>`).join("")}</tbody></table></div>` : '<p class="modal-note">По выбранным условиям нет работ для расчёта зарплаты.</p>';
   const detailsHtml = payroll.details.length ? `<h3>Детализация</h3><div class="table-mini-wrap"><table class="table-mini"><thead><tr><th>Дата</th><th>Заявка</th><th>Клиент</th><th>Объект</th><th>Бригада</th><th>Монтажник</th><th>м² к оплате</th><th>Ставка</th><th>Сумма</th></tr></thead><tbody>${payroll.details.slice(0, 120).map((d) => `<tr><td>${e(d.date)}</td><td>#${e(d.id)}</td><td>${e(d.client)}</td><td>${e(d.address)}</td><td>${d.crewSize}</td><td>${e(d.workerFull)}</td><td>${moneyNumber(d.shareM2)}</td><td>${moneyNumber(d.rate)}</td><td>${money(d.amount)}</td></tr>`).join("")}</tbody></table></div>` : "";
   els.reportPreview.innerHTML = summaryHtml + detailsHtml;
 }
@@ -668,7 +666,7 @@ function downloadPayrollSmartWorkbook() {
 }
 function buildPayrollWorkbookData() {
   const settings = getPayrollSettings();
-  const mode = els.payrollSplitMode?.value || settings.splitMode || "crew-rate";
+  const mode = "equal-m2";
   const selected = reportSelectedInstallers();
   const rows = payrollRecordsForReport().slice().sort((a, b) => String((a.fields || {})["Дата записи"] || "").localeCompare(String((b.fields || {})["Дата записи"] || "")) || String(a.id).localeCompare(String(b.id)));
   const mainRows = rows.map((r) => {
@@ -701,9 +699,9 @@ function buildPayrollWorkbookData() {
     workers,
     mainRows,
     maxRows,
-    mainHeaderRow: 4,
-    mainDataStartRow: 5,
-    employeeDataStartRow: 7
+    mainHeaderRow: 1,
+    mainDataStartRow: 2,
+    employeeDataStartRow: 6
   };
 }
 function buildPayrollSpreadsheetXml(data) {
@@ -722,7 +720,6 @@ function buildPayrollSpreadsheetXml(data) {
     <Style ss:ID="Warn"><Interior ss:Color="#FEF2F2" ss:Pattern="Solid"/><Font ss:FontName="Arial" ss:Color="#991B1B" ss:Bold="1"/><Alignment ss:WrapText="1"/></Style>
   </Styles>`;
   const sheets = [
-    buildPayrollInfoSheet(data),
     buildPayrollRatesSheet(data),
     buildPayrollMainSheet(data),
     buildPayrollSummarySheet(data),
@@ -730,23 +727,8 @@ function buildPayrollSpreadsheetXml(data) {
   ];
   return `<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html="http://www.w3.org/TR/REC-html40">\n<DocumentProperties xmlns="urn:schemas-microsoft-com:office:office"><Author>СОЛНЦАНЕТ</Author><Company>СОЛНЦАНЕТ</Company><Title>Зарплатный отчёт монтажников</Title><Created>${new Date().toISOString()}</Created></DocumentProperties>\n<ExcelWorkbook xmlns="urn:schemas-microsoft-com:office:excel"><WindowHeight>9000</WindowHeight><WindowWidth>16000</WindowWidth><ProtectStructure>False</ProtectStructure><ProtectWindows>False</ProtectWindows></ExcelWorkbook>\n${workbookStyles}\n${sheets.join("\n")}\n</Workbook>`;
 }
-function buildPayrollInfoSheet(data) {
-  const rows = [
-    xRow([xCell("Зарплатный отчёт СОЛНЦАНЕТ", "Title")], 26),
-    xRow([xCell("Как пользоваться: основной лист — «Монтажи». Если исправить дату, объект, м², статус или состав бригады на листе «Монтажи», лист «Сводка» и листы сотрудников пересчитаются формулами Excel.", "SubTitle")], 42),
-    xRow([xCell("Период", "Header"), xCell(`${data.from || "—"} — ${data.to || "—"}`, "Cell")]),
-    xRow([xCell("Статусы", "Header"), xCell(data.statusText, "Cell")]),
-    xRow([xCell("Метод расчёта", "Header"), xCell(data.modeText, "Cell")]),
-    xRow([xCell("Создан", "Header"), xCell(data.generatedAt, "Cell")]),
-    xRow([xCell("Цвета", "Header"), xCell("Оранжевые ячейки можно править вручную. Голубые ячейки — формулы, их лучше не трогать.", "Cell")]),
-    xRow([xCell("Структура", "Header"), xCell("Монтажи — общий лист с объектами; Ставки — ставки и доплаты; Сводка — итог по всем; отдельные листы сотрудников — детализация и ручные корректировки.", "Cell")])
-  ];
-  return xWorksheet("Инструкция", [28, 120], rows, 0);
-}
 function buildPayrollRatesSheet(data) {
   const rows = [];
-  rows.push(xRow([xCell("Ставки и корректировки", "Title")], 24));
-  rows.push(xRow([xCell("Здесь можно менять ставки, доплаты и авансы. Все листы сотрудников и сводка пересчитаются автоматически.", "SubTitle")], 34));
   rows.push(xRow(["Кратко", "Сотрудник", "1 чел", "2 чел", "3 чел", "4 чел", "5 чел", "Доплата", "Аванс / удержание", "Комментарий"].map((h) => xCell(h, "Header"))));
   WORKER_PROFILES.forEach((w) => {
     const r = data.settings.rates?.[w.key] || {};
@@ -756,13 +738,10 @@ function buildPayrollRatesSheet(data) {
       xCell(num(r.bonus), "Editable", "Number"), xCell(num(r.advance), "Editable", "Number"), xCell(r.comment || "", "Editable")
     ]));
   });
-  return xWorksheet("Ставки", [16, 24, 12, 12, 12, 12, 12, 14, 18, 36], rows, 3);
+  return xWorksheet("Ставки", [16, 24, 12, 12, 12, 12, 12, 14, 18, 36], rows, 1);
 }
 function buildPayrollMainSheet(data) {
   const rows = [];
-  rows.push(xRow([xCell("Монтажи — основной лист для правок", "Title")], 24));
-  rows.push(xRow([xCell("Правь здесь м², состав бригады, статус, объект, услугу. Состав бригады указывай через запятую: «Пахнев Никита, Шолохов Андрей». Колонка «Кол-во монтажников» считается автоматически.", "SubTitle")], 44));
-  rows.push(xRow([xCell("", "Cell")], 6));
   rows.push(xRow(["ID", "Дата", "Время", "Статус", "Клиент", "Телефон", "Адрес / объект", "Услуга", "Общий м²", "Монтажники", "Кол-во монтажников", "Комментарий"].map((h) => xCell(h, "Header"))));
   for (let i = 0; i < data.maxRows; i++) {
     const r = data.mainRows[i] || {};
@@ -777,18 +756,16 @@ function buildPayrollMainSheet(data) {
       xCell(r.service || "", "Editable"),
       xCell(r.m2 || 0, "Editable", "Number"),
       xCell(r.installers || "", "Editable"),
-      xCell(0, "Formula", "Number", `=IF(RC[-1]=\"\",\"\",LEN(RC[-1])-LEN(SUBSTITUTE(RC[-1],\",\",\"\"))+1)`),
+      xCell(0, "Formula", "Number", `=IF(RC[-1]="","",LEN(RC[-1])-LEN(SUBSTITUTE(RC[-1],",",""))+1)`),
       xCell(r.comment || "", "Editable")
     ]));
   }
-  return xWorksheet("Монтажи", [12, 12, 10, 18, 24, 18, 42, 28, 12, 46, 14, 46], rows, 4);
+  return xWorksheet("Монтажи", [12, 12, 10, 18, 24, 18, 42, 28, 12, 46, 14, 46], rows, 1);
 }
 function buildPayrollSummarySheet(data) {
   const rows = [];
   const start = data.employeeDataStartRow;
   const end = data.employeeDataStartRow + data.maxRows - 1;
-  rows.push(xRow([xCell("Сводка по зарплате", "Title")], 24));
-  rows.push(xRow([xCell("Итоги берутся формулами из отдельных листов сотрудников. Меняешь данные в «Монтажи» или ставки в «Ставки» — здесь всё пересчитывается.", "SubTitle")], 36));
   rows.push(xRow(["Сотрудник", "Объектов", "м² к оплате", "Начислено", "Ручные корректировки", "Доплата", "Аванс / удержание", "Итого к выплате", "Комментарий"].map((h) => xCell(h, "Header"))));
   data.workers.forEach((key) => {
     const full = workerLabel(key);
@@ -796,7 +773,7 @@ function buildPayrollSummarySheet(data) {
     const sh = xlSheet(full);
     rows.push(xRow([
       xCell(full, "Cell"),
-      xCell(0, "Formula", "Number", `=COUNTIF('${sh}'!R${start}C2:R${end}C2,\"<>\")`),
+      xCell(0, "Formula", "Number", `=COUNTIF('${sh}'!R${start}C2:R${end}C2,"<>")`),
       xCell(0, "Formula", "Number", `=SUM('${sh}'!R${start}C11:R${end}C11)`),
       xCell(0, "Formula", "Number", `=SUM('${sh}'!R${start}C13:R${end}C13)`),
       xCell(0, "Formula", "Number", `=SUM('${sh}'!R${start}C14:R${end}C14)`),
@@ -807,7 +784,7 @@ function buildPayrollSummarySheet(data) {
     ]));
   });
   rows.push(xRow([xCell("ИТОГО", "Kpi"), xCell(0, "Kpi", "Number", `=SUM(R[-${data.workers.length}]C:R[-1]C)`), xCell(0, "Kpi", "Number", `=SUM(R[-${data.workers.length}]C:R[-1]C)`), xCell(0, "Kpi", "Number", `=SUM(R[-${data.workers.length}]C:R[-1]C)`), xCell(0, "Kpi", "Number", `=SUM(R[-${data.workers.length}]C:R[-1]C)`), xCell(0, "Kpi", "Number", `=SUM(R[-${data.workers.length}]C:R[-1]C)`), xCell(0, "Kpi", "Number", `=SUM(R[-${data.workers.length}]C:R[-1]C)`), xCell(0, "Kpi", "Number", `=SUM(R[-${data.workers.length}]C:R[-1]C)`), xCell("", "Kpi")]));
-  return xWorksheet("Сводка", [28, 12, 14, 16, 20, 14, 18, 18, 32], rows, 3);
+  return xWorksheet("Сводка", [28, 12, 14, 16, 20, 14, 18, 18, 32], rows, 1);
 }
 function buildPayrollEmployeeSheet(data, workerKey) {
   const full = workerLabel(workerKey);
@@ -816,11 +793,10 @@ function buildPayrollEmployeeSheet(data, workerKey) {
   const start = data.employeeDataStartRow;
   const end = data.employeeDataStartRow + data.maxRows - 1;
   const rateRow = 2 + WORKERS.indexOf(workerKey);
-  rows.push(xRow([xCell(full, "Title")], 24));
-  rows.push(xRow([xCell("Лист сотрудника заполняется формулами из листа «Монтажи». Оранжевая колонка «Ручная корректировка» — для доплаты/штрафа по конкретному объекту.", "SubTitle")], 38));
-  rows.push(xRow(["Объектов", "м²", "Начислено", "Ручные корректировки", "Доплата", "Аванс", "Итого"].map((h) => xCell(h, "Header"))));
+  rows.push(xRow([xCell(full, "Title")], 22));
+  rows.push(xRow(["Объектов", "м² к оплате", "Начислено", "Корректировки", "Доплата", "Аванс", "Итого"].map((h) => xCell(h, "Header"))));
   rows.push(xRow([
-    xCell(0, "Formula", "Number", `=COUNTIF(R${start}C2:R${end}C2,\"<>\")`),
+    xCell(0, "Formula", "Number", `=COUNTIF(R${start}C2:R${end}C2,"<>")`),
     xCell(0, "Formula", "Number", `=SUM(R${start}C11:R${end}C11)`),
     xCell(0, "Formula", "Number", `=SUM(R${start}C13:R${end}C13)`),
     xCell(0, "Formula", "Number", `=SUM(R${start}C14:R${end}C14)`),
@@ -829,32 +805,32 @@ function buildPayrollEmployeeSheet(data, workerKey) {
     xCell(0, "Formula", "Number", `=RC[-4]+RC[-3]+RC[-2]-RC[-1]`)
   ]));
   rows.push(xRow([xCell("", "Cell")], 6));
-  rows.push(xRow(["№", "ID", "Дата", "Статус", "Клиент", "Телефон", "Адрес", "Услуга", "Общий м²", "Бригада", "м² к оплате", "Ставка", "Начислено", "Ручная корректировка", "Итого по строке", "Комментарий"].map((h) => xCell(h, "Header"))));
+  rows.push(xRow(["№", "ID", "Дата", "Статус", "Клиент", "Телефон", "Адрес", "Услуга", "Общий м²", "Бригада", "м² к оплате", "Ставка", "Начислено", "Корректировка", "Итого", "Комментарий"].map((h) => xCell(h, "Header"))));
   for (let i = 0; i < data.maxRows; i++) {
     const mainRow = data.mainDataStartRow + i;
     const test = workerInMainFormula(full, key, mainRow);
-    const rateIndex = data.mode === "one-rate-full" ? "1" : `MAX(1,MIN(5,'Монтажи'!R${mainRow}C11))`;
-    const m2Formula = data.mode === "equal-m2" ? `=IF(${test},IF('Монтажи'!R${mainRow}C11=0,0,'Монтажи'!R${mainRow}C9/'Монтажи'!R${mainRow}C11),\"\")` : `=IF(${test},'Монтажи'!R${mainRow}C9,\"\")`;
+    const rateIndex = `MAX(1,MIN(5,'Монтажи'!R${mainRow}C11))`;
+    const m2Formula = `=IF(${test},IF('Монтажи'!R${mainRow}C11=0,0,'Монтажи'!R${mainRow}C9/'Монтажи'!R${mainRow}C11),"")`;
     rows.push(xRow([
-      xCell(0, "Formula", "Number", `=IF(RC[1]=\"\",\"\",ROW()-${start - 1})`),
-      xCell("", "Formula", "String", `=IF(${test},'Монтажи'!R${mainRow}C1,\"\")`),
-      xCell("", "Formula", "String", `=IF(${test},'Монтажи'!R${mainRow}C2,\"\")`),
-      xCell("", "Formula", "String", `=IF(${test},'Монтажи'!R${mainRow}C4,\"\")`),
-      xCell("", "Formula", "String", `=IF(${test},'Монтажи'!R${mainRow}C5,\"\")`),
-      xCell("", "Formula", "String", `=IF(${test},'Монтажи'!R${mainRow}C6,\"\")`),
-      xCell("", "Formula", "String", `=IF(${test},'Монтажи'!R${mainRow}C7,\"\")`),
-      xCell("", "Formula", "String", `=IF(${test},'Монтажи'!R${mainRow}C8,\"\")`),
-      xCell(0, "Formula", "Number", `=IF(${test},'Монтажи'!R${mainRow}C9,\"\")`),
-      xCell(0, "Formula", "Number", `=IF(${test},'Монтажи'!R${mainRow}C11,\"\")`),
+      xCell(0, "Formula", "Number", `=IF(RC[1]="","",ROW()-${start - 1})`),
+      xCell("", "Formula", "String", `=IF(${test},'Монтажи'!R${mainRow}C1,"")`),
+      xCell("", "Formula", "String", `=IF(${test},'Монтажи'!R${mainRow}C2,"")`),
+      xCell("", "Formula", "String", `=IF(${test},'Монтажи'!R${mainRow}C4,"")`),
+      xCell("", "Formula", "String", `=IF(${test},'Монтажи'!R${mainRow}C5,"")`),
+      xCell("", "Formula", "String", `=IF(${test},'Монтажи'!R${mainRow}C6,"")`),
+      xCell("", "Formula", "String", `=IF(${test},'Монтажи'!R${mainRow}C7,"")`),
+      xCell("", "Formula", "String", `=IF(${test},'Монтажи'!R${mainRow}C8,"")`),
+      xCell(0, "Formula", "Number", `=IF(${test},'Монтажи'!R${mainRow}C9,"")`),
+      xCell(0, "Formula", "Number", `=IF(${test},'Монтажи'!R${mainRow}C11,"")`),
       xCell(0, "Formula", "Number", m2Formula),
-      xCell(0, "Formula", "Number", `=IF(RC[-10]=\"\",\"\",INDEX('Ставки'!R2C3:R6C7,MATCH(\"${xlFormulaText(full)}\",'Ставки'!R2C2:R6C2,0),${rateIndex}))`),
-      xCell(0, "Formula", "Number", `=IF(RC[-11]=\"\",\"\",RC[-2]*RC[-1])`),
+      xCell(0, "Formula", "Number", `=IF(RC[-10]="","",INDEX('Ставки'!R2C3:R6C7,MATCH("${xlFormulaText(full)}",'Ставки'!R2C2:R6C2,0),${rateIndex}))`),
+      xCell(0, "Formula", "Number", `=IF(RC[-11]="","",RC[-2]*RC[-1])`),
       xCell(0, "Editable", "Number"),
-      xCell(0, "Formula", "Number", `=IF(RC[-13]=\"\",\"\",RC[-2]+RC[-1])`),
+      xCell(0, "Formula", "Number", `=IF(RC[-13]="","",RC[-2]+RC[-1])`),
       xCell("", "Editable")
     ]));
   }
-  return xWorksheet(full, [8, 12, 12, 16, 24, 18, 42, 28, 12, 10, 12, 12, 14, 20, 16, 32], rows, 6);
+  return xWorksheet(full, [8, 12, 12, 16, 24, 18, 42, 28, 12, 10, 12, 12, 14, 16, 14, 32], rows, 5);
 }
 function workerInMainFormula(full, key, mainRow) {
   return `OR(ISNUMBER(SEARCH(\"${xlFormulaText(full)}\",'Монтажи'!R${mainRow}C10)),ISNUMBER(SEARCH(\"${xlFormulaText(key)}\",'Монтажи'!R${mainRow}C10)))`;
@@ -881,7 +857,7 @@ function xmlText(value) { return String(value ?? "").replace(/&/g, "&amp;").repl
 function xmlAttr(value) { return xmlText(value).replace(/"/g, "&quot;").replace(/'/g, "&apos;"); }
 function xlSheet(name) { return String(name || "Лист").replace(/[\\/?*\[\]:]/g, " ").slice(0, 31); }
 function xlFormulaText(value) { return String(value || "").replace(/"/g, "\"\""); }
-function payrollModeText(mode) { return mode === "equal-m2" ? "м² делится поровну, ставка зависит от числа монтажников" : mode === "one-rate-full" ? "полный м² каждому, ставка как за 1 человека" : "полный м² каждому, ставка зависит от числа монтажников"; }
+function payrollModeText(mode) { return "м² объекта делится на всех монтажников, ставка берётся по количеству монтажников"; }
 function payrollStatusText(mode) { return mode === "all-active" ? "Все, кроме Отказ / Отменена" : mode === "report-filter" ? "Как выбран статус в фильтре отчёта" : "Только Выполнено и Оплачено"; }
 function downloadExcel(filename, title, tables) {
   const style = `<style>body{font-family:Arial}h1{color:#0b2a66}h2{margin-top:22px;color:#0b2a66}table{border-collapse:collapse;margin-bottom:20px}th{background:#0b7a75;color:#fff;font-weight:bold}th,td{border:1px solid #d0d7de;padding:7px 9px}td.num{text-align:right} .total{font-weight:bold;background:#f1f5f9}</style>`;
