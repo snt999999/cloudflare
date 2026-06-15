@@ -1,0 +1,4 @@
+V15
+- Added explicit doGet troubleshooting instruction for Google Apps Script Web App.
+- Main Apps Script file already contains doGet, doPost, upload, delete and health check.
+- Reminder: after every script edit, deploy a New version. Saving code is not enough for /exec.

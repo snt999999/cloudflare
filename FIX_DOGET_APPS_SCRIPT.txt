@@ -1,0 +1,32 @@
+ОШИБКА: "Не удалось найти функцию скрипта: doGet"
+
+Это значит, что Google Apps Script Web App опубликован со старой версией кода, где нет функции doGet(), либо в редактор Apps Script вставлен не весь код.
+
+Что сделать:
+
+1. Открой Apps Script.
+2. Полностью замени код на содержимое файла:
+   google-drive-files-appsscript.gs
+
+3. Проверь, что вверху файла есть функция:
+
+function doGet(e) {
+  return health_({ action: 'health', token: (e && e.parameter && e.parameter.token) || '' });
+}
+
+4. Обязательно опубликуй НОВУЮ ВЕРСИЮ:
+   Deploy → Manage deployments → Edit → Version: New version → Deploy
+
+Важно: просто нажать Save недостаточно. Ссылка /exec использует опубликованную версию, а не черновик.
+
+5. Открой Web App URL, который заканчивается на /exec, в браузере.
+
+Правильный результат — JSON, например:
+{
+  "ok": true,
+  "service": "SOLNCANET Google Drive files",
+  "folderId": "...",
+  "folderName": "..."
+}
+
+Если снова пишет, что doGet не найден — значит опубликована старая версия или код вставлен не полностью.
