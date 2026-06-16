@@ -21,7 +21,8 @@ let filesCache = [];
 const storage = {
   password: "solncanet_admin_password_v9",
   history: "solncanet_history_v9",
-  payroll: "solncanet_payroll_settings_v9"
+  payroll: "solncanet_payroll_settings_v9",
+  notificationLog: "solncanet_notification_log_v19"
 };
 
 const els = {
@@ -33,7 +34,19 @@ const els = {
   clientsSearchInput: $("clientsSearchInput"), clientsDateFrom: $("clientsDateFrom"), clientsDateTo: $("clientsDateTo"), clientsServiceFilter: $("clientsServiceFilter"), clientsFilmFilter: $("clientsFilmFilter"), clientsStatusFilter: $("clientsStatusFilter"), clientsClearFiltersBtn: $("clientsClearFiltersBtn"), clientsStatCount: $("clientsStatCount"), clientsStatRequests: $("clientsStatRequests"), clientsStatM2: $("clientsStatM2"), clientsStatRepeat: $("clientsStatRepeat"),
   objectsSearchInput: $("objectsSearchInput"), objectsDateFrom: $("objectsDateFrom"), objectsDateTo: $("objectsDateTo"), objectsServiceFilter: $("objectsServiceFilter"), objectsStatusFilter: $("objectsStatusFilter"), objectsInstallerFilter: $("objectsInstallerFilter"), objectsM2Min: $("objectsM2Min"), objectsM2Max: $("objectsM2Max"), objectsClearFiltersBtn: $("objectsClearFiltersBtn"), objectsStatCount: $("objectsStatCount"), objectsStatM2: $("objectsStatM2"), objectsStatDone: $("objectsStatDone"), objectsStatWork: $("objectsStatWork"),
   installersSearchInput: $("installersSearchInput"), installersDateFrom: $("installersDateFrom"), installersDateTo: $("installersDateTo"), installersStatusFilter: $("installersStatusFilter"), installersServiceFilter: $("installersServiceFilter"), installersClearFiltersBtn: $("installersClearFiltersBtn"), installersStatJobs: $("installersStatJobs"), installersStatM2: $("installersStatM2"), installersStatAmount: $("installersStatAmount"), installersStatTotal: $("installersStatTotal"), payrollGuide: $("payrollGuide"),
-  installerDetailsPanel: $("installerDetailsPanel"), installerDetailsTitle: $("installerDetailsTitle"), installerDetailsInfo: $("installerDetailsInfo"), installerDetailsCloseBtn: $("installerDetailsCloseBtn"), installerDetailsSearchInput: $("installerDetailsSearchInput"), installerDetailsDateFrom: $("installerDetailsDateFrom"), installerDetailsDateTo: $("installerDetailsDateTo"), installerDetailsStatusFilter: $("installerDetailsStatusFilter"), installerDetailsServiceFilter: $("installerDetailsServiceFilter"), installerDetailsM2Min: $("installerDetailsM2Min"), installerDetailsM2Max: $("installerDetailsM2Max"), installerDetailsClearBtn: $("installerDetailsClearBtn"), installerDetailsStatJobs: $("installerDetailsStatJobs"), installerDetailsStatM2: $("installerDetailsStatM2"), installerDetailsStatAmount: $("installerDetailsStatAmount"), installerDetailsStatRate: $("installerDetailsStatRate"), installerDetailsBody: $("installerDetailsBody")
+  installerDetailsPanel: $("installerDetailsPanel"), installerDetailsTitle: $("installerDetailsTitle"), installerDetailsInfo: $("installerDetailsInfo"), installerDetailsCloseBtn: $("installerDetailsCloseBtn"), installerDetailsSearchInput: $("installerDetailsSearchInput"), installerDetailsDateFrom: $("installerDetailsDateFrom"), installerDetailsDateTo: $("installerDetailsDateTo"), installerDetailsStatusFilter: $("installerDetailsStatusFilter"), installerDetailsServiceFilter: $("installerDetailsServiceFilter"), installerDetailsM2Min: $("installerDetailsM2Min"), installerDetailsM2Max: $("installerDetailsM2Max"), installerDetailsClearBtn: $("installerDetailsClearBtn"), installerDetailsStatJobs: $("installerDetailsStatJobs"), installerDetailsStatM2: $("installerDetailsStatM2"), installerDetailsStatAmount: $("installerDetailsStatAmount"), installerDetailsStatRate: $("installerDetailsStatRate"), installerDetailsBody: $("installerDetailsBody"),
+  notifyTemplate: $("notifyTemplate"), notifyChannel: $("notifyChannel"), notifyMessage: $("notifyMessage"), sendNotifyBtn: $("sendNotifyBtn"), copyNotifyBtn: $("copyNotifyBtn"), requestNotifyStatus: $("requestNotifyStatus"),
+  notificationCheckBtn: $("notificationCheckBtn"), notificationSmsStatus: $("notificationSmsStatus"), notificationTelegramStatus: $("notificationTelegramStatus"), testNotifyChannel: $("testNotifyChannel"), testNotifyTo: $("testNotifyTo"), testNotifyMessage: $("testNotifyMessage"), sendTestNotifyBtn: $("sendTestNotifyBtn"), copyTestNotifyBtn: $("copyTestNotifyBtn"), notificationStatus: $("notificationStatus"), notificationTemplatesList: $("notificationTemplatesList"), notificationLogBody: $("notificationLogBody")
+};
+
+const NOTIFICATION_TEMPLATES = {
+  confirm: { title: "Запись подтверждена", text: "СОЛНЦАНЕТ: ваша запись подтверждена на {date} в {time}. Адрес: {address}. Тел. +7 912 662-92-35" },
+  reminder: { title: "Напоминание о записи", text: "СОЛНЦАНЕТ: напоминаем о записи {date} в {time}. Услуга: {service}. Адрес: {address}. Тел. +7 912 662-92-35" },
+  reschedule: { title: "Перенос записи", text: "СОЛНЦАНЕТ: ваша запись перенесена на {date} в {time}. Адрес: {address}. Если время не подходит, свяжитесь с нами: +7 912 662-92-35" },
+  cancel: { title: "Отмена записи", text: "СОЛНЦАНЕТ: ваша запись отменена. Для выбора новой даты свяжитесь с нами: +7 912 662-92-35" },
+  done: { title: "Работы выполнены", text: "СОЛНЦАНЕТ: работы по услуге {service} выполнены. Спасибо за обращение! По вопросам гарантии: +7 912 662-92-35" },
+  review: { title: "Просьба оставить отзыв", text: "СОЛНЦАНЕТ: спасибо за обращение! Будем благодарны за отзыв о нашей работе. Это помогает нам становиться лучше." },
+  custom: { title: "Свой текст", text: "" }
 };
 
 init();
@@ -66,6 +79,7 @@ function init() {
   initFileServiceEvents();
   els.historySearchInput.addEventListener("input", renderHistorySection);
   els.clearHistoryLocalBtn.addEventListener("click", clearLocalHistory);
+  initNotifications();
 
   [els.clientsSearchInput, els.clientsDateFrom, els.clientsDateTo, els.clientsServiceFilter, els.clientsFilmFilter, els.clientsStatusFilter].forEach((el) => el && el.addEventListener("input", renderClients));
   [els.clientsDateFrom, els.clientsDateTo, els.clientsServiceFilter, els.clientsStatusFilter].forEach((el) => el && el.addEventListener("change", renderClients));
@@ -233,6 +247,7 @@ function openRequest(id) {
   document.querySelectorAll('[name="installer"]').forEach((c) => c.checked = names.includes(c.value));
   renderRequestFiles(current.id);
   renderRequestHistory(current);
+  updateRequestNotificationEditor();
   els.dialog.showModal();
 }
 
@@ -1174,4 +1189,165 @@ function formatFileSize(bytes) {
 function formatDateTime(value) {
   if (!value) return "";
   try { return new Intl.DateTimeFormat("ru-RU", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Yekaterinburg" }).format(new Date(value)); } catch (_) { return value; }
+}
+
+
+// ===== Уведомления v19 =====
+
+function initNotifications() {
+  if (els.notifyTemplate) els.notifyTemplate.addEventListener("change", updateRequestNotificationEditor);
+  if (els.notifyChannel) els.notifyChannel.addEventListener("change", updateRequestNotificationEditor);
+  if (els.sendNotifyBtn) els.sendNotifyBtn.addEventListener("click", () => sendCurrentRequestNotification());
+  if (els.copyNotifyBtn) els.copyNotifyBtn.addEventListener("click", () => copyTextFrom(els.notifyMessage, els.requestNotifyStatus));
+  if (els.notificationCheckBtn) els.notificationCheckBtn.addEventListener("click", checkNotificationsConnection);
+  if (els.sendTestNotifyBtn) els.sendTestNotifyBtn.addEventListener("click", sendTestNotification);
+  if (els.copyTestNotifyBtn) els.copyTestNotifyBtn.addEventListener("click", () => copyTextFrom(els.testNotifyMessage, els.notificationStatus));
+  renderNotificationTemplates();
+  renderNotificationLog();
+}
+
+function renderNotificationTemplates() {
+  if (!els.notificationTemplatesList) return;
+  els.notificationTemplatesList.innerHTML = Object.entries(NOTIFICATION_TEMPLATES).filter(([key]) => key !== "custom").map(([key, tpl]) => `<button class="template-chip" type="button" data-template-pick="${e(key)}"><b>${e(tpl.title)}</b><p>${e(tpl.text)}</p></button>`).join("");
+  els.notificationTemplatesList.querySelectorAll("[data-template-pick]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setSection("requests");
+      msg("Шаблон выбран: " + (NOTIFICATION_TEMPLATES[btn.dataset.templatePick]?.title || ""));
+    });
+  });
+}
+
+function updateRequestNotificationEditor() {
+  if (!current || !els.notifyTemplate || !els.notifyMessage) return;
+  const key = els.notifyTemplate.value || "confirm";
+  const tpl = NOTIFICATION_TEMPLATES[key] || NOTIFICATION_TEMPLATES.confirm;
+  if (key !== "custom" || !els.notifyMessage.value.trim()) {
+    els.notifyMessage.value = fillNotificationTemplate(tpl.text, current);
+  }
+  if (els.requestNotifyStatus) els.requestNotifyStatus.textContent = "";
+}
+
+function fillNotificationTemplate(template, record) {
+  const f = (record && record.fields) || {};
+  const values = {
+    id: record?.id || "",
+    client: f["Имя клиента"] || "клиент",
+    phone: f["Телефон"] || "",
+    service: f["Услуга"] || "услуга",
+    date: formatRuDate(f["Дата записи"] || ""),
+    time: f["Время записи"] || "",
+    address: f["Адрес"] || "адрес уточняется",
+    m2: f["Итоговый м2"] || f["м2"] || ""
+  };
+  return String(template || "").replace(/\{(id|client|phone|service|date|time|address|m2)\}/g, (_, key) => values[key] || "").replace(/\s+/g, " ").trim();
+}
+
+function formatRuDate(value) {
+  if (!value) return "";
+  try {
+    const [y, m, d] = String(value).slice(0, 10).split("-").map(Number);
+    if (!y || !m || !d) return value;
+    return new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(y, m - 1, d));
+  } catch (_) { return value; }
+}
+
+async function sendCurrentRequestNotification() {
+  if (!current) return;
+  const f = current.fields || {};
+  const channel = els.notifyChannel?.value || "sms";
+  const messageText = els.notifyMessage?.value.trim() || "";
+  const to = channel === "sms" ? (f["Телефон"] || "") : "";
+  if (!messageText) return setNotificationStatus(els.requestNotifyStatus, "Введите текст уведомления", false);
+  if (channel === "sms" && !to) return setNotificationStatus(els.requestNotifyStatus, "В заявке нет телефона клиента", false);
+  setNotificationStatus(els.requestNotifyStatus, "Отправляю...", true);
+  const result = await sendNotificationApi({ channel, to, message: messageText, recordId: current.id, client: f["Имя клиента"] || "" });
+  if (result.ok) {
+    setNotificationStatus(els.requestNotifyStatus, "Уведомление отправлено", true);
+    saveNotificationLog({ channel, to: to || "Telegram администратор", message: messageText, status: "Отправлено" });
+    let history = getHistoryForRecord(current);
+    history = addHistory(current, "Уведомление", `${channel.toUpperCase()}: ${messageText}`, history);
+    await updateRecord(current.id, { "История изменений": JSON.stringify(history) }, "Уведомление отправлено и записано в историю").catch(() => null);
+    await load();
+  } else {
+    const err = result.error || result.result?.status_text || "Ошибка отправки";
+    setNotificationStatus(els.requestNotifyStatus, err, false);
+    saveNotificationLog({ channel, to, message: messageText, status: "Ошибка: " + err });
+  }
+}
+
+async function sendTestNotification() {
+  const channel = els.testNotifyChannel?.value || "sms";
+  const to = els.testNotifyTo?.value || "";
+  const messageText = els.testNotifyMessage?.value.trim() || "";
+  if (!messageText) return setNotificationStatus(els.notificationStatus, "Введите текст тестового сообщения", false);
+  setNotificationStatus(els.notificationStatus, "Отправляю тест...", true);
+  const result = await sendNotificationApi({ channel, to, message: messageText, recordId: "test", client: "Тест" });
+  if (result.ok) {
+    setNotificationStatus(els.notificationStatus, "Тестовое уведомление отправлено", true);
+    saveNotificationLog({ channel, to: to || "Telegram администратор", message: messageText, status: "Отправлено" });
+  } else {
+    const err = result.error || "Ошибка отправки";
+    setNotificationStatus(els.notificationStatus, err, false);
+    saveNotificationLog({ channel, to, message: messageText, status: "Ошибка: " + err });
+  }
+}
+
+async function checkNotificationsConnection() {
+  setNotificationStatus(els.notificationStatus, "Проверяю подключение...", true);
+  try {
+    const response = await fetch("/send-notification", { headers: { "x-admin-password": pwd() } });
+    const data = await response.json().catch(() => ({ ok: false, error: "Функция вернула не JSON" }));
+    if (!response.ok || !data.ok) throw new Error(data.error || "Ошибка проверки");
+    if (els.notificationSmsStatus) { els.notificationSmsStatus.textContent = data.sms ? "готово" : "нет API-ключа"; els.notificationSmsStatus.className = "pill-status " + (data.sms ? "ok" : "bad"); }
+    if (els.notificationTelegramStatus) { els.notificationTelegramStatus.textContent = data.telegram ? "готово" : "нет токена/chat_id"; els.notificationTelegramStatus.className = "pill-status " + (data.telegram ? "ok" : "bad"); }
+    setNotificationStatus(els.notificationStatus, "Проверка завершена", true);
+  } catch (error) {
+    setNotificationStatus(els.notificationStatus, error.message, false);
+  }
+}
+
+async function sendNotificationApi(payload) {
+  try {
+    const response = await fetch("/send-notification", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pwd() }, body: JSON.stringify(payload) });
+    const data = await response.json().catch(() => ({ ok: false, error: "Функция уведомлений вернула не JSON" }));
+    if (!response.ok && !data.error) data.error = "HTTP " + response.status;
+    return data;
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
+}
+
+function saveNotificationLog(entry) {
+  const log = getNotificationLog();
+  log.unshift({ at: dateTimeY(), ...entry });
+  localStorage.setItem(storage.notificationLog, JSON.stringify(log.slice(0, 300)));
+  renderNotificationLog();
+}
+
+function getNotificationLog() {
+  try { return JSON.parse(localStorage.getItem(storage.notificationLog) || "[]"); } catch (_) { return []; }
+}
+
+function renderNotificationLog() {
+  if (!els.notificationLogBody) return;
+  const log = getNotificationLog();
+  els.notificationLogBody.innerHTML = log.map((x) => `<tr><td>${e(x.at)}</td><td>${e(x.channel)}</td><td>${e(x.to || "—")}</td><td>${e(x.message)}</td><td>${e(x.status)}</td></tr>`).join("") || '<tr><td colspan="5">Пока нет отправок</td></tr>';
+}
+
+function setNotificationStatus(el, text, ok) {
+  if (!el) return;
+  el.textContent = text;
+  el.classList.toggle("success", Boolean(ok));
+  el.classList.toggle("error", !ok);
+}
+
+async function copyTextFrom(input, statusEl) {
+  const text = input?.value || input?.textContent || "";
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    setNotificationStatus(statusEl, "Текст скопирован", true);
+  } catch (_) {
+    setNotificationStatus(statusEl, "Не удалось скопировать автоматически", false);
+  }
 }

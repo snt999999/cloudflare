@@ -4,6 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Админ-панель — СОЛНЦАНЕТ</title>
+
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#e71630" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="СОЛНЦАНЕТ" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png" />
   <link rel="stylesheet" href="assets/admin.css" />
 </head>
 <body class="logged-out">
@@ -194,13 +202,27 @@
       </section>
 
       <section id="smsSection" class="workspace-section" style="display:none">
-        <header class="admin-head"><div><h1>Уведомления</h1><p>Интерфейс подготовлен. Реальную отправку SMS / Telegram подключим следующим этапом.</p></div></header>
-        <section class="sms-grid">
-          <div><b>Напоминание о записи</b><p>За 1 день и за 2 часа до визита.</p><label><input type="checkbox" checked /> Включено</label></div>
-          <div><b>Перенос записи</b><p>Сообщение при изменении даты и времени.</p><label><input type="checkbox" checked /> Включено</label></div>
-          <div><b>Отмена записи</b><p>Сообщение при отмене записи.</p><label><input type="checkbox" checked /> Включено</label></div>
-          <div><b>Опрос клиента</b><p>Сообщение после выполненных работ.</p><label><input type="checkbox" /> Подключить позже</label></div>
+        <header class="admin-head"><div><h1>Уведомления</h1><p>SMS клиентам и Telegram администратору. Шаблоны можно использовать из карточки заявки или отправить тестовое сообщение здесь.</p></div><div class="actions"><button id="notificationCheckBtn" type="button">Проверить подключение</button></div></header>
+        <section class="notification-grid">
+          <div class="notification-card"><b>SMS клиентам</b><p>Подтверждение записи, перенос, отмена, напоминание, просьба оставить отзыв.</p><span id="notificationSmsStatus" class="pill-status">не проверено</span></div>
+          <div class="notification-card"><b>Telegram администратору</b><p>Новая заявка, назначение монтажников, важные изменения и тестовые сообщения в рабочий чат.</p><span id="notificationTelegramStatus" class="pill-status">не проверено</span></div>
+          <div class="notification-card"><b>PWA-приложение</b><p>Сайт можно установить на экран телефона как приложение. Push-уведомления можно добавить позже отдельным этапом.</p><span class="pill-status ok">готово</span></div>
         </section>
+        <section class="card notification-console">
+          <h2>Тестовая отправка</h2>
+          <div class="dialog-grid">
+            <label>Канал<select id="testNotifyChannel"><option value="sms">SMS клиенту</option><option value="telegram">Telegram администратору</option></select></label>
+            <label>Телефон / Chat ID<input id="testNotifyTo" placeholder="+7... или пусто для Telegram админа" /></label>
+            <label class="wide">Текст сообщения<textarea id="testNotifyMessage">СОЛНЦАНЕТ: тестовое уведомление. Если вы получили это сообщение, подключение работает.</textarea></label>
+          </div>
+          <div class="dialog-actions"><button id="sendTestNotifyBtn" type="button">Отправить тест</button><button id="copyTestNotifyBtn" type="button" class="ghost">Скопировать текст</button></div>
+          <p id="notificationStatus" class="muted-text"></p>
+        </section>
+        <section class="card notification-console">
+          <h2>Шаблоны сообщений</h2>
+          <div id="notificationTemplatesList" class="notification-templates"></div>
+        </section>
+        <section class="card table-card"><table><thead><tr><th>Дата</th><th>Канал</th><th>Кому</th><th>Сообщение</th><th>Статус</th></tr></thead><tbody id="notificationLogBody"></tbody></table></section>
       </section>
 
       <section id="filesSection" class="workspace-section" style="display:none">
@@ -236,6 +258,7 @@
           <h2>Для хранения файлов</h2>
           <p>R2 не используется. Для бесплатного варианта создайте Google Apps Script из файла <b>google-drive-files-appsscript.gs</b>, разверните его как Web App и добавьте в Cloudflare Pages переменную <b>GOOGLE_DRIVE_UPLOAD_URL</b>. Ссылка должна заканчиваться на <b>/exec</b>. В Web App должно быть: <b>Execute as Me</b> и <b>Who has access: Anyone</b>. Дополнительно добавьте <b>GOOGLE_DRIVE_UPLOAD_TOKEN</b>.</p>
         </section>
+        <section class="card settings-note"><h2>Для уведомлений</h2><p>Для SMS добавьте в Cloudflare переменные <b>SMS_PROVIDER=smsru</b> и <b>SMSRU_API_ID</b>. Для Telegram добавьте <b>TELEGRAM_BOT_TOKEN</b> и <b>TELEGRAM_ADMIN_CHAT_ID</b>. После изменения переменных сделайте Redeploy.</p></section>
       </section>
     </section>
   </main>
@@ -257,6 +280,7 @@
       </div>
       <fieldset><legend>Монтажники</legend><label><input type="checkbox" name="installer" value="Никита П" /> Пахнев Никита</label><label><input type="checkbox" name="installer" value="Андрей Ш" /> Шолохов Андрей</label><label><input type="checkbox" name="installer" value="Никита К" /> Кислов Никита</label><label><input type="checkbox" name="installer" value="Дмитрий П" /> Петухов Дмитрий</label><label><input type="checkbox" name="installer" value="Роман З" /> Зинченко Роман</label></fieldset>
       <section class="files-box"><h3>Файлы этой заявки</h3><p class="muted-text">Фото выполненных работ, договоры, замеры, счета и другие материалы по объекту.</p><div class="request-file-upload"><input id="requestFileInput" type="file" multiple /><button id="requestUploadBtn" type="button">Загрузить к заявке</button><button id="requestFilesRefreshBtn" type="button" class="ghost-small">Обновить</button></div><div id="requestFilesBox" class="request-files-box"></div></section>
+      <section class="files-box notification-box"><h3>Уведомление клиенту</h3><div class="dialog-grid"><label>Шаблон<select id="notifyTemplate"><option value="confirm">Запись подтверждена</option><option value="reminder">Напоминание о записи</option><option value="reschedule">Перенос записи</option><option value="cancel">Отмена записи</option><option value="done">Работы выполнены</option><option value="review">Просьба оставить отзыв</option><option value="custom">Свой текст</option></select></label><label>Канал<select id="notifyChannel"><option value="sms">SMS клиенту</option><option value="telegram">Telegram администратору</option></select></label><label class="wide">Текст сообщения<textarea id="notifyMessage" placeholder="Текст уведомления"></textarea></label></div><div class="dialog-actions"><button id="sendNotifyBtn" type="button">Отправить</button><button id="copyNotifyBtn" type="button" class="ghost">Скопировать</button></div><p id="requestNotifyStatus" class="muted-text"></p></section>
       <section class="files-box"><h3>История этой заявки</h3><div id="requestHistoryBox" class="history-box"></div></section>
       <section class="cancel-box"><h3>Отмена / удаление в корзину</h3><p>Физически заявка не удаляется, а переносится в корзину отмен со статусом «Отменена».</p><textarea id="cancelReason" placeholder="Причина отмены или удаления"></textarea></section>
       <div class="dialog-actions"><button id="saveRequestBtn" type="button">Сохранить</button><button id="cancelRequestBtn" class="danger" type="button">Отменить / в корзину</button><button class="ghost" value="cancel">Закрыть</button></div>
@@ -314,5 +338,6 @@
   </dialog>
 
   <script src="assets/admin.js"></script>
+  <script src="assets/pwa.js"></script>
 </body>
 </html>

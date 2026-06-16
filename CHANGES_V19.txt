@@ -1,0 +1,9 @@
+V19
+- Added PWA mobile-app mode for iOS and Android.
+- Added manifest.webmanifest, service-worker.js, app icons and install banner.
+- Added /send-notification Cloudflare Function.
+- Added admin Notifications section with SMS/Telegram checks, test sending, templates and local notification log.
+- Added notification block inside request card with templates and send/copy buttons.
+- Supported SMS providers: smsru and smsc.
+- Supported Telegram admin notifications through Telegram Bot API.
+- Added setup instructions: NOTIFICATIONS_SETUP_V19.txt and PWA_APP_SETUP_V19.txt.
