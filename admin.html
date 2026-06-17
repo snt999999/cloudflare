@@ -102,7 +102,7 @@
           <table>
             <thead>
               <tr>
-                <th>Дата</th><th>Время</th><th>Клиент</th><th>Телефон</th><th>Услуга</th><th>Адрес</th><th>м²</th><th>Монтажники</th><th class="status-th">Статус</th><th></th>
+                <th>Дата</th><th>Время</th><th>Клиент</th><th>Компания</th><th>Телефон</th><th>Услуга</th><th>Адрес</th><th>м²</th><th>Монтажники</th><th class="status-th">Статус</th><th></th>
               </tr>
             </thead>
             <tbody id="requestsBody"></tbody>
@@ -117,9 +117,9 @@
       </section>
 
       <section id="clientsSection" class="workspace-section" style="display:none">
-        <header class="admin-head"><div><h1>Клиенты</h1><p>Быстрый поиск по имени, телефону, услуге, плёнке, адресу и датам обращений.</p></div></header>
+        <header class="admin-head"><div><h1>Клиенты</h1><p>Быстрый поиск по имени, компании, телефону, услуге, плёнке, адресу и датам обращений.</p></div></header>
         <section class="section-filters clients-filters">
-          <input id="clientsSearchInput" placeholder="Поиск: имя, телефон, услуга, плёнка, адрес, комментарий..." />
+          <input id="clientsSearchInput" placeholder="Поиск: имя, компания, телефон, услуга, плёнка, адрес, комментарий..." />
           <input id="clientsDateFrom" type="date" title="С даты" />
           <input id="clientsDateTo" type="date" title="По дату" />
           <select id="clientsServiceFilter"><option value="">Все услуги</option><option>Тонировка стекол автомобиля</option><option>Атермальная тонировка автомобиля</option><option>Тонировка балконов и окон</option><option>Бронирование стекол и витрин</option><option>Бронирование фар</option><option>Защита авто полиуретановой пленкой</option><option>Тонирование витрин</option><option>Декоративное тонирование офисных перегородок</option><option>Замер / консультация</option></select>
@@ -128,13 +128,13 @@
           <button id="clientsClearFiltersBtn" type="button">Сбросить</button>
         </section>
         <section class="stats stats-four compact-stats"><div><span>Клиентов</span><b id="clientsStatCount">0</b></div><div><span>Заявок</span><b id="clientsStatRequests">0</b></div><div><span>Объём, м²</span><b id="clientsStatM2">0</b></div><div><span>Повторных</span><b id="clientsStatRepeat">0</b></div></section>
-        <section class="card table-card"><table><thead><tr><th>Клиент</th><th>Телефон</th><th>Заявок</th><th>Последняя услуга</th><th>Последний адрес</th><th>Объём, м²</th><th>Последняя дата</th><th></th></tr></thead><tbody id="clientsBody"></tbody></table></section>
+        <section class="card table-card"><table><thead><tr><th>Клиент</th><th>Компания</th><th>Телефон</th><th>Заявок</th><th>Последняя услуга</th><th>Последний адрес</th><th>Объём, м²</th><th>Последняя дата</th><th></th></tr></thead><tbody id="clientsBody"></tbody></table></section>
       </section>
 
       <section id="objectsSection" class="workspace-section" style="display:none">
         <header class="admin-head"><div><h1>Объекты</h1><p>Интерактивный поиск по адресу, объекту, клиенту, услуге, монтажнику, статусу и объёму.</p></div></header>
         <section class="section-filters objects-filters">
-          <input id="objectsSearchInput" placeholder="Поиск: адрес, объект, клиент, телефон, комментарий..." />
+          <input id="objectsSearchInput" placeholder="Поиск: адрес, объект, клиент, компания, телефон, комментарий..." />
           <input id="objectsDateFrom" type="date" title="С даты" />
           <input id="objectsDateTo" type="date" title="По дату" />
           <select id="objectsServiceFilter"><option value="">Все услуги</option><option>Тонировка стекол автомобиля</option><option>Атермальная тонировка автомобиля</option><option>Тонировка балконов и окон</option><option>Бронирование стекол и витрин</option><option>Бронирование фар</option><option>Защита авто полиуретановой пленкой</option><option>Тонирование витрин</option><option>Декоративное тонирование офисных перегородок</option><option>Замер / консультация</option></select>
@@ -145,7 +145,7 @@
           <button id="objectsClearFiltersBtn" type="button">Сбросить</button>
         </section>
         <section class="stats stats-four compact-stats"><div><span>Объектов</span><b id="objectsStatCount">0</b></div><div><span>Объём, м²</span><b id="objectsStatM2">0</b></div><div><span>Выполнено</span><b id="objectsStatDone">0</b></div><div><span>В работе</span><b id="objectsStatWork">0</b></div></section>
-        <section class="card table-card"><table><thead><tr><th>Дата</th><th>Клиент</th><th>Адрес / объект</th><th>Услуга</th><th>м²</th><th>Монтажники</th><th>Статус</th><th></th></tr></thead><tbody id="objectsBody"></tbody></table></section>
+        <section class="card table-card"><table><thead><tr><th>Дата</th><th>Клиент</th><th>Компания</th><th>Адрес / объект</th><th>Услуга</th><th>м²</th><th>Монтажники</th><th>Статус</th><th></th></tr></thead><tbody id="objectsBody"></tbody></table></section>
       </section>
 
       <section id="installersSection" class="workspace-section" style="display:none">
@@ -170,7 +170,7 @@
             <button id="installerDetailsCloseBtn" class="ghost-action" type="button">Скрыть</button>
           </div>
           <section class="section-filters installer-details-filters">
-            <input id="installerDetailsSearchInput" placeholder="Поиск по истории: объект, адрес, клиент, телефон, услуга, комментарий..." />
+            <input id="installerDetailsSearchInput" placeholder="Поиск по истории: объект, адрес, клиент, компания, телефон, услуга, комментарий..." />
             <input id="installerDetailsDateFrom" type="date" title="С даты" />
             <input id="installerDetailsDateTo" type="date" title="По дату" />
             <select id="installerDetailsStatusFilter"><option value="">Все статусы</option><option>Новая заявка</option><option>Связались</option><option>Замер</option><option>Согласовано</option><option>В работе</option><option>Выполнено</option><option>Оплачено</option><option>Отказ</option><option>Отменена</option></select>
@@ -186,7 +186,7 @@
             <div><span>Средняя ставка</span><b id="installerDetailsStatRate">0 ₽</b></div>
           </section>
           <div class="installer-history-note">Нажмите «Открыть / редактировать» у нужного объекта — откроется карточка заявки, где можно изменить статус, м², услугу, адрес, комментарии и монтажников.</div>
-          <div class="table-card installer-history-table"><table><thead><tr><th>Дата</th><th>Клиент</th><th>Телефон</th><th>Адрес / объект</th><th>Услуга</th><th>м² объекта</th><th>Бригада</th><th>Ставка</th><th>Начислено</th><th>Статус</th><th></th></tr></thead><tbody id="installerDetailsBody"></tbody></table></div>
+          <div class="table-card installer-history-table"><table><thead><tr><th>Дата</th><th>Клиент</th><th>Компания</th><th>Телефон</th><th>Адрес / объект</th><th>Услуга</th><th>м² объекта</th><th>Бригада</th><th>Ставка</th><th>Начислено</th><th>Статус</th><th></th></tr></thead><tbody id="installerDetailsBody"></tbody></table></div>
         </section>
       </section>
 
@@ -274,6 +274,7 @@
         <label>Статус<select id="editStatus"><option>Новая заявка</option><option>Связались</option><option>Замер</option><option>Согласовано</option><option>В работе</option><option>Выполнено</option><option>Оплачено</option><option>Отказ</option><option>Отменена</option></select></label>
         <label>Итоговый м²<input id="editM2" type="number" step="0.01" /></label>
         <label>Ответственный<input id="editResponsible" /></label>
+        <label>Компания<input id="editCompany" placeholder="Название компании" /></label>
         <label>Услуга<input id="editService" /></label>
         <label class="wide">Адрес<input id="editAddress" /></label>
         <label class="wide">Комментарий администратора<textarea id="editAdminComment"></textarea></label>
@@ -292,7 +293,7 @@
       <button class="close" value="cancel">×</button>
       <h2>Быстрая запись по звонку</h2>
       <p class="modal-note">Заполните минимум: ФИО, телефон, услугу, дату и время. Заявка сразу попадёт в NocoDB.</p>
-      <div class="dialog-grid"><label>Фамилия и имя<input id="quickName" placeholder="Иванов Сергей" /></label><label>Телефон<input id="quickPhone" placeholder="+7..." /></label><label>Услуга<select id="quickService"><option>Тонировка стекол автомобиля</option><option>Тонировка балконов и окон</option><option>Атермальная тонировка автомобиля</option><option>Бронирование стекол и витрин</option><option>Бронирование фар</option><option>Декоративное тонирование офисных перегородок</option><option>Защита авто полиуретановой пленкой</option><option>Тонирование витрин</option><option>Замер / консультация</option><option>Другое</option></select></label><label>Дата записи<input id="quickDate" type="date" /></label><label>Время записи<input id="quickTime" type="time" /></label><label>м² / примерный объём<input id="quickM2" type="number" step="0.01" /></label><label class="wide">Адрес объекта<input id="quickAddress" placeholder="Город, улица, дом, объект" /></label><label class="wide">Комментарий / что нужно сделать<textarea id="quickComment" placeholder="Кратко опишите задачу клиента"></textarea></label></div>
+      <div class="dialog-grid"><label>Фамилия и имя<input id="quickName" placeholder="Иванов Сергей" /></label><label>Компания<input id="quickCompany" placeholder="Например: ООО Ромашка" /></label><label>Телефон<input id="quickPhone" inputmode="tel" autocomplete="tel" placeholder="+7 (___) ___-__-__" /></label><div id="quickClientHint" class="quick-client-hint wide">Введите телефон — если клиент уже есть в базе, ФИО и компания подставятся автоматически.</div><label>Услуга<select id="quickService"><option>Тонировка стекол автомобиля</option><option>Тонировка балконов и окон</option><option>Атермальная тонировка автомобиля</option><option>Бронирование стекол и витрин</option><option>Бронирование фар</option><option>Декоративное тонирование офисных перегородок</option><option>Защита авто полиуретановой пленкой</option><option>Тонирование витрин</option><option>Замер / консультация</option><option>Другое</option></select></label><label>Дата записи<input id="quickDate" type="date" /></label><label>Время записи<input id="quickTime" type="time" /></label><label>м² / примерный объём<input id="quickM2" type="number" step="0.01" /></label><label class="wide">Адрес объекта<input id="quickAddress" placeholder="Город, улица, дом, объект" /></label><label class="wide">Комментарий / что нужно сделать<textarea id="quickComment" placeholder="Кратко опишите задачу клиента"></textarea></label></div>
       <div class="dialog-actions"><button id="quickSaveBtn" type="button">Создать заявку</button><button class="ghost" value="cancel">Отмена</button></div>
     </form>
   </dialog>

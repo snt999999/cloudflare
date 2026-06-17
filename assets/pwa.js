@@ -9,8 +9,14 @@
     return /iphone|ipad|ipod/i.test(window.navigator.userAgent || '');
   }
 
+  function shouldShowInstallBox() {
+    // Установочный баннер показываем только в админке.
+    // На клиентском главном экране он не нужен и не должен отвлекать клиентов.
+    return /(^|\/)admin\.html($|[?#])/.test(window.location.pathname + window.location.search);
+  }
+
   function createInstallButton() {
-    if (document.getElementById('pwaInstallBox') || isStandalone()) return;
+    if (!shouldShowInstallBox() || document.getElementById('pwaInstallBox') || isStandalone()) return;
     const box = document.createElement('div');
     box.id = 'pwaInstallBox';
     box.className = 'pwa-install-box';

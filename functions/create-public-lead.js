@@ -40,6 +40,7 @@ function buildLeadFields(input) {
   const now = nowYekaterinburg();
   const name = clean(input.name, 160);
   const phone = clean(input.phone, 80);
+  const companyName = clean(input.companyName || input.company || "", 220);
   const service = clean(input.service || input.task, 220) || "Заявка с сайта";
   const address = clean(input.address, 300);
   const objectInfo = clean(input.objectInfo, 1000);
@@ -59,6 +60,7 @@ function buildLeadFields(input) {
 
   return {
     "Имя клиента": name,
+    "Компания": companyName,
     "Телефон": phone,
     "Услуга": service,
     "Дата записи": preferredDate,
@@ -107,6 +109,7 @@ async function sendWeb3Forms(env, fields) {
     from_name: "Сайт СОЛНЦАНЕТ",
     name: fields["Имя клиента"],
     phone: fields["Телефон"],
+    company: fields["Компания"] || "",
     service: fields["Услуга"],
     address: fields["Адрес"],
     preferred_date: fields["Дата записи"],
@@ -144,7 +147,7 @@ export async function onRequestPost(context) {
     return json({ ok: false, error: "Некорректные данные формы" }, 400);
   }
 
-  if (clean(input.company, 200)) {
+  if (clean(input.hpCompany || input.website || input.companyTrap, 200)) {
     return json({ ok: false, error: "Spam rejected" }, 400);
   }
 

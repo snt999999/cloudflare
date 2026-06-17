@@ -27,9 +27,9 @@ const storage = {
 
 const els = {
   loginPanel: $("loginPanel"), appPanel: $("appPanel"), loginForm: $("loginForm"), passwordInput: $("passwordInput"), loginMessage: $("loginMessage"), logoutBtn: $("logoutBtn"), refreshBtn: $("refreshBtn"), listBtn: $("listBtn"), calendarBtn: $("calendarBtn"), listView: $("listView"), calendarView: $("calendarView"), requestsBody: $("requestsBody"), calendarGrid: $("calendarGrid"), monthTitle: $("monthTitle"), prevMonth: $("prevMonth"), nextMonth: $("nextMonth"), searchInput: $("searchInput"), statusFilter: $("statusFilter"), installerFilter: $("installerFilter"), dateFrom: $("dateFrom"), dateTo: $("dateTo"), clearFiltersBtn: $("clearFiltersBtn"), message: $("message"), statTotal: $("statTotal"), statNew: $("statNew"), statToday: $("statToday"), statWork: $("statWork"), statVolume: $("statVolume"), statFiltered: $("statFiltered"),
-  dialog: $("requestDialog"), dialogTitle: $("dialogTitle"), requestInfo: $("requestInfo"), editDate: $("editDate"), editTime: $("editTime"), editStatus: $("editStatus"), editM2: $("editM2"), editResponsible: $("editResponsible"), editService: $("editService"), editAddress: $("editAddress"), editAdminComment: $("editAdminComment"), saveRequestBtn: $("saveRequestBtn"), cancelRequestBtn: $("cancelRequestBtn"), cancelReason: $("cancelReason"), requestHistoryBox: $("requestHistoryBox"), exportBtn: $("exportBtn"),
+  dialog: $("requestDialog"), dialogTitle: $("dialogTitle"), requestInfo: $("requestInfo"), editDate: $("editDate"), editTime: $("editTime"), editStatus: $("editStatus"), editM2: $("editM2"), editResponsible: $("editResponsible"), editCompany: $("editCompany"), editService: $("editService"), editAddress: $("editAddress"), editAdminComment: $("editAdminComment"), saveRequestBtn: $("saveRequestBtn"), cancelRequestBtn: $("cancelRequestBtn"), cancelReason: $("cancelReason"), requestHistoryBox: $("requestHistoryBox"), exportBtn: $("exportBtn"),
   clientsBody: $("clientsBody"), objectsBody: $("objectsBody"), installersBody: $("installersBody"), trashBody: $("trashBody"), historyBody: $("historyBody"), historySearchInput: $("historySearchInput"), clearHistoryLocalBtn: $("clearHistoryLocalBtn"), filesBody: $("filesBody"), filesSearchInput: $("filesSearchInput"), filesTypeFilter: $("filesTypeFilter"),
-  quickAddBtn: $("quickAddBtn"), quickAddDialog: $("quickAddDialog"), quickSaveBtn: $("quickSaveBtn"), quickName: $("quickName"), quickPhone: $("quickPhone"), quickService: $("quickService"), quickDate: $("quickDate"), quickTime: $("quickTime"), quickM2: $("quickM2"), quickAddress: $("quickAddress"), quickComment: $("quickComment"),
+  quickAddBtn: $("quickAddBtn"), quickAddDialog: $("quickAddDialog"), quickSaveBtn: $("quickSaveBtn"), quickName: $("quickName"), quickCompany: $("quickCompany"), quickPhone: $("quickPhone"), quickClientHint: $("quickClientHint"), quickService: $("quickService"), quickDate: $("quickDate"), quickTime: $("quickTime"), quickM2: $("quickM2"), quickAddress: $("quickAddress"), quickComment: $("quickComment"),
   reportDialog: $("reportDialog"), reportTitle: $("reportTitle"), reportDateFrom: $("reportDateFrom"), reportDateTo: $("reportDateTo"), reportStatus: $("reportStatus"), reportFormat: $("reportFormat"), reportAllInstallers: $("reportAllInstallers"), downloadReportBtn: $("downloadReportBtn"), payrollOptions: $("payrollOptions"), payrollSplitMode: $("payrollSplitMode"), payrollStatusMode: $("payrollStatusMode"), payrollSettingsBody: $("payrollSettingsBody"), savePayrollSettingsBtn: $("savePayrollSettingsBtn"), previewPayrollBtn: $("previewPayrollBtn"), reportPreview: $("reportPreview"),
   clientsSearchInput: $("clientsSearchInput"), clientsDateFrom: $("clientsDateFrom"), clientsDateTo: $("clientsDateTo"), clientsServiceFilter: $("clientsServiceFilter"), clientsFilmFilter: $("clientsFilmFilter"), clientsStatusFilter: $("clientsStatusFilter"), clientsClearFiltersBtn: $("clientsClearFiltersBtn"), clientsStatCount: $("clientsStatCount"), clientsStatRequests: $("clientsStatRequests"), clientsStatM2: $("clientsStatM2"), clientsStatRepeat: $("clientsStatRepeat"),
   objectsSearchInput: $("objectsSearchInput"), objectsDateFrom: $("objectsDateFrom"), objectsDateTo: $("objectsDateTo"), objectsServiceFilter: $("objectsServiceFilter"), objectsStatusFilter: $("objectsStatusFilter"), objectsInstallerFilter: $("objectsInstallerFilter"), objectsM2Min: $("objectsM2Min"), objectsM2Max: $("objectsM2Max"), objectsClearFiltersBtn: $("objectsClearFiltersBtn"), objectsStatCount: $("objectsStatCount"), objectsStatM2: $("objectsStatM2"), objectsStatDone: $("objectsStatDone"), objectsStatWork: $("objectsStatWork"),
@@ -74,6 +74,8 @@ function init() {
   els.exportBtn.addEventListener("click", () => setSection("reports"));
   els.quickAddBtn.addEventListener("click", openQuickAdd);
   els.quickSaveBtn.addEventListener("click", saveQuickAdd);
+  if (els.quickPhone) els.quickPhone.addEventListener("input", handleQuickPhoneInput);
+  if (els.quickPhone) els.quickPhone.addEventListener("blur", handleQuickPhoneInput);
   els.filesSearchInput.addEventListener("input", renderFiles);
   els.filesTypeFilter.addEventListener("change", renderFiles);
   initFileServiceEvents();
@@ -188,7 +190,7 @@ function filtered(includeTrash = false) {
     const f = r.fields || {};
     const date = String(f["Дата записи"] || "");
     const installers = splitInstallers(f["Монтажники"]);
-    const hay = norm(["#" + r.id, f["Имя клиента"], f["Телефон"], f["Услуга"], f["Адрес"], f["Монтажники"], f["Статус"], f["Комментарий клиента"], f["Комментарий администратора"], f["Cal Booking ID"]].join(" "));
+    const hay = norm(["#" + r.id, f["Имя клиента"], f["Компания"], f["Телефон"], f["Услуга"], f["Адрес"], f["Монтажники"], f["Статус"], f["Комментарий клиента"], f["Комментарий администратора"], f["Cal Booking ID"]].join(" "));
     if (status && f["Статус"] !== status) return false;
     if (installer && !installers.includes(installer)) return false;
     if (from && date && date < from) return false;
@@ -201,7 +203,7 @@ function sortByDateDesc(a, b) { const af = a.fields || {}, bf = b.fields || {}; 
 
 function renderAll() { render(); renderClients(); renderObjects(); renderInstallers(); renderInstallerDetails(); renderTrash(); renderFiles(); renderHistorySection(); }
 function render() { const arr = filtered(false); els.requestsBody.innerHTML = arr.map(requestRow).join("") || '<tr><td colspan="10">Нет заявок</td></tr>'; bindActionButtons(); renderCalendar(arr); renderStats(records, arr); }
-function requestRow(r) { const f = r.fields || {}, status = e(f["Статус"] || ""); return `<tr><td>${e(f["Дата записи"])}</td><td>${e(f["Время записи"])}</td><td><b>${e(f["Имя клиента"])}</b></td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Услуга"])}</td><td>${e(f["Адрес"])}</td><td>${e(f["Итоговый м2"] || f["м2"])}</td><td>${e(f["Монтажники"])}</td><td class="status-cell"><span class="status" data-status="${status}">${status || "—"}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`; }
+function requestRow(r) { const f = r.fields || {}, status = e(f["Статус"] || ""); return `<tr><td>${e(f["Дата записи"])}</td><td>${e(f["Время записи"])}</td><td><b>${e(f["Имя клиента"])}</b></td><td>${e(f["Компания"] || "—")}</td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Услуга"])}</td><td>${e(f["Адрес"])}</td><td>${e(f["Итоговый м2"] || f["м2"])}</td><td>${e(f["Монтажники"])}</td><td class="status-cell"><span class="status" data-status="${status}">${status || "—"}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`; }
 
 function renderCalendar(arr) {
   els.monthTitle.textContent = new Intl.DateTimeFormat("ru-RU", { month: "long", year: "numeric" }).format(cal);
@@ -233,12 +235,13 @@ function openRequest(id) {
   if (!current) return;
   const f = current.fields || {};
   els.dialogTitle.textContent = "Заявка #" + current.id;
-  els.requestInfo.innerHTML = `<b>${e(f["Имя клиента"] || "—")}</b><br>${phoneLink(f["Телефон"])}<br>${e(f["Дата записи"] || "")} ${e(f["Время записи"] || "")}<br>${e(f["Услуга"] || "")}<br>${e(f["Адрес"] || "")}<br><br>${nl2br(f["Комментарий клиента"] || f["Комментарий"] || "")}`;
+  els.requestInfo.innerHTML = `<b>${e(f["Имя клиента"] || "—")}</b>${f["Компания"] ? `<br><b>Компания:</b> ${e(f["Компания"])}` : ""}<br>${phoneLink(f["Телефон"])}<br>${e(f["Дата записи"] || "")} ${e(f["Время записи"] || "")}<br>${e(f["Услуга"] || "")}<br>${e(f["Адрес"] || "")}<br><br>${nl2br(f["Комментарий клиента"] || f["Комментарий"] || "")}`;
   els.editDate.value = f["Дата записи"] || "";
   els.editTime.value = f["Время записи"] || "";
   els.editStatus.value = f["Статус"] || "Новая заявка";
   els.editM2.value = f["Итоговый м2"] || f["м2"] || "";
   els.editResponsible.value = f["Ответственный"] || "";
+  if (els.editCompany) els.editCompany.value = f["Компания"] || "";
   els.editService.value = f["Услуга"] || "";
   els.editAddress.value = f["Адрес"] || "";
   els.editAdminComment.value = f["Комментарий администратора"] || "";
@@ -258,6 +261,7 @@ function currentEditFields() {
     "Статус": els.editStatus.value,
     "Итоговый м2": els.editM2.value,
     "Ответственный": els.editResponsible.value.trim(),
+    "Компания": els.editCompany?.value.trim() || "",
     "Услуга": els.editService.value.trim(),
     "Адрес": els.editAddress.value.trim(),
     "Комментарий администратора": els.editAdminComment.value.trim(),
@@ -306,9 +310,67 @@ async function updateRecord(id, fields, successText) {
   } catch (error) { msg(error.message); throw error; }
 }
 
-function openQuickAdd() { setDefaultDates(); els.quickName.value = ""; els.quickPhone.value = ""; els.quickAddress.value = ""; els.quickComment.value = ""; els.quickM2.value = ""; els.quickAddDialog.showModal(); }
+
+function normalizePhoneDigits(value) {
+  let digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits[0] === "8") digits = "7" + digits.slice(1);
+  else if (digits[0] === "9") digits = "7" + digits;
+  else if (digits[0] !== "7") digits = "7" + digits;
+  return digits.slice(0, 11);
+}
+function phoneKey(value) {
+  const digits = normalizePhoneDigits(value);
+  return digits.length >= 10 ? digits.slice(-10) : digits;
+}
+function formatRussianPhone(value) {
+  const digits = normalizePhoneDigits(value);
+  if (!digits) return "";
+  const rest = digits.slice(1);
+  let out = "+7";
+  if (rest.length > 0) out += " (" + rest.slice(0, 3);
+  if (rest.length >= 3) out += ")";
+  if (rest.length > 3) out += " " + rest.slice(3, 6);
+  if (rest.length > 6) out += "-" + rest.slice(6, 8);
+  if (rest.length > 8) out += "-" + rest.slice(8, 10);
+  return out;
+}
+function handleQuickPhoneInput() {
+  if (!els.quickPhone) return;
+  els.quickPhone.value = formatRussianPhone(els.quickPhone.value);
+  autofillQuickClientByPhone();
+}
+function findClientByPhone(value) {
+  const key = phoneKey(value);
+  if (!key || key.length < 5) return null;
+  const matches = activeRecords().filter((r) => phoneKey((r.fields || {})["Телефон"]) === key).sort(sortByDateDesc);
+  return matches[0] || null;
+}
+function autofillQuickClientByPhone() {
+  const hint = els.quickClientHint;
+  const key = phoneKey(els.quickPhone?.value || "");
+  if (!hint) return;
+  hint.classList.remove("is-found", "is-empty");
+  if (!key || key.length < 10) {
+    hint.textContent = "Введите телефон — если клиент уже есть в базе, ФИО и компания подставятся автоматически.";
+    return;
+  }
+  const found = findClientByPhone(els.quickPhone.value);
+  if (!found) {
+    hint.classList.add("is-empty");
+    hint.textContent = "Клиент с таким телефоном в базе не найден — будет создана новая заявка.";
+    return;
+  }
+  const f = found.fields || {};
+  if (els.quickName && !els.quickName.value.trim()) els.quickName.value = f["Имя клиента"] || "";
+  if (els.quickCompany && !els.quickCompany.value.trim()) els.quickCompany.value = f["Компания"] || "";
+  hint.classList.add("is-found");
+  hint.textContent = `Найден клиент: ${f["Имя клиента"] || "без имени"}${f["Компания"] ? " · " + f["Компания"] : ""}. Последняя заявка #${found.id}.`;
+}
+
+function openQuickAdd() { setDefaultDates(); els.quickName.value = ""; if (els.quickCompany) els.quickCompany.value = ""; els.quickPhone.value = ""; if (els.quickClientHint) { els.quickClientHint.classList.remove("is-found", "is-empty"); els.quickClientHint.textContent = "Введите телефон — если клиент уже есть в базе, ФИО и компания подставятся автоматически."; } els.quickAddress.value = ""; els.quickComment.value = ""; els.quickM2.value = ""; els.quickAddDialog.showModal(); }
 async function saveQuickAdd() {
-  const record = { "Имя клиента": els.quickName.value.trim(), "Телефон": els.quickPhone.value.trim(), "Услуга": els.quickService.value, "Дата записи": els.quickDate.value, "Время записи": els.quickTime.value, "Адрес": els.quickAddress.value.trim(), "м2": els.quickM2.value ? String(els.quickM2.value) : "", "Комментарий клиента": els.quickComment.value.trim(), "Статус": "Новая заявка", "Cal Booking ID": "manual-" + Date.now() };
+  const record = { "Имя клиента": els.quickName.value.trim(), "Компания": els.quickCompany?.value.trim() || "", "Телефон": formatRussianPhone(els.quickPhone.value), "Услуга": els.quickService.value, "Дата записи": els.quickDate.value, "Время записи": els.quickTime.value, "Адрес": els.quickAddress.value.trim(), "м2": els.quickM2.value ? String(els.quickM2.value) : "", "Комментарий клиента": els.quickComment.value.trim(), "Статус": "Новая заявка", "Cal Booking ID": "manual-" + Date.now() };
   if (!record["Имя клиента"] || !record["Телефон"] || !record["Дата записи"] || !record["Время записи"]) { msg("Заполните ФИО, телефон, дату и время"); return; }
   try {
     const response = await fetch("/create-zayavka", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pwd() }, body: JSON.stringify({ fields: record }) });
@@ -322,7 +384,7 @@ async function saveQuickAdd() {
 
 
 function recordHay(f, id = "") {
-  return norm(["#" + id, f["Имя клиента"], f["Телефон"], f["Услуга"], f["Адрес"], f["Монтажники"], f["Статус"], f["Комментарий клиента"], f["Комментарий администратора"], f["Файлы"], f["Cal Booking ID"]].join(" "));
+  return norm(["#" + id, f["Имя клиента"], f["Компания"], f["Телефон"], f["Услуга"], f["Адрес"], f["Монтажники"], f["Статус"], f["Комментарий клиента"], f["Комментарий администратора"], f["Файлы"], f["Cal Booking ID"]].join(" "));
 }
 function sectionRecords(opts = {}) {
   const { q = "", from = "", to = "", service = "", status = "", installer = "", film = "", m2Min = "", m2Max = "", includeTrash = false } = opts;
@@ -352,10 +414,10 @@ function renderClients() {
   const rows = sectionRecords({ q: els.clientsSearchInput?.value || "", from: els.clientsDateFrom?.value || "", to: els.clientsDateTo?.value || "", service: els.clientsServiceFilter?.value || "", status: els.clientsStatusFilter?.value || "", film: els.clientsFilmFilter?.value || "" });
   const map = new Map();
   rows.forEach((r) => {
-    const f = r.fields || {}, name = f["Имя клиента"] || "Без имени", phone = f["Телефон"] || "", key = norm(name + "|" + phone);
-    const item = map.get(key) || { name, phone, count: 0, last: "", id: r.id, m2: 0, service: "", address: "" };
+    const f = r.fields || {}, name = f["Имя клиента"] || "Без имени", company = f["Компания"] || "", phone = f["Телефон"] || "", key = norm(name + "|" + company + "|" + phone);
+    const item = map.get(key) || { name, company, phone, count: 0, last: "", id: r.id, m2: 0, service: "", address: "" };
     item.count++; item.m2 += getM2(f);
-    if (String(f["Дата записи"] || "") >= String(item.last || "")) { item.last = f["Дата записи"] || ""; item.id = r.id; item.service = f["Услуга"] || ""; item.address = f["Адрес"] || ""; }
+    if (String(f["Дата записи"] || "") >= String(item.last || "")) { item.last = f["Дата записи"] || ""; item.id = r.id; item.service = f["Услуга"] || ""; item.address = f["Адрес"] || ""; item.company = f["Компания"] || item.company || ""; }
     map.set(key, item);
   });
   const clients = [...map.values()].sort((a, b) => String(b.last).localeCompare(String(a.last)));
@@ -363,7 +425,7 @@ function renderClients() {
   if (els.clientsStatRequests) els.clientsStatRequests.textContent = rows.length;
   if (els.clientsStatM2) els.clientsStatM2.textContent = moneyNumber(rows.reduce((s, r) => s + getM2(r.fields || {}), 0));
   if (els.clientsStatRepeat) els.clientsStatRepeat.textContent = clients.filter((x) => x.count > 1).length;
-  els.clientsBody.innerHTML = clients.map((x) => `<tr><td><b>${e(x.name)}</b></td><td>${phoneLink(x.phone)}</td><td>${x.count}</td><td>${e(x.service || "—")}</td><td>${e(x.address || "—")}</td><td>${moneyNumber(x.m2)}</td><td>${e(x.last)}</td><td><button class="open-btn" data-open="${e(x.id)}">Открыть</button></td></tr>`).join("") || '<tr><td colspan="8">Клиенты не найдены</td></tr>';
+  els.clientsBody.innerHTML = clients.map((x) => `<tr><td><b>${e(x.name)}</b></td><td>${e(x.company || "—")}</td><td>${phoneLink(x.phone)}</td><td>${x.count}</td><td>${e(x.service || "—")}</td><td>${e(x.address || "—")}</td><td>${moneyNumber(x.m2)}</td><td>${e(x.last)}</td><td><button class="open-btn" data-open="${e(x.id)}">Открыть</button></td></tr>`).join("") || '<tr><td colspan="9">Клиенты не найдены</td></tr>';
   bindActionButtons();
 }
 function renderObjects() {
@@ -372,7 +434,7 @@ function renderObjects() {
   if (els.objectsStatM2) els.objectsStatM2.textContent = moneyNumber(rows.reduce((s, r) => s + getM2(r.fields || {}), 0));
   if (els.objectsStatDone) els.objectsStatDone.textContent = rows.filter((r) => PAYROLL_STATUSES.has((r.fields || {})["Статус"] || "")).length;
   if (els.objectsStatWork) els.objectsStatWork.textContent = rows.filter((r) => (r.fields || {})["Статус"] === "В работе").length;
-  els.objectsBody.innerHTML = rows.map((r) => { const f = r.fields || {}; return `<tr><td>${e(f["Дата записи"] || "")}</td><td><b>${e(f["Имя клиента"] || "—")}</b><br>${phoneLink(f["Телефон"])}</td><td>${e(f["Адрес"] || "—")}</td><td>${e(f["Услуга"] || "—")}</td><td>${moneyNumber(getM2(f))}</td><td>${e(displayInstallers(f["Монтажники"]) || "—")}</td><td class="status-cell"><span class="status" data-status="${e(f["Статус"] || "")}">${e(f["Статус"] || "—")}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`; }).join("") || '<tr><td colspan="8">Объекты не найдены</td></tr>';
+  els.objectsBody.innerHTML = rows.map((r) => { const f = r.fields || {}; return `<tr><td>${e(f["Дата записи"] || "")}</td><td><b>${e(f["Имя клиента"] || "—")}</b><br>${phoneLink(f["Телефон"])}</td><td>${e(f["Компания"] || "—")}</td><td>${e(f["Адрес"] || "—")}</td><td>${e(f["Услуга"] || "—")}</td><td>${moneyNumber(getM2(f))}</td><td>${e(displayInstallers(f["Монтажники"]) || "—")}</td><td class="status-cell"><span class="status" data-status="${e(f["Статус"] || "")}">${e(f["Статус"] || "—")}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`; }).join("") || '<tr><td colspan="9">Объекты не найдены</td></tr>';
   bindActionButtons();
 }
 function installerRowsForSection() {
@@ -449,21 +511,21 @@ function renderInstallerDetails() {
     const f = r.fields || {};
     const calc = detailsById.get(String(r.id));
     const status = e(f["Статус"] || "");
-    return `<tr><td>${e(f["Дата записи"] || "")}<br><small>${e(f["Время записи"] || "")}</small></td><td><b>${e(f["Имя клиента"] || "—")}</b></td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Адрес"] || "—")}</td><td>${e(f["Услуга"] || "—")}</td><td>${moneyNumber(getM2(f))}</td><td>${e(displayInstallers(f["Монтажники"]) || "—")}</td><td>${calc ? moneyNumber(calc.rate) : "—"}</td><td>${calc ? money(calc.amount) : "—"}</td><td class="status-cell"><span class="status" data-status="${status}">${status || "—"}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть / редактировать</button></td></tr>`;
+    return `<tr><td>${e(f["Дата записи"] || "")}<br><small>${e(f["Время записи"] || "")}</small></td><td><b>${e(f["Имя клиента"] || "—")}</b></td><td>${e(f["Компания"] || "—")}</td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Адрес"] || "—")}</td><td>${e(f["Услуга"] || "—")}</td><td>${moneyNumber(getM2(f))}</td><td>${e(displayInstallers(f["Монтажники"]) || "—")}</td><td>${calc ? moneyNumber(calc.rate) : "—"}</td><td>${calc ? money(calc.amount) : "—"}</td><td class="status-cell"><span class="status" data-status="${status}">${status || "—"}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть / редактировать</button></td></tr>`;
   });
   const amount = [...detailsById.values()].reduce((s, d) => s + d.amount, 0);
   const m2 = rows.reduce((s, r) => s + getM2(r.fields || {}), 0);
   const rateAvg = m2 ? amount / m2 : 0;
   els.installerDetailsTitle.textContent = `История работ: ${workerLabel(selectedInstaller)}`;
-  els.installerDetailsInfo.textContent = `Найдено объектов: ${rows.length}. Можно искать по клиенту, телефону, адресу, услуге, статусу и м².`;
+  els.installerDetailsInfo.textContent = `Найдено объектов: ${rows.length}. Можно искать по клиенту, компании, телефону, адресу, услуге, статусу и м².`;
   if (els.installerDetailsStatJobs) els.installerDetailsStatJobs.textContent = rows.length;
   if (els.installerDetailsStatM2) els.installerDetailsStatM2.textContent = moneyNumber(m2);
   if (els.installerDetailsStatAmount) els.installerDetailsStatAmount.textContent = money(amount);
   if (els.installerDetailsStatRate) els.installerDetailsStatRate.textContent = money(rateAvg);
-  els.installerDetailsBody.innerHTML = detailRows.join("") || '<tr><td colspan="11">По этому монтажнику ничего не найдено</td></tr>';
+  els.installerDetailsBody.innerHTML = detailRows.join("") || '<tr><td colspan="12">По этому монтажнику ничего не найдено</td></tr>';
   bindActionButtons();
 }
-function renderTrash() { const arr = records.filter(isTrashRecord).sort(sortByDateDesc); els.trashBody.innerHTML = arr.map((r) => { const f = r.fields || {}; return `<tr><td>${e(f["Дата записи"] || "")}</td><td><b>${e(f["Имя клиента"] || "—")}</b></td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Услуга"] || "")}</td><td>${e(f["Адрес"] || "")}</td><td>${nl2br(f["Причина отмены"] || lastCancelReason(f) || f["Комментарий администратора"] || "")}</td><td class="status-cell"><span class="status" data-status="${e(f["Статус"] || "")}">${e(f["Статус"] || "—")}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button> <button class="restore-btn" data-restore="${e(r.id)}">Восстановить</button></td></tr>`; }).join("") || '<tr><td colspan="8">Корзина пустая</td></tr>'; bindActionButtons(); }
+function renderTrash() { const arr = records.filter(isTrashRecord).sort(sortByDateDesc); els.trashBody.innerHTML = arr.map((r) => { const f = r.fields || {}; return `<tr><td>${e(f["Дата записи"] || "")}</td><td><b>${e(f["Имя клиента"] || "—")}</b></td><td>${e(f["Компания"] || "—")}</td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Услуга"] || "")}</td><td>${e(f["Адрес"] || "")}</td><td>${nl2br(f["Причина отмены"] || lastCancelReason(f) || f["Комментарий администратора"] || "")}</td><td class="status-cell"><span class="status" data-status="${e(f["Статус"] || "")}">${e(f["Статус"] || "—")}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button> <button class="restore-btn" data-restore="${e(r.id)}">Восстановить</button></td></tr>`; }).join("") || '<tr><td colspan="8">Корзина пустая</td></tr>'; bindActionButtons(); }
 function renderFiles() {
   renderFilesRequestSelect();
   const q = norm(els.filesSearchInput?.value || ""), type = norm(els.filesTypeFilter?.value || "");
@@ -473,7 +535,7 @@ function renderFiles() {
     .filter(({ record, id, files }) => {
       const f = record?.fields || {};
       const filesText = files.map((file) => [file.originalName, file.fileType, file.contentType, file.client, file.phone, file.address, file.service].join(" ")).join(" ");
-      const hay = norm(["#" + id, f["Имя клиента"], f["Телефон"], f["Адрес"], f["Услуга"], f["Статус"], f["Комментарий клиента"], f["Комментарий администратора"], f["Файлы"], filesText].join(" "));
+      const hay = norm(["#" + id, f["Имя клиента"], f["Компания"], f["Телефон"], f["Адрес"], f["Услуга"], f["Статус"], f["Комментарий клиента"], f["Комментарий администратора"], f["Файлы"], filesText].join(" "));
       if (q && !hay.includes(q)) return false;
       if (type && !files.some((file) => fileMatchesType(file, type)) && !norm(f["Файлы"] || "").includes(type)) return false;
       return true;
@@ -547,9 +609,9 @@ function downloadReport() {
   const rows = reportFiltered();
   const format = els.reportFormat?.value || "xls";
   let fields, title, filename;
-  if (currentReportType === "objects") { title = "Отчёт по объектам"; filename = "solncanet_report_objects"; fields = ["Дата записи", "Время записи", "Имя клиента", "Телефон", "Адрес", "Услуга", "Итоговый м2", "м2", "Статус", "Монтажники"]; }
-  else if (currentReportType === "clients") { title = "Отчёт по клиентам"; filename = "solncanet_report_clients"; fields = ["Имя клиента", "Телефон", "Дата записи", "Услуга", "Адрес", "Статус", "Итоговый м2", "м2"]; }
-  else { title = "Отчёт по заявкам"; filename = "solncanet_report_requests"; fields = ["Дата записи", "Время записи", "Имя клиента", "Телефон", "Услуга", "Адрес", "Итоговый м2", "м2", "Монтажники", "Статус", "Комментарий администратора"]; }
+  if (currentReportType === "objects") { title = "Отчёт по объектам"; filename = "solncanet_report_objects"; fields = ["Дата записи", "Время записи", "Имя клиента", "Компания", "Телефон", "Адрес", "Услуга", "Итоговый м2", "м2", "Статус", "Монтажники"]; }
+  else if (currentReportType === "clients") { title = "Отчёт по клиентам"; filename = "solncanet_report_clients"; fields = ["Имя клиента", "Компания", "Телефон", "Дата записи", "Услуга", "Адрес", "Статус", "Итоговый м2", "м2"]; }
+  else { title = "Отчёт по заявкам"; filename = "solncanet_report_requests"; fields = ["Дата записи", "Время записи", "Имя клиента", "Компания", "Телефон", "Услуга", "Адрес", "Итоговый м2", "м2", "Монтажники", "Статус", "Комментарий администратора"]; }
   if (format === "csv") downloadCsv(filename + ".csv", rows, fields);
   else downloadExcel(filename + ".xls", title, [{ title: "Данные", headers: fields, rows: rows.map((r) => { const f = r.fields || {}; return fields.map((k) => f[k] || ""); }) }]);
   els.reportDialog.close();
@@ -639,7 +701,7 @@ function buildPayroll(sourceRows = payrollRecordsForReport(), options = {}) {
       item.amount += amount;
       if (String(f["Дата записи"] || "") >= String(item.last || "")) item.last = f["Дата записи"] || "";
       summary[name] = item;
-      details.push({ id: r.id, date: f["Дата записи"] || "", time: f["Время записи"] || "", client: f["Имя клиента"] || "", phone: f["Телефон"] || "", address: f["Адрес"] || "", service: f["Услуга"] || "", status: f["Статус"] || "", worker: name, workerFull: workerLabel(name), installers: displayInstallers(allNames.join(", ")), crewSize, totalM2, shareM2, rate, amount });
+      details.push({ id: r.id, date: f["Дата записи"] || "", time: f["Время записи"] || "", client: f["Имя клиента"] || "", company: f["Компания"] || "", phone: f["Телефон"] || "", address: f["Адрес"] || "", service: f["Услуга"] || "", status: f["Статус"] || "", worker: name, workerFull: workerLabel(name), installers: displayInstallers(allNames.join(", ")), crewSize, totalM2, shareM2, rate, amount });
     });
   });
   WORKERS.forEach((w) => { const r = settings.rates?.[w] || {}; summary[w].bonus = num(r.bonus); summary[w].advance = num(r.advance); summary[w].comment = r.comment || ""; summary[w].total = summary[w].amount + summary[w].bonus - summary[w].advance; });
@@ -651,7 +713,7 @@ function renderPayrollPreview() {
   const summaryRows = WORKERS.map((w) => payroll.summary[w]).filter((x) => x.jobs || x.bonus || x.advance);
   const total = summaryRows.reduce((s, x) => s + x.total, 0);
   const summaryHtml = summaryRows.length ? `<h3>Итого к выплате: ${money(total)}</h3><div class="table-mini-wrap"><table class="table-mini"><thead><tr><th>Монтажник</th><th>Объектов</th><th>м² к оплате</th><th>Начислено</th><th>Доплата</th><th>Аванс/удерж.</th><th>Итого</th></tr></thead><tbody>${summaryRows.map((x) => `<tr><td><b>${e(workerLabel(x.worker))}</b></td><td>${x.jobs}</td><td>${moneyNumber(x.m2)}</td><td>${money(x.amount)}</td><td>${money(x.bonus)}</td><td>${money(x.advance)}</td><td><b>${money(x.total)}</b></td></tr>`).join("")}</tbody></table></div>` : '<p class="modal-note">По выбранным условиям нет работ для расчёта зарплаты.</p>';
-  const detailsHtml = payroll.details.length ? `<h3>Детализация</h3><div class="table-mini-wrap"><table class="table-mini"><thead><tr><th>Дата</th><th>Заявка</th><th>Клиент</th><th>Объект</th><th>Бригада</th><th>Монтажник</th><th>м² к оплате</th><th>Ставка</th><th>Сумма</th></tr></thead><tbody>${payroll.details.slice(0, 120).map((d) => `<tr><td>${e(d.date)}</td><td>#${e(d.id)}</td><td>${e(d.client)}</td><td>${e(d.address)}</td><td>${d.crewSize}</td><td>${e(d.workerFull)}</td><td>${moneyNumber(d.shareM2)}</td><td>${moneyNumber(d.rate)}</td><td>${money(d.amount)}</td></tr>`).join("")}</tbody></table></div>` : "";
+  const detailsHtml = payroll.details.length ? `<h3>Детализация</h3><div class="table-mini-wrap"><table class="table-mini"><thead><tr><th>Дата</th><th>Заявка</th><th>Клиент</th><th>Компания</th><th>Объект</th><th>Бригада</th><th>Монтажник</th><th>м² к оплате</th><th>Ставка</th><th>Сумма</th></tr></thead><tbody>${payroll.details.slice(0, 120).map((d) => `<tr><td>${e(d.date)}</td><td>#${e(d.id)}</td><td>${e(d.client)}</td><td>${e(d.company || "—")}</td><td>${e(d.address)}</td><td>${d.crewSize}</td><td>${e(d.workerFull)}</td><td>${moneyNumber(d.shareM2)}</td><td>${moneyNumber(d.rate)}</td><td>${money(d.amount)}</td></tr>`).join("")}</tbody></table></div>` : "";
   els.reportPreview.innerHTML = summaryHtml + detailsHtml;
 }
 function downloadPayrollReport() {
@@ -665,7 +727,7 @@ function downloadPayrollCsvReport() {
   const { summary, details, settings, mode } = buildPayroll();
   const summaryRows = WORKERS.map((w) => summary[w]).filter((x) => x.jobs || x.bonus || x.advance);
   const summaryTable = { title: "Сводка к выплате", headers: ["Сотрудник", "Кратко", "Объектов", "м² к оплате", "Начислено", "Доплата", "Аванс/удержание", "Итого к выплате", "Комментарий"], rows: summaryRows.map((x) => [workerLabel(x.worker), x.worker, x.jobs, moneyNumber(x.m2), moneyNumber(x.amount), moneyNumber(x.bonus), moneyNumber(x.advance), moneyNumber(x.total), x.comment]) };
-  const detailsTable = { title: "Детализация по объектам", headers: ["Дата", "Время", "Заявка", "Клиент", "Телефон", "Адрес", "Услуга", "Статус", "Бригада, чел", "Монтажник", "Все монтажники", "Общий м² объекта", "м² к оплате", "Ставка по бригаде", "Сумма"], rows: details.map((d) => [d.date, d.time, "#" + d.id, d.client, d.phone, d.address, d.service, d.status, d.crewSize, d.workerFull, d.installers, moneyNumber(d.totalM2), moneyNumber(d.shareM2), moneyNumber(d.rate), moneyNumber(d.amount)]) };
+  const detailsTable = { title: "Детализация по объектам", headers: ["Дата", "Время", "Заявка", "Клиент", "Компания", "Телефон", "Адрес", "Услуга", "Статус", "Бригада, чел", "Монтажник", "Все монтажники", "Общий м² объекта", "м² к оплате", "Ставка по бригаде", "Сумма"], rows: details.map((d) => [d.date, d.time, "#" + d.id, d.client, d.company || "", d.phone, d.address, d.service, d.status, d.crewSize, d.workerFull, d.installers, moneyNumber(d.totalM2), moneyNumber(d.shareM2), moneyNumber(d.rate), moneyNumber(d.amount)]) };
   const ratesTable = { title: "Ставки за м²", headers: ["Сотрудник", "1 чел", "2 чел", "3 чел", "4 чел", "5 чел", "Доплата", "Аванс/удержание", "Комментарий"], rows: WORKER_PROFILES.map((w) => { const r = settings.rates[w.key] || {}; return [w.full, r[1], r[2], r[3], r[4], r[5], r.bonus, r.advance, r.comment || ""]; }) };
   const metaTable = { title: "Параметры отчёта", headers: ["Параметр", "Значение"], rows: [["Период", `${els.reportDateFrom.value} — ${els.reportDateTo.value}`], ["Метод расчёта", payrollModeText(mode)], ["Статусы", payrollStatusText(els.payrollStatusMode?.value || settings.statusMode)], ["Создан", dateTimeY()]] };
   const lines = [];
@@ -693,6 +755,7 @@ function buildPayrollWorkbookData() {
       time: String(f["Время записи"] || ""),
       status: String(f["Статус"] || ""),
       client: String(f["Имя клиента"] || ""),
+      company: String(f["Компания"] || ""),
       phone: String(f["Телефон"] || ""),
       address: String(f["Адрес"] || ""),
       service: String(f["Услуга"] || ""),
@@ -757,7 +820,7 @@ function buildPayrollRatesSheet(data) {
 }
 function buildPayrollMainSheet(data) {
   const rows = [];
-  rows.push(xRow(["ID", "Дата", "Время", "Статус", "Клиент", "Телефон", "Адрес / объект", "Услуга", "Общий м²", "Монтажники", "Кол-во монтажников", "Комментарий"].map((h) => xCell(h, "Header"))));
+  rows.push(xRow(["ID", "Дата", "Время", "Статус", "Клиент", "Компания", "Телефон", "Адрес / объект", "Услуга", "Общий м²", "Монтажники", "Кол-во монтажников", "Комментарий"].map((h) => xCell(h, "Header"))));
   for (let i = 0; i < data.maxRows; i++) {
     const r = data.mainRows[i] || {};
     rows.push(xRow([
@@ -766,6 +829,7 @@ function buildPayrollMainSheet(data) {
       xCell(r.time || "", "Editable"),
       xCell(r.status || "", "Editable"),
       xCell(r.client || "", "Editable"),
+      xCell(r.company || "", "Editable"),
       xCell(r.phone || "", "Editable"),
       xCell(r.address || "", "Editable"),
       xCell(r.service || "", "Editable"),
@@ -775,7 +839,7 @@ function buildPayrollMainSheet(data) {
       xCell(r.comment || "", "Editable")
     ]));
   }
-  return xWorksheet("Монтажи", [12, 12, 10, 18, 24, 18, 42, 28, 12, 46, 14, 46], rows, 1);
+  return xWorksheet("Монтажи", [12, 12, 10, 18, 24, 24, 18, 42, 28, 12, 46, 14, 46], rows, 1);
 }
 function buildPayrollSummarySheet(data) {
   const rows = [];
@@ -789,9 +853,9 @@ function buildPayrollSummarySheet(data) {
     rows.push(xRow([
       xCell(full, "Cell"),
       xCell(0, "Formula", "Number", `=COUNTIF('${sh}'!R${start}C2:R${end}C2,"<>")`),
-      xCell(0, "Formula", "Number", `=SUM('${sh}'!R${start}C11:R${end}C11)`),
-      xCell(0, "Formula", "Number", `=SUM('${sh}'!R${start}C13:R${end}C13)`),
+      xCell(0, "Formula", "Number", `=SUM('${sh}'!R${start}C12:R${end}C12)`),
       xCell(0, "Formula", "Number", `=SUM('${sh}'!R${start}C14:R${end}C14)`),
+      xCell(0, "Formula", "Number", `=SUM('${sh}'!R${start}C15:R${end}C15)`),
       xCell(0, "Formula", "Number", `='Ставки'!R${rateRow}C8`),
       xCell(0, "Formula", "Number", `='Ставки'!R${rateRow}C9`),
       xCell(0, "Formula", "Number", `=RC[-4]+RC[-3]+RC[-2]-RC[-1]`),
@@ -812,20 +876,20 @@ function buildPayrollEmployeeSheet(data, workerKey) {
   rows.push(xRow(["Объектов", "м² к оплате", "Начислено", "Корректировки", "Доплата", "Аванс", "Итого"].map((h) => xCell(h, "Header"))));
   rows.push(xRow([
     xCell(0, "Formula", "Number", `=COUNTIF(R${start}C2:R${end}C2,"<>")`),
-    xCell(0, "Formula", "Number", `=SUM(R${start}C11:R${end}C11)`),
-    xCell(0, "Formula", "Number", `=SUM(R${start}C13:R${end}C13)`),
+    xCell(0, "Formula", "Number", `=SUM(R${start}C12:R${end}C12)`),
     xCell(0, "Formula", "Number", `=SUM(R${start}C14:R${end}C14)`),
+    xCell(0, "Formula", "Number", `=SUM(R${start}C15:R${end}C15)`),
     xCell(0, "Formula", "Number", `='Ставки'!R${rateRow}C8`),
     xCell(0, "Formula", "Number", `='Ставки'!R${rateRow}C9`),
     xCell(0, "Formula", "Number", `=RC[-4]+RC[-3]+RC[-2]-RC[-1]`)
   ]));
   rows.push(xRow([xCell("", "Cell")], 6));
-  rows.push(xRow(["№", "ID", "Дата", "Статус", "Клиент", "Телефон", "Адрес", "Услуга", "Общий м²", "Бригада", "м² к оплате", "Ставка", "Начислено", "Корректировка", "Итого", "Комментарий"].map((h) => xCell(h, "Header"))));
+  rows.push(xRow(["№", "ID", "Дата", "Статус", "Клиент", "Компания", "Телефон", "Адрес", "Услуга", "Общий м²", "Бригада", "м² к оплате", "Ставка", "Начислено", "Корректировка", "Итого", "Комментарий"].map((h) => xCell(h, "Header"))));
   for (let i = 0; i < data.maxRows; i++) {
     const mainRow = data.mainDataStartRow + i;
     const test = workerInMainFormula(full, key, mainRow);
-    const rateIndex = `MAX(1,MIN(5,'Монтажи'!R${mainRow}C11))`;
-    const m2Formula = `=IF(${test},IF('Монтажи'!R${mainRow}C11=0,0,'Монтажи'!R${mainRow}C9/'Монтажи'!R${mainRow}C11),"")`;
+    const rateIndex = `MAX(1,MIN(5,'Монтажи'!R${mainRow}C12))`;
+    const m2Formula = `=IF(${test},IF('Монтажи'!R${mainRow}C12=0,0,'Монтажи'!R${mainRow}C10/'Монтажи'!R${mainRow}C12),"")`;
     rows.push(xRow([
       xCell(0, "Formula", "Number", `=IF(RC[1]="","",ROW()-${start - 1})`),
       xCell("", "Formula", "String", `=IF(${test},'Монтажи'!R${mainRow}C1,"")`),
@@ -835,20 +899,21 @@ function buildPayrollEmployeeSheet(data, workerKey) {
       xCell("", "Formula", "String", `=IF(${test},'Монтажи'!R${mainRow}C6,"")`),
       xCell("", "Formula", "String", `=IF(${test},'Монтажи'!R${mainRow}C7,"")`),
       xCell("", "Formula", "String", `=IF(${test},'Монтажи'!R${mainRow}C8,"")`),
-      xCell(0, "Formula", "Number", `=IF(${test},'Монтажи'!R${mainRow}C9,"")`),
-      xCell(0, "Formula", "Number", `=IF(${test},'Монтажи'!R${mainRow}C11,"")`),
+      xCell("", "Formula", "String", `=IF(${test},'Монтажи'!R${mainRow}C9,"")`),
+      xCell(0, "Formula", "Number", `=IF(${test},'Монтажи'!R${mainRow}C10,"")`),
+      xCell(0, "Formula", "Number", `=IF(${test},'Монтажи'!R${mainRow}C12,"")`),
       xCell(0, "Formula", "Number", m2Formula),
-      xCell(0, "Formula", "Number", `=IF(RC[-10]="","",INDEX('Ставки'!R2C3:R6C7,MATCH("${xlFormulaText(full)}",'Ставки'!R2C2:R6C2,0),${rateIndex}))`),
-      xCell(0, "Formula", "Number", `=IF(RC[-11]="","",RC[-2]*RC[-1])`),
+      xCell(0, "Formula", "Number", `=IF(RC[-11]="","",INDEX('Ставки'!R2C3:R6C7,MATCH("${xlFormulaText(full)}",'Ставки'!R2C2:R6C2,0),${rateIndex}))`),
+      xCell(0, "Formula", "Number", `=IF(RC[-12]="","",RC[-2]*RC[-1])`),
       xCell(0, "Editable", "Number"),
-      xCell(0, "Formula", "Number", `=IF(RC[-13]="","",RC[-2]+RC[-1])`),
+      xCell(0, "Formula", "Number", `=IF(RC[-14]="","",RC[-2]+RC[-1])`),
       xCell("", "Editable")
     ]));
   }
-  return xWorksheet(full, [8, 12, 12, 16, 24, 18, 42, 28, 12, 10, 12, 12, 14, 16, 14, 32], rows, 5);
+  return xWorksheet(full, [8, 12, 12, 16, 24, 24, 18, 42, 28, 12, 10, 12, 12, 14, 16, 14, 32], rows, 5);
 }
 function workerInMainFormula(full, key, mainRow) {
-  return `OR(ISNUMBER(SEARCH(\"${xlFormulaText(full)}\",'Монтажи'!R${mainRow}C10)),ISNUMBER(SEARCH(\"${xlFormulaText(key)}\",'Монтажи'!R${mainRow}C10)))`;
+  return `OR(ISNUMBER(SEARCH(\"${xlFormulaText(full)}\",'Монтажи'!R${mainRow}C11)),ISNUMBER(SEARCH(\"${xlFormulaText(key)}\",'Монтажи'!R${mainRow}C11)))`;
 }
 function xWorksheet(name, widths, rows, freezeRow = 0) {
   const cols = widths.map((w) => `<Column ss:Width="${Number(w) * 6}"/>`).join("");
@@ -882,7 +947,7 @@ function downloadExcel(filename, title, tables) {
 }
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 
-function diffFields(oldF, newF) { const labels = { "Дата записи": "дата", "Время записи": "время", "Статус": "статус", "Итоговый м2": "м²", "Ответственный": "ответственный", "Услуга": "услуга", "Адрес": "адрес", "Комментарий администратора": "комментарий администратора", "Монтажники": "монтажники" }; const changes = []; for (const key of Object.keys(newF)) { const oldVal = String(oldF[key] || (key === "Итоговый м2" ? oldF["м2"] || "" : "")).trim(); const newVal = String(newF[key] || "").trim(); if (oldVal !== newVal) changes.push(`${labels[key] || key}: «${oldVal || "—"}» → «${newVal || "—"}»`); } return changes; }
+function diffFields(oldF, newF) { const labels = { "Дата записи": "дата", "Время записи": "время", "Статус": "статус", "Итоговый м2": "м²", "Ответственный": "ответственный", "Компания": "компания", "Услуга": "услуга", "Адрес": "адрес", "Комментарий администратора": "комментарий администратора", "Монтажники": "монтажники" }; const changes = []; for (const key of Object.keys(newF)) { const oldVal = String(oldF[key] || (key === "Итоговый м2" ? oldF["м2"] || "" : "")).trim(); const newVal = String(newF[key] || "").trim(); if (oldVal !== newVal) changes.push(`${labels[key] || key}: «${oldVal || "—"}» → «${newVal || "—"}»`); } return changes; }
 function lastCancelReason(f) { const text = String(f["Комментарий администратора"] || ""); const lines = text.split("\n").filter((x) => x.includes("ОТМЕНА:")); return lines.at(-1) || ""; }
 function msg(text) { els.message.textContent = text; }
 function e(value) { return String(value || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c])); }
@@ -1232,6 +1297,7 @@ function fillNotificationTemplate(template, record) {
   const values = {
     id: record?.id || "",
     client: f["Имя клиента"] || "клиент",
+    company: f["Компания"] || "",
     phone: f["Телефон"] || "",
     service: f["Услуга"] || "услуга",
     date: formatRuDate(f["Дата записи"] || ""),
@@ -1239,7 +1305,7 @@ function fillNotificationTemplate(template, record) {
     address: f["Адрес"] || "адрес уточняется",
     m2: f["Итоговый м2"] || f["м2"] || ""
   };
-  return String(template || "").replace(/\{(id|client|phone|service|date|time|address|m2)\}/g, (_, key) => values[key] || "").replace(/\s+/g, " ").trim();
+  return String(template || "").replace(/\{(id|client|company|phone|service|date|time|address|m2)\}/g, (_, key) => values[key] || "").replace(/\s+/g, " ").trim();
 }
 
 function formatRuDate(value) {

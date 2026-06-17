@@ -64,11 +64,15 @@
         <h2>Онлайн-запись / заявка на консультацию</h2>
         <p>Заполните форму или выберите свободное время в календаре. Мы свяжемся с вами и уточним детали.</p>
         <form id="leadForm" class="lead-form-v7">
-          <input type="text" name="company" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true" />
+          <input type="text" name="hpCompany" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true" />
           <input type="hidden" name="formStartedAt" id="formStartedAt" />
 
           <label>Фамилия и имя
             <input name="name" placeholder="Например: Иванов Сергей" autocomplete="name" required />
+          </label>
+
+          <label>Компания
+            <input name="companyName" placeholder="Например: ООО Ромашка" autocomplete="organization" />
           </label>
 
           <label>Телефон

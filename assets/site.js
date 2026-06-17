@@ -114,6 +114,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "",
       "Имя: " + (data.name || ""),
       "Телефон: " + (data.phone || ""),
+      "Компания: " + (data.companyName || ""),
       "Услуга: " + (data.service || ""),
       "Дата: " + (data.preferredDate || ""),
       "Время: " + (data.preferredTime || ""),
