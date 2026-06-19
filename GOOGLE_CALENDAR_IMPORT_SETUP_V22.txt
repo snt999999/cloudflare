@@ -1,0 +1,55 @@
+НАСТРОЙКА РУЧНОГО ИМПОРТА ИЗ GOOGLE КАЛЕНДАРЯ — V22
+
+Токен, который используем одинаково в Apps Script и Cloudflare:
+SOLNCANET_CALENDAR_2026_4C7A9D2E
+
+1. Google Apps Script
+
+1) Открой https://script.google.com
+2) Создай новый проект.
+3) В файле Code.gs удали всё.
+4) Вставь весь код из файла google-calendar-import-appsscript.gs
+5) Вверху кода оставь:
+   const IMPORT_TOKEN = 'SOLNCANET_CALENDAR_2026_4C7A9D2E';
+   const CALENDAR_ID = 'primary';
+
+Если нужен не основной календарь, а другой — вместо primary вставь ID календаря.
+
+6) Нажми Save.
+7) Deploy → New deployment → Type: Web app
+8) Execute as: Me
+9) Who has access: Anyone
+10) Deploy
+11) Скопируй Web app URL, он должен заканчиваться на /exec
+
+Проверка в браузере:
+https://script.google.com/macros/s/ТВОЙ_ID/exec?token=SOLNCANET_CALENDAR_2026_4C7A9D2E
+
+Должен вернуться JSON с ok:true.
+
+2. Cloudflare Pages
+
+Добавь переменные в Production:
+GOOGLE_CALENDAR_IMPORT_URL=https://script.google.com/macros/s/ТВОЙ_ID/exec
+GOOGLE_CALENDAR_IMPORT_TOKEN=SOLNCANET_CALENDAR_2026_4C7A9D2E
+
+После добавления переменных обязательно:
+Deployments → Redeploy
+
+3. Как пользоваться в админке
+
+Админка → Импорт календаря
+- Проверить подключение
+- Выбрать период
+- Загрузить события
+- Если событие рабочее: Создать заявку или Проверить / заполнить
+- Если событие личное: Не работа
+
+Защита от дублей:
+При создании заявки в поле Cal Booking ID пишется gcal-<id события Google Календаря>.
+Если событие уже перенесено, админка покажет кнопку «Открыть заявку» вместо создания дубля.
+
+4. Что желательно иметь в NocoDB
+
+Поле Cal Booking ID уже используется в проекте. Отдельные поля для календаря не обязательны.
+Источник и ссылка на событие сохраняются в Комментарий клиента.

@@ -20,6 +20,7 @@
     <nav class="sidebar-nav">
       <a class="active" href="#requests" data-section="requests">Заявки</a>
       <a href="#calendar" data-section="calendar">Календарь</a>
+      <a href="#calendarImport" data-section="calendarImport">Импорт календаря</a>
       <a href="#clients" data-section="clients">Клиенты</a>
       <a href="#objects" data-section="objects">Объекты</a>
       <a href="#installers" data-section="installers">Монтажники</a>
@@ -114,6 +115,49 @@
           <div class="weekdays"><b>Пн</b><b>Вт</b><b>Ср</b><b>Чт</b><b>Пт</b><b>Сб</b><b>Вс</b></div>
           <div id="calendarGrid" class="grid"></div>
         </section>
+      </section>
+
+
+      <section id="calendarImportSection" class="workspace-section" style="display:none">
+        <header class="admin-head">
+          <div>
+            <h1>Импорт из Google Календаря</h1>
+            <p>Быстрый ручной перенос рабочих событий в заявки. Личные события можно скрывать, чтобы они не мешались.</p>
+          </div>
+          <div class="actions">
+            <button id="calendarImportCheckBtn" type="button">Проверить подключение</button>
+            <button id="calendarImportLoadBtn" class="btn-green" type="button">Загрузить события</button>
+          </div>
+        </header>
+
+        <section class="section-filters calendar-import-filters">
+          <input id="calendarImportSearch" placeholder="Поиск: телефон, клиент, адрес, услуга, название события..." />
+          <input id="calendarImportFrom" type="date" title="С даты" />
+          <input id="calendarImportTo" type="date" title="По дату" />
+          <select id="calendarImportMode">
+            <option value="all">Все события</option>
+            <option value="work-like">Похожие на заявки</option>
+            <option value="not-imported">Только неперенесённые</option>
+            <option value="hidden">Скрытые / не работа</option>
+          </select>
+          <button id="calendarImportTodayBtn" type="button">Сегодня</button>
+          <button id="calendarImportWeekBtn" type="button">7 дней</button>
+        </section>
+
+        <section class="stats stats-four compact-stats calendar-import-stats">
+          <div><span>Событий</span><b id="calendarImportStatTotal">0</b></div>
+          <div><span>Похожи на заявки</span><b id="calendarImportStatWork">0</b></div>
+          <div><span>Уже перенесены</span><b id="calendarImportStatImported">0</b></div>
+          <div><span>Скрыто</span><b id="calendarImportStatHidden">0</b></div>
+        </section>
+
+        <section class="card calendar-import-help">
+          <b>Как работать:</b>
+          <span>загрузи события → проверь карточку → нажми «Создать заявку» или «Проверить / заполнить». Личные события жми «Не работа» — они уйдут в скрытые.</span>
+        </section>
+
+        <p id="calendarImportStatus" class="muted-text"></p>
+        <section id="calendarImportList" class="calendar-import-list"></section>
       </section>
 
       <section id="clientsSection" class="workspace-section" style="display:none">

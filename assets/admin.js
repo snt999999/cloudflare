@@ -17,12 +17,15 @@ let cal = new Date();
 let currentReportType = "requests";
 let selectedInstaller = null;
 let filesCache = [];
+let calendarImportEvents = [];
+let quickCalendarEvent = null;
 
 const storage = {
   password: "solncanet_admin_password_v9",
   history: "solncanet_history_v9",
   payroll: "solncanet_payroll_settings_v9",
-  notificationLog: "solncanet_notification_log_v19"
+  notificationLog: "solncanet_notification_log_v19",
+  calendarHidden: "solncanet_calendar_hidden_v22"
 };
 
 const els = {
@@ -36,7 +39,8 @@ const els = {
   installersSearchInput: $("installersSearchInput"), installersDateFrom: $("installersDateFrom"), installersDateTo: $("installersDateTo"), installersStatusFilter: $("installersStatusFilter"), installersServiceFilter: $("installersServiceFilter"), installersClearFiltersBtn: $("installersClearFiltersBtn"), installersStatJobs: $("installersStatJobs"), installersStatM2: $("installersStatM2"), installersStatAmount: $("installersStatAmount"), installersStatTotal: $("installersStatTotal"), payrollGuide: $("payrollGuide"),
   installerDetailsPanel: $("installerDetailsPanel"), installerDetailsTitle: $("installerDetailsTitle"), installerDetailsInfo: $("installerDetailsInfo"), installerDetailsCloseBtn: $("installerDetailsCloseBtn"), installerDetailsSearchInput: $("installerDetailsSearchInput"), installerDetailsDateFrom: $("installerDetailsDateFrom"), installerDetailsDateTo: $("installerDetailsDateTo"), installerDetailsStatusFilter: $("installerDetailsStatusFilter"), installerDetailsServiceFilter: $("installerDetailsServiceFilter"), installerDetailsM2Min: $("installerDetailsM2Min"), installerDetailsM2Max: $("installerDetailsM2Max"), installerDetailsClearBtn: $("installerDetailsClearBtn"), installerDetailsStatJobs: $("installerDetailsStatJobs"), installerDetailsStatM2: $("installerDetailsStatM2"), installerDetailsStatAmount: $("installerDetailsStatAmount"), installerDetailsStatRate: $("installerDetailsStatRate"), installerDetailsBody: $("installerDetailsBody"),
   notifyTemplate: $("notifyTemplate"), notifyChannel: $("notifyChannel"), notifyMessage: $("notifyMessage"), sendNotifyBtn: $("sendNotifyBtn"), copyNotifyBtn: $("copyNotifyBtn"), requestNotifyStatus: $("requestNotifyStatus"),
-  notificationCheckBtn: $("notificationCheckBtn"), notificationSmsStatus: $("notificationSmsStatus"), notificationTelegramStatus: $("notificationTelegramStatus"), testNotifyChannel: $("testNotifyChannel"), testNotifyTo: $("testNotifyTo"), testNotifyMessage: $("testNotifyMessage"), sendTestNotifyBtn: $("sendTestNotifyBtn"), copyTestNotifyBtn: $("copyTestNotifyBtn"), notificationStatus: $("notificationStatus"), notificationTemplatesList: $("notificationTemplatesList"), notificationLogBody: $("notificationLogBody")
+  notificationCheckBtn: $("notificationCheckBtn"), notificationSmsStatus: $("notificationSmsStatus"), notificationTelegramStatus: $("notificationTelegramStatus"), testNotifyChannel: $("testNotifyChannel"), testNotifyTo: $("testNotifyTo"), testNotifyMessage: $("testNotifyMessage"), sendTestNotifyBtn: $("sendTestNotifyBtn"), copyTestNotifyBtn: $("copyTestNotifyBtn"), notificationStatus: $("notificationStatus"), notificationTemplatesList: $("notificationTemplatesList"), notificationLogBody: $("notificationLogBody"),
+  calendarImportCheckBtn: $("calendarImportCheckBtn"), calendarImportLoadBtn: $("calendarImportLoadBtn"), calendarImportSearch: $("calendarImportSearch"), calendarImportFrom: $("calendarImportFrom"), calendarImportTo: $("calendarImportTo"), calendarImportMode: $("calendarImportMode"), calendarImportTodayBtn: $("calendarImportTodayBtn"), calendarImportWeekBtn: $("calendarImportWeekBtn"), calendarImportStatus: $("calendarImportStatus"), calendarImportList: $("calendarImportList"), calendarImportStatTotal: $("calendarImportStatTotal"), calendarImportStatWork: $("calendarImportStatWork"), calendarImportStatImported: $("calendarImportStatImported"), calendarImportStatHidden: $("calendarImportStatHidden")
 };
 
 const NOTIFICATION_TEMPLATES = {
@@ -94,6 +98,7 @@ function init() {
   els.historySearchInput.addEventListener("input", renderHistorySection);
   els.clearHistoryLocalBtn.addEventListener("click", clearLocalHistory);
   initNotifications();
+  initCalendarImport();
 
   [els.clientsSearchInput, els.clientsDateFrom, els.clientsDateTo, els.clientsServiceFilter, els.clientsFilmFilter, els.clientsStatusFilter].forEach((el) => el && el.addEventListener("input", renderClients));
   [els.clientsDateFrom, els.clientsDateTo, els.clientsServiceFilter, els.clientsStatusFilter].forEach((el) => el && el.addEventListener("change", renderClients));
@@ -213,7 +218,7 @@ function filtered(includeTrash = false) {
 }
 function sortByDateDesc(a, b) { const af = a.fields || {}, bf = b.fields || {}; return (String(bf["Дата записи"] || "") + " " + String(bf["Время записи"] || "")).localeCompare(String(af["Дата записи"] || "") + " " + String(af["Время записи"] || "")); }
 
-function renderAll() { render(); renderClients(); renderObjects(); renderInstallers(); renderInstallerDetails(); renderTrash(); renderFiles(); renderHistorySection(); }
+function renderAll() { render(); renderClients(); renderObjects(); renderInstallers(); renderInstallerDetails(); renderTrash(); renderFiles(); renderHistorySection(); renderCalendarImport(); }
 function render() { const arr = filtered(false); els.requestsBody.innerHTML = arr.map(requestRow).join("") || '<tr><td colspan="10">Нет заявок</td></tr>'; bindActionButtons(); renderCalendar(arr); renderStats(records, arr); }
 function requestRow(r) { const f = r.fields || {}, status = e(f["Статус"] || ""); return `<tr><td>${e(f["Дата записи"])}</td><td>${e(f["Время записи"])}</td><td><b>${e(f["Имя клиента"])}</b></td><td>${e(f["Компания"] || "—")}</td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Услуга"])}</td><td>${e(f["Адрес"])}</td><td>${e(f["Итоговый м2"] || f["м2"])}</td><td>${e(f["Монтажники"])}</td><td class="status-cell"><span class="status" data-status="${status}">${status || "—"}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`; }
 
@@ -458,15 +463,36 @@ function applyQuickClient(record) {
   hideQuickClientSuggestions();
 }
 
-function openQuickAdd() { setDefaultDates(); els.quickName.value = ""; if (els.quickCompany) els.quickCompany.value = ""; els.quickPhone.value = ""; if (els.quickClientHint) { els.quickClientHint.classList.remove("is-found", "is-empty"); els.quickClientHint.textContent = "Начните вводить номер — подходящие клиенты появятся списком ниже."; } hideQuickClientSuggestions(); els.quickAddress.value = ""; els.quickComment.value = ""; els.quickM2.value = ""; els.quickAddDialog.showModal(); }
+function openQuickAdd(prefill = null) {
+  setDefaultDates();
+  quickCalendarEvent = prefill && prefill.calendarEvent ? prefill.calendarEvent : null;
+  els.quickName.value = prefill?.name || "";
+  if (els.quickCompany) els.quickCompany.value = prefill?.company || "";
+  els.quickPhone.value = prefill?.phone ? formatQuickPhoneForTyping(prefill.phone) : "";
+  if (els.quickClientHint) {
+    els.quickClientHint.classList.remove("is-found", "is-empty");
+    els.quickClientHint.textContent = quickCalendarEvent ? "Данные предварительно заполнены из Google Календаря. Проверьте и сохраните заявку." : "Начните вводить номер — подходящие клиенты появятся списком ниже.";
+  }
+  hideQuickClientSuggestions();
+  if (els.quickService && prefill?.service) els.quickService.value = prefill.service;
+  if (els.quickDate && prefill?.date) els.quickDate.value = prefill.date;
+  if (els.quickTime && prefill?.time) els.quickTime.value = prefill.time;
+  els.quickAddress.value = prefill?.address || "";
+  els.quickComment.value = prefill?.comment || "";
+  els.quickM2.value = prefill?.m2 || "";
+  els.quickAddDialog.showModal();
+}
 async function saveQuickAdd() {
-  const record = { "Имя клиента": els.quickName.value.trim(), "Компания": els.quickCompany?.value.trim() || "", "Телефон": formatRussianPhone(els.quickPhone.value), "Услуга": els.quickService.value, "Дата записи": els.quickDate.value, "Время записи": els.quickTime.value, "Адрес": els.quickAddress.value.trim(), "м2": els.quickM2.value ? String(els.quickM2.value) : "", "Комментарий клиента": els.quickComment.value.trim(), "Статус": "Новая заявка", "Cal Booking ID": "manual-" + Date.now() };
+  const calendarId = quickCalendarEvent?.id ? "gcal-" + quickCalendarEvent.id : "manual-" + Date.now();
+  const record = { "Имя клиента": els.quickName.value.trim(), "Компания": els.quickCompany?.value.trim() || "", "Телефон": formatRussianPhone(els.quickPhone.value), "Услуга": els.quickService.value, "Дата записи": els.quickDate.value, "Время записи": els.quickTime.value, "Адрес": els.quickAddress.value.trim(), "м2": els.quickM2.value ? String(els.quickM2.value) : "", "Комментарий клиента": els.quickComment.value.trim(), "Статус": "Новая заявка", "Cal Booking ID": calendarId };
   if (!record["Имя клиента"] || !record["Телефон"] || !record["Дата записи"] || !record["Время записи"]) { msg("Заполните ФИО, телефон, дату и время"); return; }
   try {
     const response = await fetch("/create-zayavka", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pwd() }, body: JSON.stringify({ fields: record }) });
     const data = await response.json();
     if (!response.ok || !data.ok) throw new Error(data.error || "Ошибка создания заявки");
     els.quickAddDialog.close();
+    if (quickCalendarEvent?.id) markCalendarEventImported(quickCalendarEvent.id);
+    quickCalendarEvent = null;
     await load();
     msg("Быстрая заявка создана");
   } catch (error) { msg(error.message); }
@@ -1506,4 +1532,306 @@ async function copyTextFrom(input, statusEl) {
   } catch (_) {
     setNotificationStatus(statusEl, "Не удалось скопировать автоматически", false);
   }
+}
+
+// v22: ручной импорт заявок из Google Календаря
+function initCalendarImport() {
+  if (els.calendarImportFrom && !els.calendarImportFrom.value) els.calendarImportFrom.value = today();
+  if (els.calendarImportTo && !els.calendarImportTo.value) els.calendarImportTo.value = addDaysY(today(), 7);
+  if (els.calendarImportCheckBtn) els.calendarImportCheckBtn.addEventListener("click", checkCalendarImportConnection);
+  if (els.calendarImportLoadBtn) els.calendarImportLoadBtn.addEventListener("click", loadCalendarImportEvents);
+  if (els.calendarImportTodayBtn) els.calendarImportTodayBtn.addEventListener("click", () => { els.calendarImportFrom.value = today(); els.calendarImportTo.value = today(); loadCalendarImportEvents(); });
+  if (els.calendarImportWeekBtn) els.calendarImportWeekBtn.addEventListener("click", () => { els.calendarImportFrom.value = today(); els.calendarImportTo.value = addDaysY(today(), 7); loadCalendarImportEvents(); });
+  [els.calendarImportSearch, els.calendarImportFrom, els.calendarImportTo, els.calendarImportMode].forEach((el) => {
+    if (!el) return;
+    el.addEventListener("input", renderCalendarImport);
+    el.addEventListener("change", renderCalendarImport);
+  });
+  if (els.calendarImportList) {
+    els.calendarImportList.addEventListener("click", handleCalendarImportClick);
+  }
+}
+
+function addDaysY(dateStr, days) {
+  const d = dateStr ? new Date(dateStr + "T00:00:00") : new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+async function checkCalendarImportConnection() {
+  setCalendarImportStatus("Проверяю подключение к Google Календарю...", true);
+  try {
+    const res = await fetch("/calendar-events?action=health", { headers: { "x-admin-password": pwd() } });
+    const data = await res.json().catch(() => ({ ok: false, error: "Функция календаря вернула не JSON" }));
+    if (!res.ok || !data.ok) throw new Error(data.error || data.appsScript?.error || "Ошибка проверки календаря");
+    setCalendarImportStatus(data.message || "Google Календарь подключён", true);
+  } catch (error) {
+    setCalendarImportStatus(error.message, false);
+  }
+}
+
+async function loadCalendarImportEvents() {
+  const from = els.calendarImportFrom?.value || today();
+  const to = els.calendarImportTo?.value || addDaysY(from, 7);
+  setCalendarImportStatus("Загружаю события календаря...", true);
+  try {
+    const res = await fetch("/calendar-events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": pwd() },
+      body: JSON.stringify({ action: "list", dateFrom: from, dateTo: to })
+    });
+    const data = await res.json().catch(() => ({ ok: false, error: "Функция календаря вернула не JSON" }));
+    if (!res.ok || !data.ok) throw new Error(data.error || data.appsScript?.error || "Ошибка загрузки календаря");
+    calendarImportEvents = Array.isArray(data.events) ? data.events : [];
+    setCalendarImportStatus(`Загружено событий: ${calendarImportEvents.length}`, true);
+    renderCalendarImport();
+  } catch (error) {
+    calendarImportEvents = [];
+    renderCalendarImport();
+    setCalendarImportStatus(error.message, false);
+  }
+}
+
+function setCalendarImportStatus(text, ok) {
+  if (!els.calendarImportStatus) return;
+  els.calendarImportStatus.textContent = text || "";
+  els.calendarImportStatus.classList.toggle("success", Boolean(ok));
+  els.calendarImportStatus.classList.toggle("error", !ok);
+}
+
+function getCalendarHiddenIds() {
+  try { return new Set(JSON.parse(localStorage.getItem(storage.calendarHidden) || "[]")); } catch (_) { return new Set(); }
+}
+function saveCalendarHiddenIds(set) {
+  localStorage.setItem(storage.calendarHidden, JSON.stringify([...set]));
+}
+function hideCalendarEvent(id) {
+  const set = getCalendarHiddenIds();
+  set.add(String(id));
+  saveCalendarHiddenIds(set);
+  renderCalendarImport();
+}
+function restoreCalendarEvent(id) {
+  const set = getCalendarHiddenIds();
+  set.delete(String(id));
+  saveCalendarHiddenIds(set);
+  renderCalendarImport();
+}
+function markCalendarEventImported(id) {
+  // Импортированные события определяются по Cal Booking ID = gcal-<eventId> в NocoDB.
+  // В скрытые добавляем только личные / нерабочие события, чтобы статистика не путалась.
+  if (!id) return;
+}
+
+function existingRecordForCalendarEvent(id) {
+  if (!id) return null;
+  const needle = "gcal-" + id;
+  return records.find((r) => String((r.fields || {})["Cal Booking ID"] || "") === needle) || null;
+}
+
+function calendarEventHay(ev) {
+  return norm([ev.id, ev.title, ev.description, ev.location, ev.startText, ev.endText, ev.creator, ev.organizer].join(" "));
+}
+
+function analyzeCalendarEvent(ev) {
+  const parsed = parseCalendarEvent(ev);
+  const text = calendarEventHay(ev);
+  const hasPhone = Boolean(parsed.phone);
+  const workKeywords = ["тонир", "плен", "плён", "балкон", "окн", "витрин", "замер", "брон", "фары", "фар", "полиур", "ppf", "атерм", "офис", "перегород", "стекл", "солнцанет"];
+  const isWorkLike = hasPhone || workKeywords.some((w) => text.includes(w));
+  return { ...parsed, isWorkLike };
+}
+
+function renderCalendarImport() {
+  if (!els.calendarImportList) return;
+  const hidden = getCalendarHiddenIds();
+  const q = norm(els.calendarImportSearch?.value || "");
+  const mode = els.calendarImportMode?.value || "all";
+  const items = calendarImportEvents.map((ev) => ({ ev, parsed: analyzeCalendarEvent(ev), hidden: hidden.has(String(ev.id)), existing: existingRecordForCalendarEvent(ev.id) }));
+  const total = items.length;
+  const work = items.filter((x) => x.parsed.isWorkLike).length;
+  const imported = items.filter((x) => x.existing).length;
+  const hiddenCount = items.filter((x) => x.hidden).length;
+  if (els.calendarImportStatTotal) els.calendarImportStatTotal.textContent = total;
+  if (els.calendarImportStatWork) els.calendarImportStatWork.textContent = work;
+  if (els.calendarImportStatImported) els.calendarImportStatImported.textContent = imported;
+  if (els.calendarImportStatHidden) els.calendarImportStatHidden.textContent = hiddenCount;
+
+  let filteredItems = items.filter((x) => {
+    if (mode === "work-like" && !x.parsed.isWorkLike) return false;
+    if (mode === "not-imported" && (x.existing || x.hidden)) return false;
+    if (mode === "hidden" && !x.hidden) return false;
+    if (mode !== "hidden" && x.hidden) return false;
+    if (q && !calendarEventHay(x.ev).includes(q) && !norm(Object.values(x.parsed).join(" ")).includes(q)) return false;
+    return true;
+  });
+  filteredItems.sort((a, b) => String(a.ev.start || "").localeCompare(String(b.ev.start || "")));
+
+  els.calendarImportList.innerHTML = filteredItems.map(calendarImportCardHtml).join("") || '<div class="calendar-event-card empty">События не найдены. Выберите период и нажмите «Загрузить события».</div>';
+}
+
+function calendarImportCardHtml(item) {
+  const { ev, parsed, hidden, existing } = item;
+  const scoreClass = existing ? "imported" : hidden ? "hidden" : parsed.isWorkLike ? "work" : "weak";
+  const statusText = existing ? "Уже перенесено" : hidden ? "Скрыто" : parsed.isWorkLike ? "Похоже на заявку" : "Сомнительное";
+  const description = String(ev.description || "").trim();
+  return `<article class="calendar-event-card ${scoreClass}" data-calendar-event-card="${e(ev.id)}">
+    <div class="calendar-event-main">
+      <div class="calendar-event-time"><b>${e(ev.date || "")}</b><span>${e(ev.startTime || "")}–${e(ev.endTime || "")}</span></div>
+      <div class="calendar-event-content">
+        <div class="calendar-event-title"><b>${e(ev.title || "Без названия")}</b><span class="calendar-event-pill">${e(statusText)}</span></div>
+        <div class="calendar-event-fields">
+          <span><b>Клиент:</b> ${e(parsed.name || "—")}</span>
+          <span><b>Компания:</b> ${e(parsed.company || "—")}</span>
+          <span><b>Телефон:</b> ${parsed.phone ? phoneLink(parsed.phone) : "—"}</span>
+          <span><b>Услуга:</b> ${e(parsed.service || "—")}</span>
+          <span><b>Адрес:</b> ${e(parsed.address || ev.location || "—")}</span>
+        </div>
+        ${description ? `<details class="calendar-event-description"><summary>Описание события</summary><pre>${e(description)}</pre></details>` : ""}
+      </div>
+    </div>
+    <div class="calendar-event-actions">
+      ${existing ? `<button class="open-btn" data-open="${e(existing.id)}" type="button">Открыть заявку</button>` : `<button class="btn-green mini-action" data-calendar-create="${e(ev.id)}" type="button">Создать заявку</button><button class="mini-action" data-calendar-prefill="${e(ev.id)}" type="button">Проверить / заполнить</button>`}
+      ${hidden ? `<button class="mini-action" data-calendar-restore="${e(ev.id)}" type="button">Вернуть</button>` : `<button class="mini-action ghost-mini" data-calendar-hide="${e(ev.id)}" type="button">Не работа</button>`}
+      ${ev.htmlLink ? `<a class="mini-link" href="${e(ev.htmlLink)}" target="_blank" rel="noopener">Открыть в Google</a>` : ""}
+    </div>
+  </article>`;
+}
+
+function handleCalendarImportClick(event) {
+  const open = event.target.closest("[data-open]");
+  if (open) return;
+  const create = event.target.closest("[data-calendar-create]");
+  if (create) return createCalendarLead(create.dataset.calendarCreate);
+  const prefill = event.target.closest("[data-calendar-prefill]");
+  if (prefill) return prefillQuickFromCalendar(prefill.dataset.calendarPrefill);
+  const hide = event.target.closest("[data-calendar-hide]");
+  if (hide) return hideCalendarEvent(hide.dataset.calendarHide);
+  const restore = event.target.closest("[data-calendar-restore]");
+  if (restore) return restoreCalendarEvent(restore.dataset.calendarRestore);
+}
+
+function getCalendarEventById(id) {
+  return calendarImportEvents.find((ev) => String(ev.id) === String(id));
+}
+
+function prefillQuickFromCalendar(id) {
+  const ev = getCalendarEventById(id);
+  if (!ev) return;
+  openQuickAdd(calendarPrefillData(ev));
+}
+
+async function createCalendarLead(id) {
+  const ev = getCalendarEventById(id);
+  if (!ev) return;
+  const parsed = calendarPrefillData(ev);
+  if (!parsed.phone) {
+    setCalendarImportStatus("В событии не найден телефон. Нажмите «Проверить / заполнить» и внесите данные вручную.", false);
+    return openQuickAdd(parsed);
+  }
+  if (!parsed.name) parsed.name = "Клиент из календаря";
+  const fields = {
+    "Имя клиента": parsed.name,
+    "Компания": parsed.company || "",
+    "Телефон": formatRussianPhone(parsed.phone),
+    "Услуга": parsed.service || "Замер / консультация",
+    "Дата записи": parsed.date || today(),
+    "Время записи": parsed.time || "10:00",
+    "Адрес": parsed.address || "",
+    "м2": parsed.m2 || "",
+    "Комментарий клиента": parsed.comment || "Источник: Google Календарь",
+    "Статус": "Новая заявка",
+    "Cal Booking ID": "gcal-" + ev.id
+  };
+  try {
+    setCalendarImportStatus("Создаю заявку из события календаря...", true);
+    const response = await fetch("/create-zayavka", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pwd() }, body: JSON.stringify({ fields }) });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || "Ошибка создания заявки");
+    markCalendarEventImported(ev.id);
+    await load();
+    setCalendarImportStatus("Заявка создана из Google Календаря", true);
+  } catch (error) {
+    setCalendarImportStatus(error.message, false);
+  }
+}
+
+function calendarPrefillData(ev) {
+  const parsed = parseCalendarEvent(ev);
+  return {
+    ...parsed,
+    date: ev.date || String(ev.start || "").slice(0, 10),
+    time: ev.startTime || "10:00",
+    address: parsed.address || ev.location || "",
+    calendarEvent: ev,
+    comment: buildCalendarComment(ev, parsed)
+  };
+}
+
+function buildCalendarComment(ev, parsed) {
+  const parts = [
+    "Источник: Google Календарь",
+    ev.title ? "Событие: " + ev.title : "",
+    parsed.company ? "Компания: " + parsed.company : "",
+    ev.location ? "Адрес из календаря: " + ev.location : "",
+    ev.description ? "Описание: " + ev.description : "",
+    ev.htmlLink ? "Ссылка на событие: " + ev.htmlLink : ""
+  ];
+  return parts.filter(Boolean).join("\n");
+}
+
+function parseCalendarEvent(ev) {
+  const title = String(ev.title || "");
+  const description = String(ev.description || "");
+  const location = String(ev.location || "");
+  const all = [title, description, location].join("\n");
+  const phone = extractPhone(all);
+  const company = extractCompany(all);
+  const service = detectServiceFromText(all);
+  const m2Match = all.match(/(\d+(?:[\.,]\d+)?)\s*(?:м2|м²|кв\.?\s*м)/i);
+  const m2 = m2Match ? m2Match[1].replace(",", ".") : "";
+  let name = extractNameFromTitle(title, phone, service, company);
+  const address = extractAddress(all, location);
+  return { phone, company, service, name, address, m2 };
+}
+
+function extractPhone(text) {
+  const m = String(text || "").match(/(?:\+?7|8)?[\s\-()]*\d{3}[\s\-()]*\d{3}[\s\-()]*\d{2}[\s\-()]*\d{2}/);
+  return m ? formatQuickPhoneForTyping(m[0]) : "";
+}
+
+function extractCompany(text) {
+  const s = String(text || "");
+  const m = s.match(/((?:ООО|ИП|АО|ПАО|ЗАО)\s+[«\"А-ЯA-ZЁ0-9][^\n,;]{1,80})/i);
+  return m ? m[1].trim() : "";
+}
+
+function extractNameFromTitle(title, phone, service, company) {
+  let s = String(title || "");
+  if (phone) s = s.replace(phone, "").replace(formatRussianPhone(phone), "");
+  s = s.replace(/(?:\+?7|8)?[\s\-()]*\d{3}[\s\-()]*\d{3}[\s\-()]*\d{2}[\s\-()]*\d{2}/g, " ");
+  [service, company, "тонировка", "атермальная", "балкон", "окна", "окно", "витрина", "витрины", "замер", "бронирование", "фары", "пленка", "плёнка", "монтаж", "солнцанет"].forEach((word) => { if (word) s = s.replace(new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig"), " "); });
+  s = s.replace(/[—–_:;,.|/\\]+/g, " ").replace(/\s+/g, " ").trim();
+  return s.length >= 2 && s.length <= 80 ? s : "";
+}
+
+function extractAddress(text, location) {
+  if (location) return String(location).trim();
+  const lines = String(text || "").split(/\n+/).map((x) => x.trim()).filter(Boolean);
+  const addr = lines.find((line) => /(?:ул\.|улица|проспект|пр-т|пер\.|переулок|шоссе|бульвар|наб\.|дом|д\.|офис|Екатеринбург)/i.test(line));
+  return addr || "";
+}
+
+function detectServiceFromText(text) {
+  const s = norm(text);
+  if (/фар/.test(s)) return "Бронирование фар";
+  if (/полиур|ppf|капот|бампер|кузов|антиграв/.test(s)) return "Защита авто полиуретановой пленкой";
+  if (/атерм/.test(s)) return "Атермальная тонировка автомобиля";
+  if (/балкон|лоджи|окн/.test(s)) return "Тонировка балконов и окон";
+  if (/офис|перегород/.test(s)) return "Декоративное тонирование офисных перегородок";
+  if (/брон|укреп|safety|безопас|стекл/.test(s) && /витрин|стекл/.test(s)) return "Бронирование стекол и витрин";
+  if (/витрин/.test(s)) return "Тонирование витрин";
+  if (/авто|машин|лобов|задн|передн|тонир/.test(s)) return "Тонировка стекол автомобиля";
+  if (/замер|консультац/.test(s)) return "Замер / консультация";
+  return "Замер / консультация";
 }
