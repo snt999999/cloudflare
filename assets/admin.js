@@ -19,6 +19,7 @@ let selectedInstaller = null;
 let filesCache = [];
 let calendarImportEvents = [];
 let quickCalendarEvent = null;
+let currentClientKey = null;
 
 const storage = {
   password: "solncanet_admin_password_v9",
@@ -40,7 +41,9 @@ const els = {
   installerDetailsPanel: $("installerDetailsPanel"), installerDetailsTitle: $("installerDetailsTitle"), installerDetailsInfo: $("installerDetailsInfo"), installerDetailsCloseBtn: $("installerDetailsCloseBtn"), installerDetailsSearchInput: $("installerDetailsSearchInput"), installerDetailsDateFrom: $("installerDetailsDateFrom"), installerDetailsDateTo: $("installerDetailsDateTo"), installerDetailsStatusFilter: $("installerDetailsStatusFilter"), installerDetailsServiceFilter: $("installerDetailsServiceFilter"), installerDetailsM2Min: $("installerDetailsM2Min"), installerDetailsM2Max: $("installerDetailsM2Max"), installerDetailsClearBtn: $("installerDetailsClearBtn"), installerDetailsStatJobs: $("installerDetailsStatJobs"), installerDetailsStatM2: $("installerDetailsStatM2"), installerDetailsStatAmount: $("installerDetailsStatAmount"), installerDetailsStatRate: $("installerDetailsStatRate"), installerDetailsBody: $("installerDetailsBody"),
   notifyTemplate: $("notifyTemplate"), notifyChannel: $("notifyChannel"), notifyMessage: $("notifyMessage"), sendNotifyBtn: $("sendNotifyBtn"), copyNotifyBtn: $("copyNotifyBtn"), requestNotifyStatus: $("requestNotifyStatus"),
   notificationCheckBtn: $("notificationCheckBtn"), notificationSmsStatus: $("notificationSmsStatus"), notificationTelegramStatus: $("notificationTelegramStatus"), testNotifyChannel: $("testNotifyChannel"), testNotifyTo: $("testNotifyTo"), testNotifyMessage: $("testNotifyMessage"), sendTestNotifyBtn: $("sendTestNotifyBtn"), copyTestNotifyBtn: $("copyTestNotifyBtn"), notificationStatus: $("notificationStatus"), notificationTemplatesList: $("notificationTemplatesList"), notificationLogBody: $("notificationLogBody"),
-  calendarImportCheckBtn: $("calendarImportCheckBtn"), calendarImportLoadBtn: $("calendarImportLoadBtn"), calendarImportSearch: $("calendarImportSearch"), calendarImportFrom: $("calendarImportFrom"), calendarImportTo: $("calendarImportTo"), calendarImportMode: $("calendarImportMode"), calendarImportTodayBtn: $("calendarImportTodayBtn"), calendarImportWeekBtn: $("calendarImportWeekBtn"), calendarImportStatus: $("calendarImportStatus"), calendarImportList: $("calendarImportList"), calendarImportStatTotal: $("calendarImportStatTotal"), calendarImportStatWork: $("calendarImportStatWork"), calendarImportStatImported: $("calendarImportStatImported"), calendarImportStatHidden: $("calendarImportStatHidden")
+  calendarImportCheckBtn: $("calendarImportCheckBtn"), calendarImportLoadBtn: $("calendarImportLoadBtn"), calendarImportSearch: $("calendarImportSearch"), calendarImportFrom: $("calendarImportFrom"), calendarImportTo: $("calendarImportTo"), calendarImportMode: $("calendarImportMode"), calendarImportTodayBtn: $("calendarImportTodayBtn"), calendarImportWeekBtn: $("calendarImportWeekBtn"), calendarImportStatus: $("calendarImportStatus"), calendarImportList: $("calendarImportList"), calendarImportStatTotal: $("calendarImportStatTotal"), calendarImportStatWork: $("calendarImportStatWork"), calendarImportStatImported: $("calendarImportStatImported"), calendarImportStatHidden: $("calendarImportStatHidden"),
+  topQuickAddBtn: $("topQuickAddBtn"), topRefreshBtn: $("topRefreshBtn"), topReportsBtn: $("topReportsBtn"), globalSearchInput: $("globalSearchInput"), globalSearchResults: $("globalSearchResults"),
+  clientCardDialog: $("clientCardDialog"), clientCardTitle: $("clientCardTitle"), clientCardSubtitle: $("clientCardSubtitle"), clientCardQuickBtn: $("clientCardQuickBtn"), clientCardStatRequests: $("clientCardStatRequests"), clientCardStatM2: $("clientCardStatM2"), clientCardStatDone: $("clientCardStatDone"), clientCardStatLast: $("clientCardStatLast"), clientCardInfo: $("clientCardInfo"), clientCardAddresses: $("clientCardAddresses"), clientCardRequestsBody: $("clientCardRequestsBody"), clientCardFiles: $("clientCardFiles"), clientCardComments: $("clientCardComments")
 };
 
 const NOTIFICATION_TEMPLATES = {
@@ -77,6 +80,13 @@ function init() {
   els.cancelRequestBtn.addEventListener("click", cancelCurrentRequest);
   els.exportBtn.addEventListener("click", () => setSection("reports"));
   els.quickAddBtn.addEventListener("click", openQuickAdd);
+  if (els.topQuickAddBtn) els.topQuickAddBtn.addEventListener("click", openQuickAdd);
+  if (els.topRefreshBtn) els.topRefreshBtn.addEventListener("click", load);
+  if (els.topReportsBtn) els.topReportsBtn.addEventListener("click", () => openReport("payroll"));
+  if (els.globalSearchInput) els.globalSearchInput.addEventListener("input", renderGlobalSearch);
+  if (els.globalSearchInput) els.globalSearchInput.addEventListener("focus", renderGlobalSearch);
+  if (els.globalSearchResults) els.globalSearchResults.addEventListener("click", handleGlobalSearchClick);
+  if (els.clientCardQuickBtn) els.clientCardQuickBtn.addEventListener("click", quickAddFromClientCard);
   els.quickSaveBtn.addEventListener("click", saveQuickAdd);
   if (els.quickPhone) {
     els.quickPhone.addEventListener("input", handleQuickPhoneInput);
@@ -87,6 +97,9 @@ function init() {
     els.quickClientSuggestions.addEventListener("click", handleQuickClientSuggestionClick);
   }
   document.addEventListener("click", (event) => {
+    if (els.globalSearchInput && els.globalSearchResults && !els.globalSearchInput.contains(event.target) && !els.globalSearchResults.contains(event.target)) {
+      els.globalSearchResults.hidden = true;
+    }
     if (!els.quickAddDialog || !els.quickAddDialog.open) return;
     if (els.quickPhone && els.quickPhone.contains(event.target)) return;
     if (els.quickClientSuggestions && els.quickClientSuggestions.contains(event.target)) return;
@@ -218,7 +231,7 @@ function filtered(includeTrash = false) {
 }
 function sortByDateDesc(a, b) { const af = a.fields || {}, bf = b.fields || {}; return (String(bf["Дата записи"] || "") + " " + String(bf["Время записи"] || "")).localeCompare(String(af["Дата записи"] || "") + " " + String(af["Время записи"] || "")); }
 
-function renderAll() { render(); renderClients(); renderObjects(); renderInstallers(); renderInstallerDetails(); renderTrash(); renderFiles(); renderHistorySection(); renderCalendarImport(); }
+function renderAll() { render(); renderClients(); renderObjects(); renderInstallers(); renderInstallerDetails(); renderTrash(); renderFiles(); renderHistorySection(); renderCalendarImport(); renderGlobalSearch(false); }
 function render() { const arr = filtered(false); els.requestsBody.innerHTML = arr.map(requestRow).join("") || '<tr><td colspan="10">Нет заявок</td></tr>'; bindActionButtons(); renderCalendar(arr); renderStats(records, arr); }
 function requestRow(r) { const f = r.fields || {}, status = e(f["Статус"] || ""); return `<tr><td>${e(f["Дата записи"])}</td><td>${e(f["Время записи"])}</td><td><b>${e(f["Имя клиента"])}</b></td><td>${e(f["Компания"] || "—")}</td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Услуга"])}</td><td>${e(f["Адрес"])}</td><td>${e(f["Итоговый м2"] || f["м2"])}</td><td>${e(f["Монтажники"])}</td><td class="status-cell"><span class="status" data-status="${status}">${status || "—"}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`; }
 
@@ -240,6 +253,7 @@ function renderCalendar(arr) {
 function renderStats(all, arr) { const t = today(); const active = activeRecords(); els.statTotal.textContent = active.length; els.statNew.textContent = active.filter((r) => (r.fields || {})["Статус"] === "Новая заявка").length; els.statToday.textContent = active.filter((r) => (r.fields || {})["Дата записи"] === t).length; els.statWork.textContent = active.filter((r) => (r.fields || {})["Статус"] === "В работе").length; els.statFiltered.textContent = arr.length; els.statVolume.textContent = moneyNumber(arr.reduce((s, r) => s + getM2(r.fields || {}), 0)); }
 function bindActionButtons() {
   document.querySelectorAll("[data-open]").forEach((button) => button.onclick = () => openRequest(button.dataset.open));
+  document.querySelectorAll("[data-open-client]").forEach((button) => button.onclick = () => openClientCard(button.dataset.openClient));
   document.querySelectorAll("[data-restore]").forEach((button) => button.onclick = () => restoreRequest(button.dataset.restore));
   document.querySelectorAll("[data-file-preview]").forEach((button) => button.onclick = () => openFilePreview(button.dataset.filePreview));
   document.querySelectorAll("[data-file-open]").forEach((button) => button.onclick = () => openFileInDrive(button.dataset.fileOpen));
@@ -530,8 +544,8 @@ function renderClients() {
   const rows = sectionRecords({ q: els.clientsSearchInput?.value || "", from: els.clientsDateFrom?.value || "", to: els.clientsDateTo?.value || "", service: els.clientsServiceFilter?.value || "", status: els.clientsStatusFilter?.value || "", film: els.clientsFilmFilter?.value || "" });
   const map = new Map();
   rows.forEach((r) => {
-    const f = r.fields || {}, name = f["Имя клиента"] || "Без имени", company = f["Компания"] || "", phone = f["Телефон"] || "", key = norm(name + "|" + company + "|" + phone);
-    const item = map.get(key) || { name, company, phone, count: 0, last: "", id: r.id, m2: 0, service: "", address: "" };
+    const f = r.fields || {}, name = f["Имя клиента"] || "Без имени", company = f["Компания"] || "", phone = f["Телефон"] || "", key = clientKeyFromFields(f);
+    const item = map.get(key) || { key, name, company, phone, count: 0, last: "", id: r.id, m2: 0, service: "", address: "" };
     item.count++; item.m2 += getM2(f);
     if (String(f["Дата записи"] || "") >= String(item.last || "")) { item.last = f["Дата записи"] || ""; item.id = r.id; item.service = f["Услуга"] || ""; item.address = f["Адрес"] || ""; item.company = f["Компания"] || item.company || ""; }
     map.set(key, item);
@@ -541,7 +555,7 @@ function renderClients() {
   if (els.clientsStatRequests) els.clientsStatRequests.textContent = rows.length;
   if (els.clientsStatM2) els.clientsStatM2.textContent = moneyNumber(rows.reduce((s, r) => s + getM2(r.fields || {}), 0));
   if (els.clientsStatRepeat) els.clientsStatRepeat.textContent = clients.filter((x) => x.count > 1).length;
-  els.clientsBody.innerHTML = clients.map((x) => `<tr><td><b>${e(x.name)}</b></td><td>${e(x.company || "—")}</td><td>${phoneLink(x.phone)}</td><td>${x.count}</td><td>${e(x.service || "—")}</td><td>${e(x.address || "—")}</td><td>${moneyNumber(x.m2)}</td><td>${e(x.last)}</td><td><button class="open-btn" data-open="${e(x.id)}">Открыть</button></td></tr>`).join("") || '<tr><td colspan="9">Клиенты не найдены</td></tr>';
+  els.clientsBody.innerHTML = clients.map((x) => `<tr><td><b>${e(x.name)}</b></td><td>${e(x.company || "—")}</td><td>${phoneLink(x.phone)}</td><td>${x.count}</td><td>${e(x.service || "—")}</td><td>${e(x.address || "—")}</td><td>${moneyNumber(x.m2)}</td><td>${e(x.last)}</td><td><button class="open-btn" data-open-client="${e(x.key)}">Карточка</button></td></tr>`).join("") || '<tr><td colspan="9">Клиенты не найдены</td></tr>';
   bindActionButtons();
 }
 function renderObjects() {
@@ -1754,6 +1768,135 @@ async function createCalendarLead(id) {
   } catch (error) {
     setCalendarImportStatus(error.message, false);
   }
+}
+
+
+/* v24: закреплённая панель, глобальный поиск и карточка клиента */
+function clientKeyFromFields(f = {}) {
+  const phone = phoneKey(f["Телефон"] || "");
+  if (phone && phone.length >= 5) return "phone:" + phone;
+  const name = norm(f["Имя клиента"] || "");
+  const company = norm(f["Компания"] || "");
+  return "name:" + [name, company].filter(Boolean).join("|");
+}
+
+function clientRecordsByKey(key) {
+  if (!key) return [];
+  return records.filter((r) => clientKeyFromFields(r.fields || {}) === key).sort(sortByDateDesc);
+}
+
+function clientSummaryFromRows(rows) {
+  const first = rows[0] || { fields: {} };
+  const f0 = first.fields || {};
+  const last = rows[0]?.fields || {};
+  const name = last["Имя клиента"] || f0["Имя клиента"] || "Без имени";
+  const company = last["Компания"] || f0["Компания"] || "";
+  const phone = last["Телефон"] || f0["Телефон"] || "";
+  const requests = rows.length;
+  const m2 = rows.reduce((s, r) => s + getM2(r.fields || {}), 0);
+  const done = rows.filter((r) => PAYROLL_STATUSES.has((r.fields || {})["Статус"] || "")).length;
+  const lastDate = rows.map((r) => (r.fields || {})["Дата записи"] || "").filter(Boolean).sort().pop() || "—";
+  return { name, company, phone, requests, m2, done, lastDate };
+}
+
+function openClientCard(key) {
+  const rows = clientRecordsByKey(key);
+  if (!rows.length || !els.clientCardDialog) return;
+  currentClientKey = key;
+  const s = clientSummaryFromRows(rows);
+  els.clientCardTitle.textContent = s.name || "Карточка клиента";
+  els.clientCardSubtitle.textContent = [s.company, s.phone].filter(Boolean).join(" · ");
+  els.clientCardStatRequests.textContent = s.requests;
+  els.clientCardStatM2.textContent = moneyNumber(s.m2);
+  els.clientCardStatDone.textContent = s.done;
+  els.clientCardStatLast.textContent = s.lastDate;
+
+  const phones = uniqueValues(rows.map((r) => (r.fields || {})["Телефон"]));
+  const companies = uniqueValues(rows.map((r) => (r.fields || {})["Компания"]));
+  const services = uniqueValues(rows.map((r) => (r.fields || {})["Услуга"]));
+  const addresses = uniqueValues(rows.map((r) => (r.fields || {})["Адрес"]));
+  els.clientCardInfo.innerHTML = `
+    <p><b>ФИО:</b> ${e(s.name || "—")}</p>
+    <p><b>Компания:</b> ${e(companies.join(", ") || "—")}</p>
+    <p><b>Телефон:</b> ${phones.length ? phones.map(phoneLink).join("<br>") : "—"}</p>
+    <p><b>Услуги:</b> ${e(services.join(", ") || "—")}</p>
+  `;
+  els.clientCardAddresses.innerHTML = addresses.length ? addresses.map((a) => `<span>${e(a)}</span>`).join("") : '<p class="muted-text">Адресов пока нет.</p>';
+  els.clientCardRequestsBody.innerHTML = rows.map((r) => {
+    const f = r.fields || {};
+    return `<tr><td>${e(f["Дата записи"] || "")}</td><td>${e(f["Услуга"] || "—")}</td><td>${e(f["Адрес"] || "—")}</td><td>${moneyNumber(getM2(f))}</td><td><span class="status" data-status="${e(f["Статус"] || "")}">${e(f["Статус"] || "—")}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`;
+  }).join("") || '<tr><td colspan="6">Заявок пока нет</td></tr>';
+
+  const requestIds = new Set(rows.map((r) => String(r.id)));
+  const files = filesCache.filter((file) => requestIds.has(String(file.requestId)));
+  els.clientCardFiles.innerHTML = files.length ? files.map(fileMiniHtml).join("") : '<p class="muted-text">Файлов по клиенту пока нет.</p>';
+
+  const comments = rows.map((r) => {
+    const f = r.fields || {};
+    const text = [f["Комментарий клиента"], f["Комментарий"], f["Комментарий администратора"]].filter(Boolean).join("\n");
+    if (!text) return "";
+    return `<div class="history-item"><b>#${e(r.id)} · ${e(f["Дата записи"] || "")}</b><p>${nl2br(text)}</p></div>`;
+  }).filter(Boolean);
+  els.clientCardComments.innerHTML = comments.join("") || '<p class="muted-text">Комментариев пока нет.</p>';
+  bindActionButtons();
+  els.clientCardDialog.showModal();
+}
+
+function quickAddFromClientCard() {
+  const rows = clientRecordsByKey(currentClientKey);
+  if (!rows.length) return;
+  const f = rows[0].fields || {};
+  if (els.clientCardDialog?.open) els.clientCardDialog.close();
+  openQuickAdd({
+    name: f["Имя клиента"] || "",
+    company: f["Компания"] || "",
+    phone: f["Телефон"] || "",
+    address: f["Адрес"] || "",
+    service: f["Услуга"] || "Замер / консультация",
+    comment: "Повторное обращение клиента"
+  });
+}
+
+function uniqueValues(list) {
+  return [...new Set((list || []).map((x) => String(x || "").trim()).filter(Boolean))];
+}
+
+function renderGlobalSearch(allowOpen = true) {
+  if (!els.globalSearchInput || !els.globalSearchResults) return;
+  const q = norm(els.globalSearchInput.value || "");
+  if (!q || q.length < 2) { els.globalSearchResults.hidden = true; els.globalSearchResults.innerHTML = ""; return; }
+  const items = [];
+  const seenClients = new Set();
+  records.forEach((r) => {
+    const f = r.fields || {};
+    const hay = norm([r.id, f["Имя клиента"], f["Компания"], f["Телефон"], f["Услуга"], f["Адрес"], f["Статус"], f["Монтажники"], f["Комментарий клиента"], f["Комментарий администратора"]].join(" "));
+    if (hay.includes(q)) {
+      items.push({ type: "Заявка", title: `#${r.id} — ${f["Имя клиента"] || "Без имени"}`, sub: [f["Компания"], f["Телефон"], f["Услуга"], f["Адрес"], f["Статус"]].filter(Boolean).join(" · "), action: "open", id: r.id });
+      const ck = clientKeyFromFields(f);
+      if (ck && !seenClients.has(ck)) {
+        seenClients.add(ck);
+        items.push({ type: "Клиент", title: f["Имя клиента"] || f["Компания"] || f["Телефон"] || "Клиент", sub: [f["Компания"], f["Телефон"], "карточка клиента"].filter(Boolean).join(" · "), action: "client", id: ck });
+      }
+    }
+  });
+  filesCache.forEach((file) => {
+    const hay = norm([file.originalName, file.name, file.client, file.phone, file.address, file.service, file.fileType, file.requestId].join(" "));
+    if (hay.includes(q)) items.push({ type: "Файл", title: file.originalName || file.name || "Файл", sub: [`#${file.requestId || "—"}`, file.client, file.address, file.fileType].filter(Boolean).join(" · "), action: "file", id: file.key });
+  });
+  const limited = items.slice(0, 18);
+  els.globalSearchResults.innerHTML = limited.length ? limited.map((item) => `<button type="button" class="global-search-item" data-global-action="${e(item.action)}" data-global-id="${e(item.id)}"><span>${e(item.type)}</span><b>${e(item.title)}</b><small>${e(item.sub)}</small></button>`).join("") : '<div class="global-search-empty">Ничего не найдено</div>';
+  els.globalSearchResults.hidden = false;
+}
+
+function handleGlobalSearchClick(event) {
+  const btn = event.target.closest("[data-global-action]");
+  if (!btn) return;
+  const action = btn.dataset.globalAction;
+  const id = btn.dataset.globalId;
+  els.globalSearchResults.hidden = true;
+  if (action === "open") openRequest(id);
+  if (action === "client") openClientCard(id);
+  if (action === "file") openFilePreview(id);
 }
 
 function calendarPrefillData(ev) {

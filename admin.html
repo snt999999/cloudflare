@@ -20,7 +20,6 @@
     <nav class="sidebar-nav">
       <a class="active" href="#requests" data-section="requests">Заявки</a>
       <a href="#calendar" data-section="calendar">Календарь</a>
-      <a href="#calendarImport" data-section="calendarImport">Импорт календаря</a>
       <a href="#clients" data-section="clients">Клиенты</a>
       <a href="#objects" data-section="objects">Объекты</a>
       <a href="#installers" data-section="installers">Монтажники</a>
@@ -30,6 +29,7 @@
       <a href="#files" data-section="files">Файлы</a>
       <a href="#reports" data-section="reports">Отчёты</a>
       <a href="#settings" data-section="settings">Настройки</a>
+      <a href="#calendarImport" data-section="calendarImport">Импорт календаря</a>
     </nav>
   </aside>
 
@@ -46,6 +46,21 @@
     </section>
 
     <section id="appPanel" style="display:none">
+      <section class="admin-topbar" id="adminTopbar">
+        <div class="topbar-left">
+          <button id="topQuickAddBtn" class="btn-green" type="button">+ Быстрая запись</button>
+          <button id="topRefreshBtn" type="button">Обновить</button>
+        </div>
+        <div class="global-search-wrap">
+          <input id="globalSearchInput" type="search" placeholder="Быстрый поиск по всей админке: телефон, клиент, компания, адрес, заявка, файл..." autocomplete="off" />
+          <div id="globalSearchResults" class="global-search-results" hidden></div>
+        </div>
+        <div class="topbar-right">
+          <button id="topReportsBtn" type="button">Отчёты</button>
+          <a href="zapis.html" target="_blank" rel="noopener">Запись</a>
+        </div>
+      </section>
+
       <section id="requestsSection" class="workspace-section">
         <header class="admin-head">
           <div>
@@ -329,6 +344,50 @@
       <section class="files-box"><h3>История этой заявки</h3><div id="requestHistoryBox" class="history-box"></div></section>
       <section class="cancel-box"><h3>Отмена / удаление в корзину</h3><p>Физически заявка не удаляется, а переносится в корзину отмен со статусом «Отменена».</p><textarea id="cancelReason" placeholder="Причина отмены или удаления"></textarea></section>
       <div class="dialog-actions"><button id="saveRequestBtn" type="button">Сохранить</button><button id="cancelRequestBtn" class="danger" type="button">Отменить / в корзину</button><button class="ghost" value="cancel">Закрыть</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="clientCardDialog" class="wide-dialog client-card-dialog">
+    <form method="dialog">
+      <button class="close" value="cancel">×</button>
+      <div class="client-card-head">
+        <div>
+          <h2 id="clientCardTitle">Карточка клиента</h2>
+          <p id="clientCardSubtitle" class="muted-text"></p>
+        </div>
+        <div class="client-card-actions">
+          <button id="clientCardQuickBtn" type="button" class="btn-green">Новая заявка этому клиенту</button>
+        </div>
+      </div>
+      <section class="client-card-stats stats stats-four compact-stats">
+        <div><span>Заявок</span><b id="clientCardStatRequests">0</b></div>
+        <div><span>Объём, м²</span><b id="clientCardStatM2">0</b></div>
+        <div><span>Выполнено</span><b id="clientCardStatDone">0</b></div>
+        <div><span>Последняя дата</span><b id="clientCardStatLast">—</b></div>
+      </section>
+      <section class="client-card-grid">
+        <div class="card client-card-box">
+          <h3>Данные клиента</h3>
+          <div id="clientCardInfo" class="client-card-info"></div>
+        </div>
+        <div class="card client-card-box">
+          <h3>Адреса / объекты</h3>
+          <div id="clientCardAddresses" class="client-card-tags"></div>
+        </div>
+      </section>
+      <section class="card client-card-box">
+        <h3>История обращений</h3>
+        <div class="table-card client-card-table"><table><thead><tr><th>Дата</th><th>Услуга</th><th>Адрес</th><th>м²</th><th>Статус</th><th></th></tr></thead><tbody id="clientCardRequestsBody"></tbody></table></div>
+      </section>
+      <section class="card client-card-box">
+        <h3>Файлы клиента</h3>
+        <div id="clientCardFiles" class="request-files-box"></div>
+      </section>
+      <section class="card client-card-box">
+        <h3>Комментарии</h3>
+        <div id="clientCardComments" class="client-card-comments"></div>
+      </section>
+      <div class="dialog-actions"><button class="ghost" value="cancel">Закрыть</button></div>
     </form>
   </dialog>
 
