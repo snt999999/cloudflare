@@ -29,7 +29,7 @@ const els = {
   loginPanel: $("loginPanel"), appPanel: $("appPanel"), loginForm: $("loginForm"), passwordInput: $("passwordInput"), loginMessage: $("loginMessage"), logoutBtn: $("logoutBtn"), refreshBtn: $("refreshBtn"), listBtn: $("listBtn"), calendarBtn: $("calendarBtn"), listView: $("listView"), calendarView: $("calendarView"), requestsBody: $("requestsBody"), calendarGrid: $("calendarGrid"), monthTitle: $("monthTitle"), prevMonth: $("prevMonth"), nextMonth: $("nextMonth"), searchInput: $("searchInput"), statusFilter: $("statusFilter"), installerFilter: $("installerFilter"), dateFrom: $("dateFrom"), dateTo: $("dateTo"), clearFiltersBtn: $("clearFiltersBtn"), message: $("message"), statTotal: $("statTotal"), statNew: $("statNew"), statToday: $("statToday"), statWork: $("statWork"), statVolume: $("statVolume"), statFiltered: $("statFiltered"),
   dialog: $("requestDialog"), dialogTitle: $("dialogTitle"), requestInfo: $("requestInfo"), editDate: $("editDate"), editTime: $("editTime"), editStatus: $("editStatus"), editM2: $("editM2"), editResponsible: $("editResponsible"), editCompany: $("editCompany"), editService: $("editService"), editAddress: $("editAddress"), editAdminComment: $("editAdminComment"), saveRequestBtn: $("saveRequestBtn"), cancelRequestBtn: $("cancelRequestBtn"), cancelReason: $("cancelReason"), requestHistoryBox: $("requestHistoryBox"), exportBtn: $("exportBtn"),
   clientsBody: $("clientsBody"), objectsBody: $("objectsBody"), installersBody: $("installersBody"), trashBody: $("trashBody"), historyBody: $("historyBody"), historySearchInput: $("historySearchInput"), clearHistoryLocalBtn: $("clearHistoryLocalBtn"), filesBody: $("filesBody"), filesSearchInput: $("filesSearchInput"), filesTypeFilter: $("filesTypeFilter"),
-  quickAddBtn: $("quickAddBtn"), quickAddDialog: $("quickAddDialog"), quickSaveBtn: $("quickSaveBtn"), quickName: $("quickName"), quickCompany: $("quickCompany"), quickPhone: $("quickPhone"), quickClientHint: $("quickClientHint"), quickService: $("quickService"), quickDate: $("quickDate"), quickTime: $("quickTime"), quickM2: $("quickM2"), quickAddress: $("quickAddress"), quickComment: $("quickComment"),
+  quickAddBtn: $("quickAddBtn"), quickAddDialog: $("quickAddDialog"), quickSaveBtn: $("quickSaveBtn"), quickName: $("quickName"), quickCompany: $("quickCompany"), quickPhone: $("quickPhone"), quickClientHint: $("quickClientHint"), quickClientSuggestions: $("quickClientSuggestions"), quickService: $("quickService"), quickDate: $("quickDate"), quickTime: $("quickTime"), quickM2: $("quickM2"), quickAddress: $("quickAddress"), quickComment: $("quickComment"),
   reportDialog: $("reportDialog"), reportTitle: $("reportTitle"), reportDateFrom: $("reportDateFrom"), reportDateTo: $("reportDateTo"), reportStatus: $("reportStatus"), reportFormat: $("reportFormat"), reportAllInstallers: $("reportAllInstallers"), downloadReportBtn: $("downloadReportBtn"), payrollOptions: $("payrollOptions"), payrollSplitMode: $("payrollSplitMode"), payrollStatusMode: $("payrollStatusMode"), payrollSettingsBody: $("payrollSettingsBody"), savePayrollSettingsBtn: $("savePayrollSettingsBtn"), previewPayrollBtn: $("previewPayrollBtn"), reportPreview: $("reportPreview"),
   clientsSearchInput: $("clientsSearchInput"), clientsDateFrom: $("clientsDateFrom"), clientsDateTo: $("clientsDateTo"), clientsServiceFilter: $("clientsServiceFilter"), clientsFilmFilter: $("clientsFilmFilter"), clientsStatusFilter: $("clientsStatusFilter"), clientsClearFiltersBtn: $("clientsClearFiltersBtn"), clientsStatCount: $("clientsStatCount"), clientsStatRequests: $("clientsStatRequests"), clientsStatM2: $("clientsStatM2"), clientsStatRepeat: $("clientsStatRepeat"),
   objectsSearchInput: $("objectsSearchInput"), objectsDateFrom: $("objectsDateFrom"), objectsDateTo: $("objectsDateTo"), objectsServiceFilter: $("objectsServiceFilter"), objectsStatusFilter: $("objectsStatusFilter"), objectsInstallerFilter: $("objectsInstallerFilter"), objectsM2Min: $("objectsM2Min"), objectsM2Max: $("objectsM2Max"), objectsClearFiltersBtn: $("objectsClearFiltersBtn"), objectsStatCount: $("objectsStatCount"), objectsStatM2: $("objectsStatM2"), objectsStatDone: $("objectsStatDone"), objectsStatWork: $("objectsStatWork"),
@@ -74,8 +74,20 @@ function init() {
   els.exportBtn.addEventListener("click", () => setSection("reports"));
   els.quickAddBtn.addEventListener("click", openQuickAdd);
   els.quickSaveBtn.addEventListener("click", saveQuickAdd);
-  if (els.quickPhone) els.quickPhone.addEventListener("input", handleQuickPhoneInput);
-  if (els.quickPhone) els.quickPhone.addEventListener("blur", handleQuickPhoneInput);
+  if (els.quickPhone) {
+    els.quickPhone.addEventListener("input", handleQuickPhoneInput);
+    els.quickPhone.addEventListener("focus", renderQuickClientSuggestions);
+    els.quickPhone.addEventListener("keydown", handleQuickPhoneKeydown);
+  }
+  if (els.quickClientSuggestions) {
+    els.quickClientSuggestions.addEventListener("click", handleQuickClientSuggestionClick);
+  }
+  document.addEventListener("click", (event) => {
+    if (!els.quickAddDialog || !els.quickAddDialog.open) return;
+    if (els.quickPhone && els.quickPhone.contains(event.target)) return;
+    if (els.quickClientSuggestions && els.quickClientSuggestions.contains(event.target)) return;
+    hideQuickClientSuggestions();
+  });
   els.filesSearchInput.addEventListener("input", renderFiles);
   els.filesTypeFilter.addEventListener("change", renderFiles);
   initFileServiceEvents();
@@ -323,6 +335,12 @@ function phoneKey(value) {
   const digits = normalizePhoneDigits(value);
   return digits.length >= 10 ? digits.slice(-10) : digits;
 }
+function phoneSearchKey(value) {
+  let digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if ((digits[0] === "7" || digits[0] === "8") && digits.length > 1) digits = digits.slice(1);
+  return digits.slice(0, 10);
+}
 function formatRussianPhone(value) {
   const digits = normalizePhoneDigits(value);
   if (!digits) return "";
@@ -335,40 +353,112 @@ function formatRussianPhone(value) {
   if (rest.length > 8) out += "-" + rest.slice(8, 10);
   return out;
 }
+function formatQuickPhoneForTyping(value) {
+  const digits = normalizePhoneDigits(value);
+  if (!digits) return "";
+  return "+" + digits;
+}
 function handleQuickPhoneInput() {
   if (!els.quickPhone) return;
-  els.quickPhone.value = formatRussianPhone(els.quickPhone.value);
-  autofillQuickClientByPhone();
+  const before = els.quickPhone.value;
+  els.quickPhone.value = formatQuickPhoneForTyping(before);
+  try { els.quickPhone.setSelectionRange(els.quickPhone.value.length, els.quickPhone.value.length); } catch (_) {}
+  renderQuickClientSuggestions();
+}
+function handleQuickPhoneKeydown(event) {
+  if (!els.quickPhone) return;
+  if (event.key !== "Backspace" && event.key !== "Delete") return;
+  const value = els.quickPhone.value || "";
+  const start = els.quickPhone.selectionStart || 0;
+  const end = els.quickPhone.selectionEnd || start;
+  if (start !== end) return;
+  if (event.key === "Backspace" && start <= 2) {
+    event.preventDefault();
+    els.quickPhone.value = "";
+    renderQuickClientSuggestions();
+  }
+}
+function getQuickClientMatches(value) {
+  const query = phoneSearchKey(value);
+  if (!query) return [];
+  const latestByPhone = new Map();
+  activeRecords().sort(sortByDateDesc).forEach((r) => {
+    const f = r.fields || {};
+    const key = phoneKey(f["Телефон"]);
+    if (!key || latestByPhone.has(key)) return;
+    latestByPhone.set(key, r);
+  });
+  return [...latestByPhone.values()].filter((r) => {
+    const key = phoneKey((r.fields || {})["Телефон"]);
+    return key && (key.startsWith(query) || key.includes(query));
+  }).slice(0, 8);
 }
 function findClientByPhone(value) {
   const key = phoneKey(value);
-  if (!key || key.length < 5) return null;
+  if (!key || key.length < 10) return null;
   const matches = activeRecords().filter((r) => phoneKey((r.fields || {})["Телефон"]) === key).sort(sortByDateDesc);
   return matches[0] || null;
 }
-function autofillQuickClientByPhone() {
+function renderQuickClientSuggestions() {
   const hint = els.quickClientHint;
-  const key = phoneKey(els.quickPhone?.value || "");
-  if (!hint) return;
-  hint.classList.remove("is-found", "is-empty");
-  if (!key || key.length < 10) {
-    hint.textContent = "Введите телефон — если клиент уже есть в базе, ФИО и компания подставятся автоматически.";
+  const box = els.quickClientSuggestions;
+  const value = els.quickPhone?.value || "";
+  const query = phoneSearchKey(value);
+  if (hint) hint.classList.remove("is-found", "is-empty");
+  if (!box) return;
+  if (!query) {
+    box.hidden = true;
+    box.innerHTML = "";
+    if (hint) hint.textContent = "Начните вводить номер — подходящие клиенты появятся списком ниже.";
     return;
   }
-  const found = findClientByPhone(els.quickPhone.value);
-  if (!found) {
-    hint.classList.add("is-empty");
-    hint.textContent = "Клиент с таким телефоном в базе не найден — будет создана новая заявка.";
+  const matches = getQuickClientMatches(value);
+  if (!matches.length) {
+    box.hidden = true;
+    box.innerHTML = "";
+    if (hint) {
+      hint.classList.add("is-empty");
+      hint.textContent = query.length < 3 ? "Продолжайте вводить номер — ищу совпадения в базе." : "Совпадений пока нет — будет создана новая заявка.";
+    }
     return;
   }
-  const f = found.fields || {};
-  if (els.quickName && !els.quickName.value.trim()) els.quickName.value = f["Имя клиента"] || "";
-  if (els.quickCompany && !els.quickCompany.value.trim()) els.quickCompany.value = f["Компания"] || "";
-  hint.classList.add("is-found");
-  hint.textContent = `Найден клиент: ${f["Имя клиента"] || "без имени"}${f["Компания"] ? " · " + f["Компания"] : ""}. Последняя заявка #${found.id}.`;
+  box.hidden = false;
+  box.innerHTML = matches.map((r) => quickClientSuggestionHtml(r)).join("");
+  const exact = findClientByPhone(value);
+  if (hint) {
+    hint.classList.add(exact ? "is-found" : "");
+    hint.textContent = exact ? "Номер найден. Нажмите на клиента в списке, чтобы заполнить карточку." : `Найдено совпадений: ${matches.length}. Выберите клиента из списка.`;
+  }
+}
+function quickClientSuggestionHtml(record) {
+  const f = record.fields || {};
+  return `<button type="button" class="quick-client-item" data-quick-client="${e(record.id)}"><b>${e(f["Имя клиента"] || "Без имени")}</b>${f["Компания"] ? `<span>${e(f["Компания"])}</span>` : ""}<small>${e(f["Телефон"] || "")}${f["Адрес"] ? " · " + e(f["Адрес"]) : ""}${f["Дата записи"] ? " · последняя: " + e(f["Дата записи"]) : ""}</small></button>`;
+}
+function hideQuickClientSuggestions() {
+  if (!els.quickClientSuggestions) return;
+  els.quickClientSuggestions.hidden = true;
+}
+function handleQuickClientSuggestionClick(event) {
+  const btn = event.target.closest("[data-quick-client]");
+  if (!btn) return;
+  const record = records.find((r) => String(r.id) === String(btn.dataset.quickClient));
+  if (record) applyQuickClient(record);
+}
+function applyQuickClient(record) {
+  const f = record.fields || {};
+  if (els.quickName) els.quickName.value = f["Имя клиента"] || "";
+  if (els.quickCompany) els.quickCompany.value = f["Компания"] || "";
+  if (els.quickPhone) els.quickPhone.value = formatQuickPhoneForTyping(f["Телефон"] || els.quickPhone.value || "");
+  if (els.quickAddress && !els.quickAddress.value.trim()) els.quickAddress.value = f["Адрес"] || "";
+  if (els.quickClientHint) {
+    els.quickClientHint.classList.remove("is-empty");
+    els.quickClientHint.classList.add("is-found");
+    els.quickClientHint.textContent = `Выбран клиент: ${f["Имя клиента"] || "без имени"}${f["Компания"] ? " · " + f["Компания"] : ""}. Данные подставлены.`;
+  }
+  hideQuickClientSuggestions();
 }
 
-function openQuickAdd() { setDefaultDates(); els.quickName.value = ""; if (els.quickCompany) els.quickCompany.value = ""; els.quickPhone.value = ""; if (els.quickClientHint) { els.quickClientHint.classList.remove("is-found", "is-empty"); els.quickClientHint.textContent = "Введите телефон — если клиент уже есть в базе, ФИО и компания подставятся автоматически."; } els.quickAddress.value = ""; els.quickComment.value = ""; els.quickM2.value = ""; els.quickAddDialog.showModal(); }
+function openQuickAdd() { setDefaultDates(); els.quickName.value = ""; if (els.quickCompany) els.quickCompany.value = ""; els.quickPhone.value = ""; if (els.quickClientHint) { els.quickClientHint.classList.remove("is-found", "is-empty"); els.quickClientHint.textContent = "Начните вводить номер — подходящие клиенты появятся списком ниже."; } hideQuickClientSuggestions(); els.quickAddress.value = ""; els.quickComment.value = ""; els.quickM2.value = ""; els.quickAddDialog.showModal(); }
 async function saveQuickAdd() {
   const record = { "Имя клиента": els.quickName.value.trim(), "Компания": els.quickCompany?.value.trim() || "", "Телефон": formatRussianPhone(els.quickPhone.value), "Услуга": els.quickService.value, "Дата записи": els.quickDate.value, "Время записи": els.quickTime.value, "Адрес": els.quickAddress.value.trim(), "м2": els.quickM2.value ? String(els.quickM2.value) : "", "Комментарий клиента": els.quickComment.value.trim(), "Статус": "Новая заявка", "Cal Booking ID": "manual-" + Date.now() };
   if (!record["Имя клиента"] || !record["Телефон"] || !record["Дата записи"] || !record["Время записи"]) { msg("Заполните ФИО, телефон, дату и время"); return; }
