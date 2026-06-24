@@ -28,6 +28,13 @@ async function patchSms(env, id, fields) {
   const text = await res.text(); const data = parseJson(text);
   return { ok: res.ok, status: res.status, response: data, payload };
 }
+async function patchSmsSafe(env, id, extendedFields, fallbackFields) {
+  const full = await patchSms(env, id, extendedFields);
+  if (full.ok || !fallbackFields) return full;
+  const fallback = await patchSms(env, id, fallbackFields);
+  return { ...fallback, extendedFailed: full };
+}
+function compactJson(value, max = 1800) { try { return JSON.stringify(value || {}).slice(0, max); } catch (_) { return String(value || "").slice(0, max); } }
 function nowYekaterinburgParts() {
   const parts = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Yekaterinburg", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date());
   const p = Object.fromEntries(parts.map((x) => [x.type, x.value]));
@@ -151,11 +158,15 @@ async function runSmsCron({ request, env, source }) {
     await patchSms(env, record.id, { "Статус": "Отправляется", "Ошибка": "" });
     const sent = await sendSms(env, to, message);
     if (sent.ok) {
-      await patchSms(env, record.id, { "Статус": "Отправлено", "Дата фактической отправки": new Date().toISOString(), "Ошибка": "" });
+      const base = { "Статус": "Отправлено", "Дата фактической отправки": new Date().toISOString(), "Ошибка": "" };
+      const extended = { ...base, "ID Prostor": sent.smscId || "", "Client ID": sent.clientId || "", "Статус доставки": sent.status || "accepted", "Ответ сервиса": compactJson(sent.result || sent), "Дата проверки статуса": new Date().toISOString() };
+      await patchSmsSafe(env, record.id, extended, base);
     } else {
-      await patchSms(env, record.id, { "Статус": "Ошибка", "Ошибка": sent.error || "Ошибка отправки" });
+      const base = { "Статус": "Ошибка", "Ошибка": sent.error || "Ошибка отправки" };
+      const extended = { ...base, "Статус доставки": sent.status || "error", "Ответ сервиса": compactJson(sent.result || sent), "Дата проверки статуса": new Date().toISOString() };
+      await patchSmsSafe(env, record.id, extended, base);
     }
-    results.push({ id: record.id, to, ok: sent.ok, error: sent.error || "", provider: sent.provider || "" });
+    results.push({ id: record.id, to, ok: sent.ok, error: sent.error || "", provider: sent.provider || "", smscId: sent.smscId || "", clientId: sent.clientId || "", deliveryStatus: sent.status || "" });
   }
   return json({ ok: true, source, now, checked: listed.records.length, due: due.length, processed: results.length, results });
 }

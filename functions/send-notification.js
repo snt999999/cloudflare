@@ -16,7 +16,10 @@ export async function onRequestPost({ request, env }) {
 
     if (channel === "sms") {
       if (!to) return json({ ok: false, error: "Не указан номер телефона клиента" }, 400);
-      return await sendSms({ env, to, message });
+      const smsResponse = await sendSms({ env, to, message });
+      const smsPayload = await smsResponse.clone().json().catch(() => ({}));
+      await logDirectSms({ env, body, to, message, smsPayload });
+      return smsResponse;
     }
 
     if (channel === "telegram" || channel === "admin_telegram") {
@@ -42,6 +45,58 @@ export async function onRequestGet({ request, env }) {
     telegram: Boolean(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_ADMIN_CHAT_ID),
     provider: env.SMS_PROVIDER || "smsru"
   });
+}
+
+function smsEndpoint(env) { return env.NOCODB_SMS_ENDPOINT || env.NOCODB_NOTIFICATIONS_ENDPOINT || ""; }
+function nocodbToken(env) { return env.NOCODB_TOKEN || ""; }
+function yDateTimeParts() {
+  const parts = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Yekaterinburg", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date());
+  const p = Object.fromEntries(parts.map((x) => [x.type, x.value]));
+  return { date: `${p.year}-${p.month}-${p.day}`, time: `${p.hour}:${p.minute}` };
+}
+function compactJson(value, max = 1800) {
+  try { return JSON.stringify(value || {}).slice(0, max); } catch (_) { return String(value || "").slice(0, max); }
+}
+async function createSmsLog(env, fields) {
+  if (!smsEndpoint(env) || !nocodbToken(env)) return { ok: false, skipped: true, error: "NOCODB_SMS_ENDPOINT/NOCODB_TOKEN не заданы" };
+  const res = await fetch(smsEndpoint(env), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "xc-token": nocodbToken(env) },
+    body: JSON.stringify([{ fields }])
+  });
+  const text = await res.text();
+  let data; try { data = JSON.parse(text); } catch (_) { data = text; }
+  return { ok: res.ok, status: res.status, response: data };
+}
+async function logDirectSms({ env, body, to, message, smsPayload }) {
+  if (!smsEndpoint(env) || !nocodbToken(env)) return;
+  const now = yDateTimeParts();
+  const first = Array.isArray(smsPayload?.result?.messages) ? smsPayload.result.messages[0] : null;
+  const baseFields = {
+    "ID заявки": cleanText(body.recordId || body.requestId || "TEST-" + Date.now(), 80),
+    "ФИО": cleanText(body.client || body.name || "Тестовая отправка", 160),
+    "Компания": cleanText(body.company || "", 160),
+    "Телефон": normalizeTo(to),
+    "Канал": "sms",
+    "Тип уведомления": cleanText(body.type || "Тестовая / ручная отправка", 120),
+    "Текст SMS": message,
+    "Дата отправки": now.date,
+    "Время отправки": now.time,
+    "Статус": smsPayload?.ok ? "Отправлено" : "Ошибка",
+    "Ошибка": smsPayload?.ok ? "" : cleanText(smsPayload?.error || "Ошибка отправки", 400),
+    "Дата фактической отправки": smsPayload?.ok ? new Date().toISOString() : "",
+    "Создано": new Date().toISOString()
+  };
+  const extendedFields = {
+    ...baseFields,
+    "ID Prostor": cleanText(smsPayload?.smscId || first?.smscId || "", 100),
+    "Client ID": cleanText(smsPayload?.clientId || first?.clientId || "", 100),
+    "Статус доставки": cleanText(first?.status || smsPayload?.status || "accepted", 120),
+    "Ответ сервиса": compactJson(smsPayload?.result || smsPayload),
+    "Дата проверки статуса": new Date().toISOString()
+  };
+  const full = await createSmsLog(env, extendedFields);
+  if (!full.ok) await createSmsLog(env, baseFields);
 }
 
 async function sendSms({ env, to, message }) {

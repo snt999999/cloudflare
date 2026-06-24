@@ -42,6 +42,13 @@ async function patchSms(env, id, fields) {
   if (!res.ok) return { ok: false, error: "NocoDB SMS update error", status: res.status, nocodbResponse: data, sentPayload: payload };
   return { ok: true, nocodbResponse: data };
 }
+async function patchSmsSafe(env, id, extendedFields, fallbackFields) {
+  const full = await patchSms(env, id, extendedFields);
+  if (full.ok || !fallbackFields) return full;
+  const fallback = await patchSms(env, id, fallbackFields);
+  return { ...fallback, extendedFailed: full };
+}
+function compactJson(value, max = 1800) { try { return JSON.stringify(value || {}).slice(0, max); } catch (_) { return String(value || "").slice(0, max); } }
 function cleanText(value, max = 900) { return String(value || "").replace(/[<>]/g, "").trim().slice(0, max); }
 function cleanDate(value) { return String(value || "").slice(0, 10); }
 function cleanTime(value) { return String(value || "").slice(0, 5); }
@@ -101,7 +108,23 @@ export async function onRequestPost({ request, env }) {
       if (action === "mark_sent") fields = { "Статус": "Отправлено", "Дата фактической отправки": new Date().toISOString(), "Ошибка": "" };
       if (action === "mark_error") fields = { "Статус": "Ошибка", "Ошибка": cleanText(body.error || "Ошибка отправки") };
       if (action === "reschedule") fields = { "Статус": "Запланировано", "Дата отправки": cleanDate(body.date), "Время отправки": cleanTime(body.time), "Ошибка": "" };
-      const result = await patchSms(env, body.id, fields);
+      let result;
+      if (action === "mark_sent") {
+        const extended = {
+          ...fields,
+          "ID Prostor": cleanText(body.smscId || body.prostorId || "", 100),
+          "Client ID": cleanText(body.clientId || "", 100),
+          "Статус доставки": cleanText(body.deliveryStatus || body.prostorStatus || "accepted", 120),
+          "Ответ сервиса": compactJson(body.serviceResponse || body.result || body),
+          "Дата проверки статуса": new Date().toISOString()
+        };
+        result = await patchSmsSafe(env, body.id, extended, fields);
+      } else if (action === "mark_error") {
+        const extended = { ...fields, "Статус доставки": cleanText(body.deliveryStatus || "error", 120), "Ответ сервиса": compactJson(body.serviceResponse || body.result || body), "Дата проверки статуса": new Date().toISOString() };
+        result = await patchSmsSafe(env, body.id, extended, fields);
+      } else {
+        result = await patchSms(env, body.id, fields);
+      }
       return json(result, result.ok || result.setupRequired ? 200 : 500);
     }
     return json({ ok: false, error: "Неизвестное действие SMS-очереди" }, 400);

@@ -1,0 +1,7 @@
+v27 Prostor status tracking
+
+- Тестовая SMS теперь записывается в NocoDB SMS-очередь, если задан NOCODB_SMS_ENDPOINT.
+- Добавлена проверка статуса Prostor по ID Prostor / smscId.
+- В SMS-очереди показываются ID Prostor и статус доставки, если в NocoDB есть эти поля.
+- При отправке из очереди сохраняются smscId/clientId/ответ сервиса, если в NocoDB добавлены дополнительные поля.
+- Добавлена функция /sms-status.

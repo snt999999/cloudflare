@@ -41,7 +41,7 @@ const els = {
   installersSearchInput: $("installersSearchInput"), installersDateFrom: $("installersDateFrom"), installersDateTo: $("installersDateTo"), installersStatusFilter: $("installersStatusFilter"), installersServiceFilter: $("installersServiceFilter"), installersClearFiltersBtn: $("installersClearFiltersBtn"), installersStatJobs: $("installersStatJobs"), installersStatM2: $("installersStatM2"), installersStatAmount: $("installersStatAmount"), installersStatTotal: $("installersStatTotal"), payrollGuide: $("payrollGuide"),
   installerDetailsPanel: $("installerDetailsPanel"), installerDetailsTitle: $("installerDetailsTitle"), installerDetailsInfo: $("installerDetailsInfo"), installerDetailsCloseBtn: $("installerDetailsCloseBtn"), installerDetailsSearchInput: $("installerDetailsSearchInput"), installerDetailsDateFrom: $("installerDetailsDateFrom"), installerDetailsDateTo: $("installerDetailsDateTo"), installerDetailsStatusFilter: $("installerDetailsStatusFilter"), installerDetailsServiceFilter: $("installerDetailsServiceFilter"), installerDetailsM2Min: $("installerDetailsM2Min"), installerDetailsM2Max: $("installerDetailsM2Max"), installerDetailsClearBtn: $("installerDetailsClearBtn"), installerDetailsStatJobs: $("installerDetailsStatJobs"), installerDetailsStatM2: $("installerDetailsStatM2"), installerDetailsStatAmount: $("installerDetailsStatAmount"), installerDetailsStatRate: $("installerDetailsStatRate"), installerDetailsBody: $("installerDetailsBody"),
   notifyTemplate: $("notifyTemplate"), notifyChannel: $("notifyChannel"), notifyMessage: $("notifyMessage"), sendNotifyBtn: $("sendNotifyBtn"), copyNotifyBtn: $("copyNotifyBtn"), requestNotifyStatus: $("requestNotifyStatus"),
-  notificationCheckBtn: $("notificationCheckBtn"), notificationSmsStatus: $("notificationSmsStatus"), notificationTelegramStatus: $("notificationTelegramStatus"), testNotifyChannel: $("testNotifyChannel"), testNotifyTo: $("testNotifyTo"), testNotifyMessage: $("testNotifyMessage"), sendTestNotifyBtn: $("sendTestNotifyBtn"), copyTestNotifyBtn: $("copyTestNotifyBtn"), notificationStatus: $("notificationStatus"), notificationTemplatesList: $("notificationTemplatesList"), notificationLogBody: $("notificationLogBody"), smsQueueRefreshBtn: $("smsQueueRefreshBtn"), smsQueueSearch: $("smsQueueSearch"), smsQueueStatus: $("smsQueueStatus"), smsQueueFrom: $("smsQueueFrom"), smsQueueTo: $("smsQueueTo"), smsQueueBody: $("smsQueueBody"), smsQueueStatusText: $("smsQueueStatusText"), scheduleSmsTemplate: $("scheduleSmsTemplate"), scheduleSmsDate: $("scheduleSmsDate"), scheduleSmsTime: $("scheduleSmsTime"), scheduleSmsMessage: $("scheduleSmsMessage"), scheduleSmsBtn: $("scheduleSmsBtn"), scheduleDefaultSmsBtn: $("scheduleDefaultSmsBtn"), scheduleSmsStatus: $("scheduleSmsStatus"),
+  notificationCheckBtn: $("notificationCheckBtn"), notificationSmsStatus: $("notificationSmsStatus"), notificationTelegramStatus: $("notificationTelegramStatus"), testNotifyChannel: $("testNotifyChannel"), testNotifyTo: $("testNotifyTo"), testNotifyMessage: $("testNotifyMessage"), sendTestNotifyBtn: $("sendTestNotifyBtn"), copyTestNotifyBtn: $("copyTestNotifyBtn"), notificationStatus: $("notificationStatus"), notificationTemplatesList: $("notificationTemplatesList"), notificationLogBody: $("notificationLogBody"), prostorStatusId: $("prostorStatusId"), checkProstorStatusBtn: $("checkProstorStatusBtn"), prostorStatusText: $("prostorStatusText"), smsQueueRefreshBtn: $("smsQueueRefreshBtn"), smsQueueSearch: $("smsQueueSearch"), smsQueueStatus: $("smsQueueStatus"), smsQueueFrom: $("smsQueueFrom"), smsQueueTo: $("smsQueueTo"), smsQueueBody: $("smsQueueBody"), smsQueueStatusText: $("smsQueueStatusText"), scheduleSmsTemplate: $("scheduleSmsTemplate"), scheduleSmsDate: $("scheduleSmsDate"), scheduleSmsTime: $("scheduleSmsTime"), scheduleSmsMessage: $("scheduleSmsMessage"), scheduleSmsBtn: $("scheduleSmsBtn"), scheduleDefaultSmsBtn: $("scheduleDefaultSmsBtn"), scheduleSmsStatus: $("scheduleSmsStatus"),
   calendarImportCheckBtn: $("calendarImportCheckBtn"), calendarImportLoadBtn: $("calendarImportLoadBtn"), calendarImportSearch: $("calendarImportSearch"), calendarImportFrom: $("calendarImportFrom"), calendarImportTo: $("calendarImportTo"), calendarImportMode: $("calendarImportMode"), calendarImportTodayBtn: $("calendarImportTodayBtn"), calendarImportWeekBtn: $("calendarImportWeekBtn"), calendarImportStatus: $("calendarImportStatus"), calendarImportList: $("calendarImportList"), calendarImportStatTotal: $("calendarImportStatTotal"), calendarImportStatWork: $("calendarImportStatWork"), calendarImportStatImported: $("calendarImportStatImported"), calendarImportStatHidden: $("calendarImportStatHidden"),
   topQuickAddBtn: $("topQuickAddBtn"), topRefreshBtn: $("topRefreshBtn"), topReportsBtn: $("topReportsBtn"), globalSearchInput: $("globalSearchInput"), globalSearchResults: $("globalSearchResults"),
   clientCardDialog: $("clientCardDialog"), clientCardTitle: $("clientCardTitle"), clientCardSubtitle: $("clientCardSubtitle"), clientCardQuickBtn: $("clientCardQuickBtn"), clientCardStatRequests: $("clientCardStatRequests"), clientCardStatM2: $("clientCardStatM2"), clientCardStatDone: $("clientCardStatDone"), clientCardStatLast: $("clientCardStatLast"), clientCardInfo: $("clientCardInfo"), clientCardAddresses: $("clientCardAddresses"), clientCardRequestsBody: $("clientCardRequestsBody"), clientCardFiles: $("clientCardFiles"), clientCardComments: $("clientCardComments")
@@ -1484,8 +1484,10 @@ async function sendTestNotification() {
   setNotificationStatus(els.notificationStatus, "Отправляю тест...", true);
   const result = await sendNotificationApi({ channel, to, message: messageText, recordId: "test", client: "Тест" });
   if (result.ok) {
-    setNotificationStatus(els.notificationStatus, "Тестовое уведомление отправлено", true);
-    saveNotificationLog({ channel, to: to || "Telegram администратор", message: messageText, status: "Отправлено" });
+    const idText = result.smscId ? ` ID Prostor: ${result.smscId}` : "";
+    setNotificationStatus(els.notificationStatus, "Тестовое уведомление отправлено" + idText, true);
+    saveNotificationLog({ channel, to: to || "Telegram администратор", message: messageText, status: "Отправлено" + idText });
+    if (result.smscId && els.prostorStatusId) els.prostorStatusId.value = result.smscId;
   } else {
     const err = result.error || "Ошибка отправки";
     setNotificationStatus(els.notificationStatus, err, false);
@@ -1552,6 +1554,7 @@ function initSmsQueue() {
     el.addEventListener("change", renderSmsQueue);
   });
   if (els.smsQueueBody) els.smsQueueBody.addEventListener("click", handleSmsQueueClick);
+  if (els.checkProstorStatusBtn) els.checkProstorStatusBtn.addEventListener("click", checkManualProstorStatus);
   if (els.scheduleSmsBtn) els.scheduleSmsBtn.addEventListener("click", scheduleSmsForCurrentRequest);
   if (els.scheduleDefaultSmsBtn) els.scheduleDefaultSmsBtn.addEventListener("click", scheduleDefaultSmsForCurrentRequest);
   if (els.scheduleSmsTemplate) els.scheduleSmsTemplate.addEventListener("change", updateScheduleSmsEditor);
@@ -1610,10 +1613,12 @@ function renderSmsQueue() {
     const f = r.fields || {};
     const status = f["Статус"] || "—";
     const openBtn = f["ID заявки"] ? `<button class="open-btn" type="button" data-sms-open-request="${e(f["ID заявки"])}">Заявка</button>` : "";
+    const statusBtn = f["ID Prostor"] ? `<button class="open-btn" type="button" data-sms-status="${e(f["ID Prostor"])}" data-sms-nocodb="${e(r.id)}">Статус</button>` : "";
     const actions = status === "Запланировано"
-      ? `<button class="open-btn" type="button" data-sms-send-now="${e(r.id)}">Сейчас</button><button class="open-btn danger-inline" type="button" data-sms-cancel="${e(r.id)}">Отменить</button>${openBtn}`
-      : `${status === "Отменено" ? `<button class="open-btn" type="button" data-sms-restore="${e(r.id)}">Вернуть</button>` : ""}${openBtn}`;
-    return `<tr><td>${e(f["Дата отправки"] || "")} ${e(f["Время отправки"] || "")}</td><td><b>${e(f["ФИО"] || "—")}</b>${f["Компания"] ? `<br><small>${e(f["Компания"])}</small>` : ""}</td><td>${e(f["Телефон"] || "")}</td><td>${e(f["Тип уведомления"] || "")}</td><td>${e(f["Текст SMS"] || "")}${f["Ошибка"] ? `<br><small class="error-text">${e(f["Ошибка"])}</small>` : ""}</td><td><span class="status" data-status="${e(status)}">${e(status)}</span></td><td>${actions}</td></tr>`;
+      ? `<button class="open-btn" type="button" data-sms-send-now="${e(r.id)}">Сейчас</button><button class="open-btn danger-inline" type="button" data-sms-cancel="${e(r.id)}">Отменить</button>${statusBtn}${openBtn}`
+      : `${status === "Отменено" ? `<button class="open-btn" type="button" data-sms-restore="${e(r.id)}">Вернуть</button>` : ""}${statusBtn}${openBtn}`;
+    const serviceMeta = `${f["ID Prostor"] ? `<br><small>ID Prostor: ${e(f["ID Prostor"])}</small>` : ""}${f["Статус доставки"] ? `<br><small>Доставка: ${e(f["Статус доставки"])}</small>` : ""}`;
+    return `<tr><td>${e(f["Дата отправки"] || "")} ${e(f["Время отправки"] || "")}</td><td><b>${e(f["ФИО"] || "—")}</b>${f["Компания"] ? `<br><small>${e(f["Компания"])}</small>` : ""}</td><td>${e(f["Телефон"] || "")}</td><td>${e(f["Тип уведомления"] || "")}</td><td>${e(f["Текст SMS"] || "")}${serviceMeta}${f["Ошибка"] ? `<br><small class="error-text">${e(f["Ошибка"])}</small>` : ""}</td><td><span class="status" data-status="${e(status)}">${e(status)}</span></td><td>${actions}</td></tr>`;
   }).join("");
 }
 
@@ -1622,10 +1627,33 @@ function handleSmsQueueClick(event) {
   const restore = event.target.closest("[data-sms-restore]");
   const sendNow = event.target.closest("[data-sms-send-now]");
   const open = event.target.closest("[data-sms-open-request]");
+  const checkStatus = event.target.closest("[data-sms-status]");
+  if (checkStatus) return checkSmsDeliveryStatus(checkStatus.dataset.smsStatus, checkStatus.dataset.smsNocodb);
   if (cancel) return updateSmsQueueItem(cancel.dataset.smsCancel, { action: "cancel", reason: "Отменено вручную" });
   if (restore) return updateSmsQueueItem(restore.dataset.smsRestore, { action: "restore" });
   if (sendNow) return sendSmsQueueNow(sendNow.dataset.smsSendNow);
   if (open) return openRequest(open.dataset.smsOpenRequest);
+}
+
+async function checkManualProstorStatus() {
+  const smscId = els.prostorStatusId?.value.trim() || "";
+  if (!smscId) return setNotificationStatus(els.prostorStatusText, "Введите ID Prostor / smscId", false);
+  return checkSmsDeliveryStatus(smscId, "");
+}
+
+async function checkSmsDeliveryStatus(smscId, nocodbId = "") {
+  setNotificationStatus(els.prostorStatusText || els.smsQueueStatusText, "Проверяю статус Prostor...", true);
+  try {
+    const response = await fetch("/sms-status", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pwd() }, body: JSON.stringify({ smscId, nocodbId }) });
+    const data = await response.json().catch(() => ({ ok: false, error: "Функция статуса вернула не JSON" }));
+    if (!response.ok || !data.ok) throw new Error(data.error || "Ошибка проверки статуса");
+    const text = `Статус Prostor: ${data.status || "—"}. ID: ${data.smscId || smscId}`;
+    setNotificationStatus(els.prostorStatusText || els.smsQueueStatusText, text, true);
+    if (els.prostorStatusId) els.prostorStatusId.value = data.smscId || smscId;
+    await loadSmsQueue(true);
+  } catch (error) {
+    setNotificationStatus(els.prostorStatusText || els.smsQueueStatusText, error.message, false);
+  }
 }
 
 async function updateSmsQueueItem(id, payload) {
@@ -1646,7 +1674,7 @@ async function sendSmsQueueNow(id) {
   const f = item.fields || {};
   const result = await sendNotificationApi({ channel: "sms", to: f["Телефон"], message: f["Текст SMS"], recordId: f["ID заявки"], client: f["ФИО"] || "" });
   if (result.ok) {
-    await updateSmsQueueItem(id, { action: "mark_sent" });
+    await updateSmsQueueItem(id, { action: "mark_sent", smscId: result.smscId || "", clientId: result.clientId || "", deliveryStatus: result.status || result.result?.messages?.[0]?.status || "accepted", serviceResponse: result.result || result });
     saveNotificationLog({ channel: "sms", to: f["Телефон"], message: f["Текст SMS"], status: "Отправлено из очереди" });
   } else {
     await updateSmsQueueItem(id, { action: "mark_error", error: result.error || "Ошибка отправки" });
