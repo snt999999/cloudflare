@@ -261,11 +261,10 @@
       </section>
 
       <section id="smsSection" class="workspace-section" style="display:none">
-        <header class="admin-head"><div><h1>Уведомления</h1><p>SMS клиентам и Telegram администратору. Шаблоны можно использовать из карточки заявки или отправить тестовое сообщение здесь.</p></div><div class="actions"><button id="notificationCheckBtn" type="button">Проверить подключение</button></div></header>
-        <section class="notification-grid">
-          <div class="notification-card"><b>SMS клиентам</b><p>Подтверждение записи, перенос, отмена, напоминание, просьба оставить отзыв.</p><span id="notificationSmsStatus" class="pill-status">не проверено</span></div>
-          <div class="notification-card"><b>Telegram администратору</b><p>Новая заявка, назначение монтажников, важные изменения и тестовые сообщения в рабочий чат.</p><span id="notificationTelegramStatus" class="pill-status">не проверено</span></div>
-          <div class="notification-card"><b>PWA-приложение</b><p>Сайт можно установить на экран телефона как приложение. Push-уведомления можно добавить позже отдельным этапом.</p><span class="pill-status ok">готово</span></div>
+        <header class="admin-head"><div><h1>Уведомления</h1><p>SMS клиентам, ручная отправка и автоматические напоминания по расписанию.</p></div><div class="actions"><button id="notificationCheckBtn" type="button">Проверить подключение</button><button id="smsQueueRefreshBtn" type="button">Обновить очередь</button></div></header>
+        <section class="notification-grid notification-grid--two">
+          <div class="notification-card"><b>SMS клиентам</b><p>Подтверждение записи, напоминание, перенос, отмена, выполненные работы и просьба оставить отзыв.</p><span id="notificationSmsStatus" class="pill-status">не проверено</span></div>
+          <div class="notification-card"><b>Telegram администратору</b><p>Тестовые сообщения и уведомления в рабочий чат администратора.</p><span id="notificationTelegramStatus" class="pill-status">не проверено</span></div>
         </section>
         <section class="card notification-console">
           <h2>Тестовая отправка</h2>
@@ -277,6 +276,17 @@
           <div class="dialog-actions"><button id="sendTestNotifyBtn" type="button">Отправить тест</button><button id="copyTestNotifyBtn" type="button" class="ghost">Скопировать текст</button></div>
           <p id="notificationStatus" class="muted-text"></p>
         </section>
+        <section class="card notification-console sms-schedule-console">
+          <h2>SMS-очередь</h2>
+          <div class="sms-queue-toolbar">
+            <input id="smsQueueSearch" type="search" placeholder="Поиск: клиент, телефон, компания, текст, статус..." />
+            <select id="smsQueueStatus"><option value="">Все статусы</option><option value="Запланировано">Запланировано</option><option value="Отправляется">Отправляется</option><option value="Отправлено">Отправлено</option><option value="Ошибка">Ошибка</option><option value="Отменено">Отменено</option></select>
+            <input id="smsQueueFrom" type="date" />
+            <input id="smsQueueTo" type="date" />
+          </div>
+          <div class="table-card sms-queue-table"><table><thead><tr><th>Когда</th><th>Клиент</th><th>Телефон</th><th>Тип</th><th>Текст</th><th>Статус</th><th></th></tr></thead><tbody id="smsQueueBody"><tr><td colspan="7">Очередь ещё не загружена</td></tr></tbody></table></div>
+          <p id="smsQueueStatusText" class="muted-text"></p>
+        </section>
         <section class="card notification-console">
           <h2>Шаблоны сообщений</h2>
           <div id="notificationTemplatesList" class="notification-templates"></div>
@@ -287,7 +297,7 @@
       <section id="filesSection" class="workspace-section" style="display:none">
         <header class="admin-head"><div><h1>Файлы</h1><p>Поиск по номеру заявки, названию файла, клиенту, телефону, адресу, объекту, услуге и статусу.</p></div></header>
         <section class="file-search-panel file-search-panel--wide"><input id="filesSearchInput" placeholder="Быстрый поиск: номер заявки, файл, телефон, адрес, объект, клиент..." /><select id="filesTypeFilter"><option value="">Все типы</option><option value="фото">Фото</option><option value="видео">Видео</option><option value="pdf">PDF / документы</option><option value="документ">Другие документы</option></select><button id="filesRefreshBtn" type="button">Обновить файлы</button><button id="googleDriveTestBtn" type="button">Проверить Google Drive</button></section>
-        <section class="files-dashboard"><div class="upload-zone" id="filesDropZone"><b>Загрузка файлов в Google Drive</b><p>Выберите заявку, прикрепите фото/видео/PDF/документы. Файлы сохраняются в Google Drive через Apps Script, а ссылки автоматически привязываются к номеру заявки.</p><label>Заявка<select id="filesRequestSelect"><option value="">Сначала загрузите заявки</option></select></label><input id="filesUploadInput" type="file" multiple /><button id="filesUploadBtn" type="button">Загрузить файлы</button><p id="filesStatus" class="muted-text"></p></div><div class="card"><table><thead><tr><th>Заявка</th><th>Клиент</th><th>Телефон</th><th>Адрес / объект</th><th>Файлы</th><th>Статус</th><th></th></tr></thead><tbody id="filesBody"></tbody></table></div></section>
+        <section class="files-dashboard"><div class="upload-zone" id="filesDropZone"><b>Загрузка файлов в Google Drive</b><p>Выберите заявку, прикрепите фото/видео/PDF/документы. Файлы сохраняются в рабочей папке и автоматически привязываются к номеру заявки.</p><label>Заявка<select id="filesRequestSelect"><option value="">Сначала загрузите заявки</option></select></label><input id="filesUploadInput" type="file" multiple /><button id="filesUploadBtn" type="button">Загрузить файлы</button><p id="filesStatus" class="muted-text"></p></div><div class="card"><table><thead><tr><th>Заявка</th><th>Клиент</th><th>Телефон</th><th>Адрес / объект</th><th>Файлы</th><th>Статус</th><th></th></tr></thead><tbody id="filesBody"></tbody></table></div></section>
       </section>
 
       <section id="reportsSection" class="workspace-section" style="display:none">
@@ -301,24 +311,16 @@
       </section>
 
       <section id="settingsSection" class="workspace-section" style="display:none">
-        <header class="admin-head"><div><h1>Настройки</h1><p>Проверка системных ссылок и подключений.</p></div></header>
+        <header class="admin-head"><div><h1>Настройки</h1><p>Проверка рабочих подключений и быстрые ссылки.</p></div></header>
         <section class="settings-grid">
-          <a href="/test" target="_blank">Проверить Cloudflare Functions</a>
-          <a href="/nocodb-test" target="_blank">Проверить NocoDB</a>
-          <a href="/cal-nocodb-v5" target="_blank">Проверить Cal.com Webhook</a>
-          <a href="/list-files" target="_blank">Проверить список файлов</a><button id="googleDriveTestBtnSettings" type="button">Проверить Google Drive</button>
+          <a href="/test" target="_blank">Проверить сайт</a>
+          <a href="/nocodb-test" target="_blank">Проверить базу заявок</a>
+          <a href="/list-files" target="_blank">Проверить файлы</a>
+          <button id="googleDriveTestBtnSettings" type="button">Проверить Google Drive</button>
           <a href="zapis.html" target="_blank">Открыть страницу записи</a>
         </section>
-        <section class="card settings-note">
-          <h2>Для отправки заявок на почту</h2>
-          <p>В Cloudflare Pages → Settings → Variables добавьте переменную <b>WEB3FORMS_ACCESS_KEY</b>. Если её не добавить, заявка всё равно сохранится в NocoDB, но письмо на почту не уйдёт.</p>
-        </section>
-        <section class="card settings-note">
-          <h2>Для хранения файлов</h2>
-          <p>R2 не используется. Для бесплатного варианта создайте Google Apps Script из файла <b>google-drive-files-appsscript.gs</b>, разверните его как Web App и добавьте в Cloudflare Pages переменную <b>GOOGLE_DRIVE_UPLOAD_URL</b>. Ссылка должна заканчиваться на <b>/exec</b>. В Web App должно быть: <b>Execute as Me</b> и <b>Who has access: Anyone</b>. Дополнительно добавьте <b>GOOGLE_DRIVE_UPLOAD_TOKEN</b>.</p>
-        </section>
-        <section class="card settings-note"><h2>Для уведомлений</h2><p>Для SMS добавьте в Cloudflare переменные <b>SMS_PROVIDER=smsru</b> и <b>SMSRU_API_ID</b>. Для Telegram добавьте <b>TELEGRAM_BOT_TOKEN</b> и <b>TELEGRAM_ADMIN_CHAT_ID</b>. После изменения переменных сделайте Redeploy.</p></section>
-      </section>
+        <section class="card settings-note"><h2>Статус сервиса</h2><p>Все рабочие проверки вынесены в кнопки выше. Технические инструкции убраны с интерфейса, чтобы админка не была перегружена.</p></section>
+      </section></section>
     </section>
   </main>
 
@@ -340,7 +342,8 @@
       </div>
       <fieldset><legend>Монтажники</legend><label><input type="checkbox" name="installer" value="Никита П" /> Пахнев Никита</label><label><input type="checkbox" name="installer" value="Андрей Ш" /> Шолохов Андрей</label><label><input type="checkbox" name="installer" value="Никита К" /> Кислов Никита</label><label><input type="checkbox" name="installer" value="Дмитрий П" /> Петухов Дмитрий</label><label><input type="checkbox" name="installer" value="Роман З" /> Зинченко Роман</label></fieldset>
       <section class="files-box"><h3>Файлы этой заявки</h3><p class="muted-text">Фото выполненных работ, договоры, замеры, счета и другие материалы по объекту.</p><div class="request-file-upload"><input id="requestFileInput" type="file" multiple /><button id="requestUploadBtn" type="button">Загрузить к заявке</button><button id="requestFilesRefreshBtn" type="button" class="ghost-small">Обновить</button></div><div id="requestFilesBox" class="request-files-box"></div></section>
-      <section class="files-box notification-box"><h3>Уведомление клиенту</h3><div class="dialog-grid"><label>Шаблон<select id="notifyTemplate"><option value="confirm">Запись подтверждена</option><option value="reminder">Напоминание о записи</option><option value="reschedule">Перенос записи</option><option value="cancel">Отмена записи</option><option value="done">Работы выполнены</option><option value="review">Просьба оставить отзыв</option><option value="custom">Свой текст</option></select></label><label>Канал<select id="notifyChannel"><option value="sms">SMS клиенту</option><option value="telegram">Telegram администратору</option></select></label><label class="wide">Текст сообщения<textarea id="notifyMessage" placeholder="Текст уведомления"></textarea></label></div><div class="dialog-actions"><button id="sendNotifyBtn" type="button">Отправить</button><button id="copyNotifyBtn" type="button" class="ghost">Скопировать</button></div><p id="requestNotifyStatus" class="muted-text"></p></section>
+      <section class="files-box notification-box"><h3>Уведомление клиенту</h3><div class="dialog-grid"><label>Шаблон<select id="notifyTemplate"><option value="confirm">Запись подтверждена</option><option value="reminder">Напоминание о записи</option><option value="reschedule">Перенос записи</option><option value="cancel">Отмена записи</option><option value="done">Работы выполнены</option><option value="review">Просьба оставить отзыв</option><option value="custom">Свой текст</option></select></label><label>Канал<select id="notifyChannel"><option value="sms">SMS клиенту</option><option value="telegram">Telegram администратору</option></select></label><label class="wide">Текст сообщения<textarea id="notifyMessage" placeholder="Текст уведомления"></textarea></label></div><div class="dialog-actions"><button id="sendNotifyBtn" type="button">Отправить сейчас</button><button id="copyNotifyBtn" type="button" class="ghost">Скопировать</button></div><p id="requestNotifyStatus" class="muted-text"></p></section>
+      <section class="files-box notification-box"><h3>Авто-SMS</h3><div class="dialog-grid"><label>Шаблон<select id="scheduleSmsTemplate"><option value="confirm">Запись подтверждена</option><option value="reminder">Напоминание о записи</option><option value="reschedule">Перенос записи</option><option value="cancel">Отмена записи</option><option value="done">Работы выполнены</option><option value="review">Просьба оставить отзыв</option><option value="custom">Свой текст</option></select></label><label>Дата отправки<input id="scheduleSmsDate" type="date" /></label><label>Время отправки<input id="scheduleSmsTime" type="time" /></label><label class="wide">Текст SMS<textarea id="scheduleSmsMessage" placeholder="Текст SMS"></textarea></label></div><div class="dialog-actions"><button id="scheduleSmsBtn" type="button">Запланировать SMS</button><button id="scheduleDefaultSmsBtn" type="button" class="ghost">Создать напоминания за 24 часа и за 2 часа</button></div><p id="scheduleSmsStatus" class="muted-text"></p></section>
       <section class="files-box"><h3>История этой заявки</h3><div id="requestHistoryBox" class="history-box"></div></section>
       <section class="cancel-box"><h3>Отмена / удаление в корзину</h3><p>Физически заявка не удаляется, а переносится в корзину отмен со статусом «Отменена».</p><textarea id="cancelReason" placeholder="Причина отмены или удаления"></textarea></section>
       <div class="dialog-actions"><button id="saveRequestBtn" type="button">Сохранить</button><button id="cancelRequestBtn" class="danger" type="button">Отменить / в корзину</button><button class="ghost" value="cancel">Закрыть</button></div>

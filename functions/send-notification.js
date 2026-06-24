@@ -38,7 +38,7 @@ export async function onRequestGet({ request, env }) {
   }
   return json({
     ok: true,
-    sms: Boolean(env.SMS_API_KEY || env.SMSRU_API_ID),
+    sms: Boolean(env.SMS_API_KEY || env.SMSRU_API_ID || (env.PROSTOR_LOGIN && env.PROSTOR_PASSWORD)),
     telegram: Boolean(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_ADMIN_CHAT_ID),
     provider: env.SMS_PROVIDER || "smsru"
   });
@@ -48,7 +48,52 @@ async function sendSms({ env, to, message }) {
   const provider = String(env.SMS_PROVIDER || "smsru").toLowerCase();
   if (provider === "smsru") return await sendSmsRu({ env, to, message });
   if (provider === "smsc") return await sendSmsc({ env, to, message });
-  return json({ ok: false, error: "SMS_PROVIDER должен быть smsru или smsc" }, 400);
+  if (provider === "prostor") return await sendProstor({ env, to, message });
+  return json({ ok: false, error: "SMS_PROVIDER должен быть smsru, smsc или prostor" }, 400);
+}
+
+function prostorBase(env) {
+  const base = String(env.PROSTOR_API_BASE || "https://api.prostor-sms.ru/messages/v2").replace(/\/+$/, "");
+  return base;
+}
+function getProstorCredentials(env) {
+  const login = env.PROSTOR_LOGIN || env.PROSTOR_API_LOGIN || "";
+  const password = env.PROSTOR_PASSWORD || env.PROSTOR_API_PASSWORD || env.SMS_API_KEY || "";
+  return { login, password };
+}
+function makeProstorClientId() {
+  return ("SC" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)).toUpperCase().slice(0, 72);
+}
+async function sendProstor({ env, to, message }) {
+  const { login, password } = getProstorCredentials(env);
+  if (!login || !password) return json({ ok: false, provider: "prostor", error: "Для Prostor нужны PROSTOR_LOGIN и PROSTOR_PASSWORD" }, 400);
+  const sender = env.PROSTOR_SENDER || env.SMS_SENDER || "";
+  const url = env.PROSTOR_SEND_URL || (prostorBase(env) + "/send.json");
+  const clientId = makeProstorClientId();
+  const sms = { phone: plusPhone(to), clientId, text: message };
+  if (sender) sms.sender = sender;
+  const payload = { login, password, messages: [sms] };
+  if (env.PROSTOR_STATUS_QUEUE_NAME) payload.statusQueueName = env.PROSTOR_STATUS_QUEUE_NAME;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json; charset=utf-8", "Accept": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  const raw = await response.text();
+  let data;
+  try { data = JSON.parse(raw); } catch (_) { data = { raw }; }
+  const first = Array.isArray(data.messages) ? data.messages[0] : null;
+  const firstStatus = String(first?.status || "").toLowerCase();
+  const ok = response.ok && String(data.status || "").toLowerCase() === "ok" && firstStatus === "accepted";
+  return json({
+    ok,
+    provider: "prostor",
+    to,
+    clientId,
+    smscId: first?.smscId || "",
+    result: data,
+    error: ok ? "" : (first?.status || data.status || data.raw || "Prostor не подтвердил отправку")
+  }, ok ? 200 : 502);
 }
 
 async function sendSmsRu({ env, to, message }) {
@@ -110,6 +155,11 @@ function normalizeTo(value) {
   if (digits.length === 11 && digits.startsWith("8")) return "7" + digits.slice(1);
   if (digits.length === 10) return "7" + digits;
   return digits;
+}
+
+function plusPhone(value) {
+  const digits = normalizeTo(value).replace(/\D/g, "");
+  return digits ? "+" + digits : "";
 }
 
 function cleanText(value) {

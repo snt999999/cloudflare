@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const emailText = result.emailSent
           ? "Копия заявки отправлена на почту."
-          : "Заявка сохранена в админке. Почта Web3Forms пока не подключена.";
+          : "Заявка отправлена. Мы свяжемся с вами в ближайшее время.";
 
         if (note) {
           note.textContent = `Заявка отправлена. Мы свяжемся с вами в ближайшее время. ${emailText}`;
