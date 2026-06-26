@@ -34,9 +34,9 @@ const storage = {
 
 const els = {
   loginPanel: $("loginPanel"), appPanel: $("appPanel"), loginForm: $("loginForm"), passwordInput: $("passwordInput"), loginMessage: $("loginMessage"), logoutBtn: $("logoutBtn"), refreshBtn: $("refreshBtn"), listBtn: $("listBtn"), calendarBtn: $("calendarBtn"), listView: $("listView"), calendarView: $("calendarView"), requestsBody: $("requestsBody"), calendarGrid: $("calendarGrid"), monthTitle: $("monthTitle"), calendarMonthSummary: $("calendarMonthSummary"), calendarTodayBtn: $("calendarTodayBtn"), calendarDayAgenda: $("calendarDayAgenda"), calendarSelectedDateTitle: $("calendarSelectedDateTitle"), calendarSelectedDateSummary: $("calendarSelectedDateSummary"), calendarSelectedEvents: $("calendarSelectedEvents"), prevMonth: $("prevMonth"), nextMonth: $("nextMonth"), searchInput: $("searchInput"), statusFilter: $("statusFilter"), installerFilter: $("installerFilter"), dateFrom: $("dateFrom"), dateTo: $("dateTo"), clearFiltersBtn: $("clearFiltersBtn"), message: $("message"), statTotal: $("statTotal"), statNew: $("statNew"), statToday: $("statToday"), statWork: $("statWork"), statVolume: $("statVolume"), statFiltered: $("statFiltered"),
-  dialog: $("requestDialog"), dialogTitle: $("dialogTitle"), requestInfo: $("requestInfo"), editDate: $("editDate"), editTime: $("editTime"), editStatus: $("editStatus"), editM2: $("editM2"), editResponsible: $("editResponsible"), editCompany: $("editCompany"), editService: $("editService"), editAddress: $("editAddress"), editAdminComment: $("editAdminComment"), saveRequestBtn: $("saveRequestBtn"), cancelRequestBtn: $("cancelRequestBtn"), cancelReason: $("cancelReason"), requestHistoryBox: $("requestHistoryBox"), exportBtn: $("exportBtn"),
+  dialog: $("requestDialog"), dialogTitle: $("dialogTitle"), requestInfo: $("requestInfo"), editDate: $("editDate"), editTime: $("editTime"), editStatus: $("editStatus"), editM2: $("editM2"), editResponsible: $("editResponsible"), editCompany: $("editCompany"), editService: $("editService"), editAddress: $("editAddress"), editAdminComment: $("editAdminComment"), saveRequestBtn: $("saveRequestBtn"), cancelRequestBtn: $("cancelRequestBtn"), cancelReason: $("cancelReason"), requestHistoryBox: $("requestHistoryBox"), requestGoogleCalendarBox: $("requestGoogleCalendarBox"), requestGoogleCreateBtn: $("requestGoogleCreateBtn"), requestGoogleOpenLink: $("requestGoogleOpenLink"), requestGoogleStatus: $("requestGoogleStatus"), exportBtn: $("exportBtn"),
   clientsBody: $("clientsBody"), objectsBody: $("objectsBody"), installersBody: $("installersBody"), trashBody: $("trashBody"), historyBody: $("historyBody"), historySearchInput: $("historySearchInput"), clearHistoryLocalBtn: $("clearHistoryLocalBtn"), filesBody: $("filesBody"), filesSearchInput: $("filesSearchInput"), filesTypeFilter: $("filesTypeFilter"),
-  quickAddBtn: $("quickAddBtn"), quickAddDialog: $("quickAddDialog"), quickSaveBtn: $("quickSaveBtn"), quickName: $("quickName"), quickCompany: $("quickCompany"), quickPhone: $("quickPhone"), quickClientHint: $("quickClientHint"), quickClientSuggestions: $("quickClientSuggestions"), quickService: $("quickService"), quickDate: $("quickDate"), quickTime: $("quickTime"), quickM2: $("quickM2"), quickAddress: $("quickAddress"), quickComment: $("quickComment"),
+  quickAddBtn: $("quickAddBtn"), quickAddDialog: $("quickAddDialog"), quickSaveBtn: $("quickSaveBtn"), quickName: $("quickName"), quickCompany: $("quickCompany"), quickPhone: $("quickPhone"), quickClientHint: $("quickClientHint"), quickClientSuggestions: $("quickClientSuggestions"), quickGoogleSync: $("quickGoogleSync"), quickService: $("quickService"), quickDate: $("quickDate"), quickTime: $("quickTime"), quickM2: $("quickM2"), quickAddress: $("quickAddress"), quickComment: $("quickComment"),
   reportDialog: $("reportDialog"), reportTitle: $("reportTitle"), reportDateFrom: $("reportDateFrom"), reportDateTo: $("reportDateTo"), reportStatus: $("reportStatus"), reportFormat: $("reportFormat"), reportAllInstallers: $("reportAllInstallers"), downloadReportBtn: $("downloadReportBtn"), payrollOptions: $("payrollOptions"), payrollSplitMode: $("payrollSplitMode"), payrollStatusMode: $("payrollStatusMode"), payrollSettingsBody: $("payrollSettingsBody"), savePayrollSettingsBtn: $("savePayrollSettingsBtn"), previewPayrollBtn: $("previewPayrollBtn"), reportPreview: $("reportPreview"),
   clientsSearchInput: $("clientsSearchInput"), clientsDateFrom: $("clientsDateFrom"), clientsDateTo: $("clientsDateTo"), clientsServiceFilter: $("clientsServiceFilter"), clientsFilmFilter: $("clientsFilmFilter"), clientsStatusFilter: $("clientsStatusFilter"), clientsClearFiltersBtn: $("clientsClearFiltersBtn"), clientsStatCount: $("clientsStatCount"), clientsStatRequests: $("clientsStatRequests"), clientsStatM2: $("clientsStatM2"), clientsStatRepeat: $("clientsStatRepeat"),
   objectsSearchInput: $("objectsSearchInput"), objectsDateFrom: $("objectsDateFrom"), objectsDateTo: $("objectsDateTo"), objectsServiceFilter: $("objectsServiceFilter"), objectsStatusFilter: $("objectsStatusFilter"), objectsInstallerFilter: $("objectsInstallerFilter"), objectsM2Min: $("objectsM2Min"), objectsM2Max: $("objectsM2Max"), objectsClearFiltersBtn: $("objectsClearFiltersBtn"), objectsStatCount: $("objectsStatCount"), objectsStatM2: $("objectsStatM2"), objectsStatDone: $("objectsStatDone"), objectsStatWork: $("objectsStatWork"),
@@ -81,6 +81,7 @@ function init() {
 
   els.clearFiltersBtn.addEventListener("click", clearFilters);
   els.saveRequestBtn.addEventListener("click", saveRequest);
+  if (els.requestGoogleCreateBtn) els.requestGoogleCreateBtn.addEventListener("click", createOrUpdateGoogleCalendarForCurrent);
   els.cancelRequestBtn.addEventListener("click", cancelCurrentRequest);
   els.exportBtn.addEventListener("click", () => setSection("reports"));
   els.quickAddBtn.addEventListener("click", openQuickAdd);
@@ -375,6 +376,7 @@ function openRequest(id) {
   renderRequestHistory(current);
   updateRequestNotificationEditor();
   updateScheduleSmsEditor();
+  renderRequestGoogleCalendar(current);
   els.dialog.showModal();
 }
 
@@ -580,6 +582,7 @@ function openQuickAdd(prefill = null) {
     els.quickClientHint.classList.remove("is-found", "is-empty");
     els.quickClientHint.textContent = quickCalendarEvent ? "Данные предварительно заполнены из Google Календаря. Проверьте и сохраните заявку." : "Начните вводить номер — подходящие клиенты появятся списком ниже.";
   }
+  if (els.quickGoogleSync) els.quickGoogleSync.checked = true;
   hideQuickClientSuggestions();
   if (els.quickService && prefill?.service) els.quickService.value = prefill.service;
   if (els.quickDate && prefill?.date) els.quickDate.value = prefill.date;
@@ -590,6 +593,7 @@ function openQuickAdd(prefill = null) {
   els.quickAddDialog.showModal();
 }
 async function saveQuickAdd() {
+  const syncGoogle = Boolean(els.quickGoogleSync?.checked);
   const calendarId = quickCalendarEvent?.id ? "gcal-" + quickCalendarEvent.id : "manual-" + Date.now();
   const record = { "Имя клиента": els.quickName.value.trim(), "Компания": els.quickCompany?.value.trim() || "", "Телефон": formatRussianPhone(els.quickPhone.value), "Услуга": els.quickService.value, "Дата записи": els.quickDate.value, "Время записи": els.quickTime.value, "Адрес": els.quickAddress.value.trim(), "м2": els.quickM2.value ? String(els.quickM2.value) : "", "Комментарий клиента": els.quickComment.value.trim(), "Статус": "Новая заявка", "Cal Booking ID": calendarId };
   if (!record["Имя клиента"] || !record["Телефон"] || !record["Дата записи"] || !record["Время записи"]) { msg("Заполните ФИО, телефон, дату и время"); return; }
@@ -597,12 +601,122 @@ async function saveQuickAdd() {
     const response = await fetch("/create-zayavka", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pwd() }, body: JSON.stringify({ fields: record }) });
     const data = await response.json();
     if (!response.ok || !data.ok) throw new Error(data.error || "Ошибка создания заявки");
+    const createdId = extractCreatedRecordId(data);
+    let googleResult = null;
+    if (syncGoogle && !quickCalendarEvent?.id) {
+      googleResult = await createGoogleCalendarEventForQuick(record, createdId);
+      if (googleResult?.ok && createdId && (googleResult.eventId || googleResult.htmlLink)) {
+        await saveGoogleCalendarInfoToRecord(createdId, googleResult);
+      }
+    }
     els.quickAddDialog.close();
     if (quickCalendarEvent?.id) markCalendarEventImported(quickCalendarEvent.id);
     quickCalendarEvent = null;
     await load();
-    msg("Быстрая заявка создана");
+    if (syncGoogle && googleResult?.ok) msg("Быстрая заявка создана и продублирована в Google Календарь");
+    else if (syncGoogle && googleResult && !googleResult.ok) msg("Заявка создана, но Google Календарь не создал событие: " + (googleResult.error || "ошибка"));
+    else msg("Быстрая заявка создана");
   } catch (error) { msg(error.message); }
+}
+
+function extractCreatedRecordId(data) {
+  const r = data?.nocodbResponse;
+  if (Array.isArray(r)) return r[0]?.id || r[0]?.Id || r[0]?.fields?.Id || r[0]?.fields?.id || "";
+  if (Array.isArray(r?.list)) return r.list[0]?.id || r.list[0]?.Id || "";
+  if (Array.isArray(r?.data)) return r.data[0]?.id || r.data[0]?.Id || "";
+  return r?.id || r?.Id || r?.fields?.id || r?.fields?.Id || "";
+}
+
+async function createGoogleCalendarEventForQuick(fields, recordId) {
+  try {
+    const response = await fetch("/calendar-create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": pwd() },
+      body: JSON.stringify({ fields, recordId, source: "quickAdd" })
+    });
+    const data = await response.json().catch(() => ({ ok: false, error: "Функция календаря вернула не JSON" }));
+    if (!response.ok || !data.ok) return { ok: false, error: data.error || data.appsScript?.error || "Ошибка Google Календаря", details: data };
+    return data;
+  } catch (error) {
+    return { ok: false, error: error.message || "Ошибка Google Календаря" };
+  }
+}
+
+async function saveGoogleCalendarInfoToRecord(recordId, googleResult, source = "Быстрая запись → Google Календарь") {
+  const fields = {
+    "Google Calendar Event ID": googleResult.eventId || "",
+    "Ссылка на событие": googleResult.htmlLink || "",
+    "Источник": source
+  };
+  try {
+    await fetch("/update-zayavka", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pwd() }, body: JSON.stringify({ id: recordId, fields }) });
+  } catch (_) {}
+}
+
+function googleEventInfoFromFields(f = {}) {
+  return {
+    eventId: f["Google Calendar Event ID"] || "",
+    htmlLink: f["Ссылка на событие"] || "",
+    source: f["Источник"] || ""
+  };
+}
+
+function renderRequestGoogleCalendar(record) {
+  if (!els.requestGoogleCalendarBox) return;
+  const f = record?.fields || {};
+  const info = googleEventInfoFromFields(f);
+  const hasEvent = Boolean(info.eventId || info.htmlLink);
+  els.requestGoogleCalendarBox.innerHTML = `
+    <div class="google-calendar-status ${hasEvent ? "is-linked" : "is-empty"}">
+      <span>${hasEvent ? "Событие связано" : "Событие ещё не создано"}</span>
+      <b>${hasEvent ? e(info.eventId || "ID не записан") : "Нет выгрузки"}</b>
+      <small>${e(info.source || (hasEvent ? "Google Календарь" : "Нажмите кнопку ниже, чтобы создать событие"))}</small>
+    </div>`;
+  if (els.requestGoogleOpenLink) {
+    els.requestGoogleOpenLink.hidden = !info.htmlLink;
+    if (info.htmlLink) els.requestGoogleOpenLink.href = info.htmlLink;
+  }
+  if (els.requestGoogleStatus) els.requestGoogleStatus.textContent = hasEvent ? "Можно обновить событие после изменения даты, времени, адреса или услуги." : "Создаст событие в Google Календаре и запишет ID обратно в NocoDB.";
+}
+
+function fieldsForGoogleFromCurrent() {
+  if (!current) return {};
+  const base = { ...(current.fields || {}) };
+  const edited = currentEditFields();
+  return { ...base, ...edited };
+}
+
+async function createOrUpdateGoogleCalendarForCurrent() {
+  if (!current) return;
+  const fields = fieldsForGoogleFromCurrent();
+  if (!fields["Дата записи"] || !fields["Время записи"]) { if (els.requestGoogleStatus) els.requestGoogleStatus.textContent = "Для выгрузки нужны дата и время записи."; return; }
+  if (els.requestGoogleStatus) els.requestGoogleStatus.textContent = "Отправляю событие в Google Календарь...";
+  try {
+    const eventId = (current.fields || {})["Google Calendar Event ID"] || "";
+    const res = await fetch("/calendar-create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": pwd() },
+      body: JSON.stringify({ action: eventId ? "upsert" : "create", eventId, fields, recordId: current.id, source: "requestCard" })
+    });
+    const data = await res.json().catch(() => ({ ok: false, error: "Функция календаря вернула не JSON" }));
+    if (!res.ok || !data.ok) throw new Error(data.error || data.appsScript?.error || "Ошибка Google Календаря");
+    const updateFields = {
+      "Google Calendar Event ID": data.eventId || eventId || "",
+      "Ссылка на событие": data.htmlLink || "",
+      "Источник": eventId ? "Заявка → обновлено в Google Календаре" : "Заявка → Google Календарь"
+    };
+    let history = getHistoryForRecord(current);
+    history = addHistory(current, eventId ? "Google Календарь" : "Выгрузка в Google Календарь", eventId ? "Событие обновлено" : "Событие создано", history);
+    updateFields["История изменений"] = JSON.stringify(history);
+    await updateRecord(current.id, updateFields, eventId ? "Событие Google Календаря обновлено" : "Событие Google Календаря создано");
+    current.fields = { ...(current.fields || {}), ...updateFields };
+    renderRequestGoogleCalendar(current);
+    renderRequestHistory(current);
+    await load();
+  } catch (error) {
+    if (els.requestGoogleStatus) els.requestGoogleStatus.textContent = error.message;
+    msg(error.message);
+  }
 }
 
 

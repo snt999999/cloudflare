@@ -1,0 +1,20 @@
+V30 — Google Calendar export
+
+Добавлено:
+- Выгрузка быстрой записи в Google Календарь.
+- Чекбокс в быстрой записи: «Дублировать запись в Google Календарь».
+- Функция Cloudflare Pages /calendar-create.
+- Единый Apps Script google-calendar-sync-appsscript.gs с действиями health/list/create/upsert.
+- Сохранение Google Calendar Event ID и ссылки на событие обратно в NocoDB.
+- В карточке заявки добавлен блок Google Календаря.
+- В карточке заявки есть кнопка «Создать / обновить событие».
+- При обновлении события записывается история изменения.
+
+Нужно в NocoDB:
+- Google Calendar Event ID — Single line text
+- Ссылка на событие — URL или Single line text
+- Источник — Single line text
+
+Переменные Cloudflare:
+- GOOGLE_CALENDAR_IMPORT_URL или GOOGLE_CALENDAR_SYNC_URL
+- GOOGLE_CALENDAR_IMPORT_TOKEN или GOOGLE_CALENDAR_SYNC_TOKEN
