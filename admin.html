@@ -15,7 +15,10 @@
   <link rel="stylesheet" href="assets/admin.css" />
 </head>
 <body class="logged-out">
+  <button id="mobileMenuBtn" class="mobile-menu-btn" type="button" aria-label="Открыть меню">☰ Меню</button>
+  <div id="sidebarOverlay" class="sidebar-overlay" aria-hidden="true"></div>
   <aside class="sidebar" id="sidebar">
+    <button id="sidebarCloseBtn" class="sidebar-close-btn" type="button" aria-label="Закрыть меню">×</button>
     <a class="sidebar-logo" href="index.html"><img src="assets/logo-solncanet.png" alt="СОЛНЦАНЕТ" /></a>
     <nav class="sidebar-nav">
       <a class="active" href="#requests" data-section="requests">Заявки</a>
@@ -331,9 +334,9 @@
       </section>
 
       <section id="filesSection" class="workspace-section" style="display:none">
-        <header class="admin-head"><div><h1>Файлы</h1><p>Поиск по номеру заявки, названию файла, клиенту, телефону, адресу, объекту, услуге и статусу.</p></div></header>
+        <header class="admin-head"><div><h1>Файлы</h1><p>Показываются только заявки, к которым уже прикреплены файлы. Файлы хранятся в Google Drive и открываются прямо из карточки заявки.</p></div></header>
         <section class="file-search-panel file-search-panel--wide"><input id="filesSearchInput" placeholder="Быстрый поиск: номер заявки, файл, телефон, адрес, объект, клиент..." /><select id="filesTypeFilter"><option value="">Все типы</option><option value="фото">Фото</option><option value="видео">Видео</option><option value="pdf">PDF / документы</option><option value="документ">Другие документы</option></select><button id="filesRefreshBtn" type="button">Обновить файлы</button><button id="googleDriveTestBtn" type="button">Проверить Google Drive</button></section>
-        <section class="files-dashboard"><div class="upload-zone" id="filesDropZone"><b>Загрузка файлов в Google Drive</b><p>Выберите заявку, прикрепите фото/видео/PDF/документы. Файлы сохраняются в рабочей папке и автоматически привязываются к номеру заявки.</p><label>Заявка<select id="filesRequestSelect"><option value="">Сначала загрузите заявки</option></select></label><input id="filesUploadInput" type="file" multiple /><button id="filesUploadBtn" type="button">Загрузить файлы</button><p id="filesStatus" class="muted-text"></p></div><div class="card"><table><thead><tr><th>Заявка</th><th>Клиент</th><th>Телефон</th><th>Адрес / объект</th><th>Файлы</th><th>Статус</th><th></th></tr></thead><tbody id="filesBody"></tbody></table></div></section>
+        <section class="files-dashboard"><div class="upload-zone" id="filesDropZone"><b>Загрузка файлов в Google Drive</b><p>Выберите заявку, прикрепите фото/видео/PDF/документы. Сайт сохранит связь файла с заявкой и обновит событие в Google Календаре, чтобы сотрудники видели ссылки на телефоне.</p><label>Заявка<select id="filesRequestSelect"><option value="">Сначала загрузите заявки</option></select></label><input id="filesUploadInput" type="file" multiple /><button id="filesUploadBtn" type="button">Загрузить файлы</button><p id="filesStatus" class="muted-text"></p></div><div class="card"><table><thead><tr><th>Заявка</th><th>Клиент</th><th>Телефон</th><th>Адрес / объект</th><th>Файлы</th><th>Статус</th><th></th></tr></thead><tbody id="filesBody"></tbody></table></div></section>
       </section>
 
       <section id="reportsSection" class="workspace-section" style="display:none">

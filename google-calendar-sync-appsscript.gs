@@ -87,6 +87,8 @@ function createOrUpdateEvent_(calendar, input) {
     ev = calendar.createEvent(title, start, end, { description, location });
   }
 
+  const attachmentResult = syncEventAttachments_(ev, fields);
+
   return {
     ok: true,
     success: true,
@@ -96,7 +98,8 @@ function createOrUpdateEvent_(calendar, input) {
     htmlLink: buildEventLink_(CALENDAR_ID, ev.getId()),
     title: ev.getTitle(),
     start: formatDateTime_(ev.getStartTime()),
-    end: formatDateTime_(ev.getEndTime())
+    end: formatDateTime_(ev.getEndTime()),
+    attachmentResult: attachmentResult
   };
 }
 
@@ -116,10 +119,69 @@ function buildDescription_(fields, recordId) {
   if (fields['Адрес']) rows.push('Адрес: ' + fields['Адрес']);
   if (fields['м2'] || fields['Итоговый м2']) rows.push('м²: ' + (fields['Итоговый м2'] || fields['м2']));
   if (fields['Монтажники']) rows.push('Монтажники: ' + fields['Монтажники']);
+  const filesBlock = buildFilesBlock_(fields);
+  if (filesBlock) rows.push(filesBlock);
   if (fields['Комментарий клиента']) rows.push('\nКомментарий клиента:\n' + fields['Комментарий клиента']);
   if (fields['Комментарий администратора']) rows.push('\nКомментарий администратора:\n' + fields['Комментарий администратора']);
   rows.push('\nИсточник: сайт/админка СОЛНЦАНЕТ');
   return rows.filter(Boolean).join('\n');
+}
+
+function extractFiles_(fields) {
+  const raw = fields && fields['Файлы'];
+  if (!raw) return [];
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return (Array.isArray(parsed) ? parsed : [parsed]).filter(function(file) {
+      return file && (file.url || file.webViewLink || file.downloadUrl || file.webContentLink || file.id || file.fileId);
+    });
+  } catch (err) {
+    return String(raw).split(/\n+/).map(function(line) { return { originalName: line, url: line }; }).filter(function(file) { return file.url; });
+  }
+}
+
+function fileUrl_(file) {
+  if (!file) return '';
+  if (file.url) return String(file.url);
+  if (file.webViewLink) return String(file.webViewLink);
+  if (file.downloadUrl) return String(file.downloadUrl);
+  if (file.webContentLink) return String(file.webContentLink);
+  const id = file.id || file.fileId;
+  return id ? 'https://drive.google.com/file/d/' + encodeURIComponent(String(id)) + '/view' : '';
+}
+
+function buildFilesBlock_(fields) {
+  const files = extractFiles_(fields);
+  if (!files.length) return '';
+  const lines = ['\nФайлы Google Drive:'];
+  files.forEach(function(file, index) {
+    const name = String(file.originalName || file.name || ('Файл ' + (index + 1))).trim();
+    const url = fileUrl_(file);
+    if (url) lines.push((index + 1) + '. ' + name + ' — ' + url);
+  });
+  return lines.length > 1 ? lines.join('\n') : '';
+}
+
+function syncEventAttachments_(ev, fields) {
+  const files = extractFiles_(fields);
+  if (!files.length) return { ok: false, reason: 'no_files', count: 0 };
+  try {
+    if (typeof Calendar === 'undefined' || !Calendar.Events || !Calendar.Events.patch) {
+      return { ok: false, reason: 'advanced_calendar_api_disabled', count: files.length };
+    }
+    const attachments = files.map(function(file, index) {
+      return {
+        fileUrl: fileUrl_(file),
+        title: String(file.originalName || file.name || ('Файл ' + (index + 1))).slice(0, 250),
+        mimeType: String(file.contentType || file.mimeType || 'application/octet-stream')
+      };
+    }).filter(function(item) { return item.fileUrl; });
+    if (!attachments.length) return { ok: false, reason: 'no_file_urls', count: 0 };
+    Calendar.Events.patch({ attachments: attachments }, CALENDAR_ID, ev.getId(), { supportsAttachments: true });
+    return { ok: true, count: attachments.length };
+  } catch (err) {
+    return { ok: false, reason: 'attachment_error', error: err.message || String(err), count: files.length };
+  }
 }
 
 function eventToPayload_(ev) {

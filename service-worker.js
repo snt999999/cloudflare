@@ -1,4 +1,4 @@
-const CACHE_NAME = 'solncanet-pwa-v30';
+const CACHE_NAME = 'solncanet-pwa-v32';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -30,7 +30,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (req.method !== 'GET') return;
   if (url.origin !== location.origin) return;
-  if (url.pathname.startsWith('/list-') || url.pathname.startsWith('/create-') || url.pathname.startsWith('/update-') || url.pathname.startsWith('/upload-') || url.pathname.startsWith('/delete-') || url.pathname.startsWith('/send-')) return;
+  if (url.pathname.startsWith('/list-') || url.pathname.startsWith('/create-') || url.pathname.startsWith('/update-') || url.pathname.startsWith('/upload-') || url.pathname.startsWith('/delete-') || url.pathname.startsWith('/send-') || url.pathname.startsWith('/calendar-') || url.pathname.startsWith('/sms-') || url.pathname.startsWith('/google-drive-')) return;
 
   event.respondWith(
     fetch(req)

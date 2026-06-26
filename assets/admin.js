@@ -33,6 +33,7 @@ const storage = {
 };
 
 const els = {
+  sidebar: $("sidebar"), mobileMenuBtn: $("mobileMenuBtn"), sidebarCloseBtn: $("sidebarCloseBtn"), sidebarOverlay: $("sidebarOverlay"),
   loginPanel: $("loginPanel"), appPanel: $("appPanel"), loginForm: $("loginForm"), passwordInput: $("passwordInput"), loginMessage: $("loginMessage"), logoutBtn: $("logoutBtn"), refreshBtn: $("refreshBtn"), listBtn: $("listBtn"), calendarBtn: $("calendarBtn"), listView: $("listView"), calendarView: $("calendarView"), requestsBody: $("requestsBody"), calendarGrid: $("calendarGrid"), monthTitle: $("monthTitle"), calendarMonthSummary: $("calendarMonthSummary"), calendarTodayBtn: $("calendarTodayBtn"), calendarDayAgenda: $("calendarDayAgenda"), calendarSelectedDateTitle: $("calendarSelectedDateTitle"), calendarSelectedDateSummary: $("calendarSelectedDateSummary"), calendarSelectedEvents: $("calendarSelectedEvents"), prevMonth: $("prevMonth"), nextMonth: $("nextMonth"), searchInput: $("searchInput"), statusFilter: $("statusFilter"), installerFilter: $("installerFilter"), dateFrom: $("dateFrom"), dateTo: $("dateTo"), clearFiltersBtn: $("clearFiltersBtn"), message: $("message"), statTotal: $("statTotal"), statNew: $("statNew"), statToday: $("statToday"), statWork: $("statWork"), statVolume: $("statVolume"), statFiltered: $("statFiltered"),
   dialog: $("requestDialog"), dialogTitle: $("dialogTitle"), requestInfo: $("requestInfo"), editDate: $("editDate"), editTime: $("editTime"), editStatus: $("editStatus"), editM2: $("editM2"), editResponsible: $("editResponsible"), editCompany: $("editCompany"), editService: $("editService"), editAddress: $("editAddress"), editAdminComment: $("editAdminComment"), saveRequestBtn: $("saveRequestBtn"), cancelRequestBtn: $("cancelRequestBtn"), cancelReason: $("cancelReason"), requestHistoryBox: $("requestHistoryBox"), requestGoogleCalendarBox: $("requestGoogleCalendarBox"), requestGoogleCreateBtn: $("requestGoogleCreateBtn"), requestGoogleOpenLink: $("requestGoogleOpenLink"), requestGoogleStatus: $("requestGoogleStatus"), exportBtn: $("exportBtn"),
   clientsBody: $("clientsBody"), objectsBody: $("objectsBody"), installersBody: $("installersBody"), trashBody: $("trashBody"), historyBody: $("historyBody"), historySearchInput: $("historySearchInput"), clearHistoryLocalBtn: $("clearHistoryLocalBtn"), filesBody: $("filesBody"), filesSearchInput: $("filesSearchInput"), filesTypeFilter: $("filesTypeFilter"),
@@ -73,6 +74,9 @@ function init() {
   els.prevMonth.addEventListener("click", () => { cal.setMonth(cal.getMonth() - 1); render(); });
   els.nextMonth.addEventListener("click", () => { cal.setMonth(cal.getMonth() + 1); render(); });
   if (els.calendarTodayBtn) els.calendarTodayBtn.addEventListener("click", () => { const now = new Date(); cal = new Date(now.getFullYear(), now.getMonth(), 1); selectedCalendarDate = today(); render(); });
+  initMobileSidebar();
+  initClickableRows();
+  initDialogBackdropClose();
 
   [els.searchInput, els.statusFilter, els.installerFilter, els.dateFrom, els.dateTo].forEach((el) => {
     el.addEventListener("input", renderAll);
@@ -157,6 +161,56 @@ function init() {
   renderPayrollSettings();
 }
 
+function initMobileSidebar() {
+  if (els.mobileMenuBtn) els.mobileMenuBtn.addEventListener("click", openMobileSidebar);
+  if (els.sidebarCloseBtn) els.sidebarCloseBtn.addEventListener("click", closeMobileSidebar);
+  if (els.sidebarOverlay) els.sidebarOverlay.addEventListener("click", closeMobileSidebar);
+  if (els.sidebar) els.sidebar.addEventListener("click", (event) => {
+    const link = event.target.closest("[data-section]");
+    if (link) closeMobileSidebar();
+  });
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeMobileSidebar(); });
+}
+function openMobileSidebar() { document.body.classList.add("sidebar-open"); }
+function closeMobileSidebar() { document.body.classList.remove("sidebar-open"); }
+
+
+function rowClickIgnored(target) {
+  return Boolean(target.closest('button, a, input, select, textarea, label, summary, [role="button"], .file-chip, .quick-client-suggestions, .global-search-results'));
+}
+
+function handleClickableTableRow(event) {
+  if (rowClickIgnored(event.target)) return;
+  const row = event.target.closest('tr[data-open-row], tr[data-open-client-row], tr[data-installer-row]');
+  if (!row) return;
+  if (row.dataset.openRow) return openRequest(row.dataset.openRow);
+  if (row.dataset.openClientRow) return openClientCard(row.dataset.openClientRow);
+  if (row.dataset.installerRow) return openInstallerDetails(row.dataset.installerRow);
+}
+
+function initClickableRows() {
+  [
+    els.requestsBody,
+    els.clientsBody,
+    els.objectsBody,
+    els.installersBody,
+    els.installerDetailsBody,
+    els.trashBody,
+    els.historyBody,
+    els.filesBody,
+    $('clientCardRequestsBody')
+  ].filter(Boolean).forEach((body) => body.addEventListener('click', handleClickableTableRow));
+}
+
+function initDialogBackdropClose() {
+  document.querySelectorAll('dialog').forEach((dialog) => {
+    dialog.addEventListener('click', (event) => {
+      if (event.target !== dialog) return;
+      dialog.close();
+    });
+  });
+}
+
 function setDefaultDates() {
   const t = today();
   if (els.quickDate) els.quickDate.value = t;
@@ -201,6 +255,7 @@ async function load() {
 }
 
 function setSection(section) {
+  closeMobileSidebar();
   document.querySelectorAll("[data-section]").forEach((a) => a.classList.toggle("active", a.dataset.section === section));
   document.querySelectorAll(".workspace-section").forEach((s) => s.style.display = "none");
 
@@ -240,7 +295,7 @@ function sortByDateDesc(a, b) { const af = a.fields || {}, bf = b.fields || {}; 
 
 function renderAll() { render(); renderClients(); renderObjects(); renderInstallers(); renderInstallerDetails(); renderTrash(); renderFiles(); renderHistorySection(); renderCalendarImport(); renderSmsQueue(); renderGlobalSearch(false); }
 function render() { const arr = filtered(false); els.requestsBody.innerHTML = arr.map(requestRow).join("") || '<tr><td colspan="10">Нет заявок</td></tr>'; bindActionButtons(); renderCalendar(arr); renderStats(records, arr); }
-function requestRow(r) { const f = r.fields || {}, status = e(f["Статус"] || ""); return `<tr><td>${e(f["Дата записи"])}</td><td>${e(f["Время записи"])}</td><td><b>${e(f["Имя клиента"])}</b></td><td>${e(f["Компания"] || "—")}</td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Услуга"])}</td><td>${e(f["Адрес"])}</td><td>${e(f["Итоговый м2"] || f["м2"])}</td><td>${e(f["Монтажники"])}</td><td class="status-cell"><span class="status" data-status="${status}">${status || "—"}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`; }
+function requestRow(r) { const f = r.fields || {}, status = e(f["Статус"] || ""); return `<tr class="clickable-row" data-open-row="${e(r.id)}"><td>${e(f["Дата записи"])}</td><td>${e(f["Время записи"])}</td><td><b>${e(f["Имя клиента"])}</b></td><td>${e(f["Компания"] || "—")}</td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Услуга"])}</td><td>${e(f["Адрес"])}</td><td>${e(f["Итоговый м2"] || f["м2"])}</td><td>${e(f["Монтажники"])}</td><td class="status-cell"><span class="status" data-status="${status}">${status || "—"}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`; }
 
 function renderCalendar(arr) {
   if (!els.calendarGrid || !els.monthTitle) return;
@@ -300,6 +355,13 @@ function bindCalendarMonthButtons() {
     button.onclick = (event) => {
       event.stopPropagation();
       selectedCalendarDate = button.dataset.calendarSelectDay;
+      render();
+    };
+  });
+  document.querySelectorAll("[data-calendar-day]").forEach((day) => {
+    day.onclick = (event) => {
+      if (event.target.closest("[data-open], [data-calendar-select-day]")) return;
+      selectedCalendarDate = day.dataset.calendarDay;
       render();
     };
   });
@@ -762,7 +824,7 @@ function renderClients() {
   if (els.clientsStatRequests) els.clientsStatRequests.textContent = rows.length;
   if (els.clientsStatM2) els.clientsStatM2.textContent = moneyNumber(rows.reduce((s, r) => s + getM2(r.fields || {}), 0));
   if (els.clientsStatRepeat) els.clientsStatRepeat.textContent = clients.filter((x) => x.count > 1).length;
-  els.clientsBody.innerHTML = clients.map((x) => `<tr><td><b>${e(x.name)}</b></td><td>${e(x.company || "—")}</td><td>${phoneLink(x.phone)}</td><td>${x.count}</td><td>${e(x.service || "—")}</td><td>${e(x.address || "—")}</td><td>${moneyNumber(x.m2)}</td><td>${e(x.last)}</td><td><button class="open-btn" data-open-client="${e(x.key)}">Карточка</button></td></tr>`).join("") || '<tr><td colspan="9">Клиенты не найдены</td></tr>';
+  els.clientsBody.innerHTML = clients.map((x) => `<tr class="clickable-row" data-open-client-row="${e(x.key)}"><td><b>${e(x.name)}</b></td><td>${e(x.company || "—")}</td><td>${phoneLink(x.phone)}</td><td>${x.count}</td><td>${e(x.service || "—")}</td><td>${e(x.address || "—")}</td><td>${moneyNumber(x.m2)}</td><td>${e(x.last)}</td><td><button class="open-btn" data-open-client="${e(x.key)}">Карточка</button></td></tr>`).join("") || '<tr><td colspan="9">Клиенты не найдены</td></tr>';
   bindActionButtons();
 }
 function renderObjects() {
@@ -771,7 +833,7 @@ function renderObjects() {
   if (els.objectsStatM2) els.objectsStatM2.textContent = moneyNumber(rows.reduce((s, r) => s + getM2(r.fields || {}), 0));
   if (els.objectsStatDone) els.objectsStatDone.textContent = rows.filter((r) => PAYROLL_STATUSES.has((r.fields || {})["Статус"] || "")).length;
   if (els.objectsStatWork) els.objectsStatWork.textContent = rows.filter((r) => (r.fields || {})["Статус"] === "В работе").length;
-  els.objectsBody.innerHTML = rows.map((r) => { const f = r.fields || {}; return `<tr><td>${e(f["Дата записи"] || "")}</td><td><b>${e(f["Имя клиента"] || "—")}</b><br>${phoneLink(f["Телефон"])}</td><td>${e(f["Компания"] || "—")}</td><td>${e(f["Адрес"] || "—")}</td><td>${e(f["Услуга"] || "—")}</td><td>${moneyNumber(getM2(f))}</td><td>${e(displayInstallers(f["Монтажники"]) || "—")}</td><td class="status-cell"><span class="status" data-status="${e(f["Статус"] || "")}">${e(f["Статус"] || "—")}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`; }).join("") || '<tr><td colspan="9">Объекты не найдены</td></tr>';
+  els.objectsBody.innerHTML = rows.map((r) => { const f = r.fields || {}; return `<tr class="clickable-row" data-open-row="${e(r.id)}"><td>${e(f["Дата записи"] || "")}</td><td><b>${e(f["Имя клиента"] || "—")}</b><br>${phoneLink(f["Телефон"])}</td><td>${e(f["Компания"] || "—")}</td><td>${e(f["Адрес"] || "—")}</td><td>${e(f["Услуга"] || "—")}</td><td>${moneyNumber(getM2(f))}</td><td>${e(displayInstallers(f["Монтажники"]) || "—")}</td><td class="status-cell"><span class="status" data-status="${e(f["Статус"] || "")}">${e(f["Статус"] || "—")}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`; }).join("") || '<tr><td colspan="9">Объекты не найдены</td></tr>';
   bindActionButtons();
 }
 function installerRowsForSection() {
@@ -786,7 +848,7 @@ function renderInstallers() {
   if (els.installersStatM2) els.installersStatM2.textContent = moneyNumber(summaryRows.reduce((s, x) => s + x.m2, 0));
   if (els.installersStatAmount) els.installersStatAmount.textContent = money(summaryRows.reduce((s, x) => s + x.amount, 0));
   if (els.installersStatTotal) els.installersStatTotal.textContent = money(summaryRows.reduce((s, x) => s + x.total, 0));
-  els.installersBody.innerHTML = summaryRows.map((x) => `<tr class="installer-row ${selectedInstaller === x.worker ? "selected" : ""}" data-installer-row="${e(x.worker)}"><td><button class="installer-open-name" data-installer="${e(x.worker)}" type="button"><b>${e(workerLabel(x.worker))}</b><br><small>${e(x.worker)}</small></button></td><td>${x.jobs}</td><td>${moneyNumber(x.m2)}</td><td>${money(x.amount)}</td><td>${money(x.bonus)}</td><td>${money(x.advance)}</td><td><b>${money(x.total)}</b></td><td>${e(x.last || "—")}</td><td><button class="open-btn" data-installer="${e(x.worker)}" type="button">История работ</button></td></tr>`).join("");
+  els.installersBody.innerHTML = summaryRows.map((x) => `<tr class="installer-row clickable-row ${selectedInstaller === x.worker ? "selected" : ""}" data-installer-row="${e(x.worker)}"><td><button class="installer-open-name" data-installer="${e(x.worker)}" type="button"><b>${e(workerLabel(x.worker))}</b><br><small>${e(x.worker)}</small></button></td><td>${x.jobs}</td><td>${moneyNumber(x.m2)}</td><td>${money(x.amount)}</td><td>${money(x.bonus)}</td><td>${money(x.advance)}</td><td><b>${money(x.total)}</b></td><td>${e(x.last || "—")}</td><td><button class="open-btn" data-installer="${e(x.worker)}" type="button">История работ</button></td></tr>`).join("");
   bindInstallerButtons();
 }
 function bindInstallerButtons() {
@@ -848,7 +910,7 @@ function renderInstallerDetails() {
     const f = r.fields || {};
     const calc = detailsById.get(String(r.id));
     const status = e(f["Статус"] || "");
-    return `<tr><td>${e(f["Дата записи"] || "")}<br><small>${e(f["Время записи"] || "")}</small></td><td><b>${e(f["Имя клиента"] || "—")}</b></td><td>${e(f["Компания"] || "—")}</td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Адрес"] || "—")}</td><td>${e(f["Услуга"] || "—")}</td><td>${moneyNumber(getM2(f))}</td><td>${e(displayInstallers(f["Монтажники"]) || "—")}</td><td>${calc ? moneyNumber(calc.rate) : "—"}</td><td>${calc ? money(calc.amount) : "—"}</td><td class="status-cell"><span class="status" data-status="${status}">${status || "—"}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть / редактировать</button></td></tr>`;
+    return `<tr class="clickable-row" data-open-row="${e(r.id)}"><td>${e(f["Дата записи"] || "")}<br><small>${e(f["Время записи"] || "")}</small></td><td><b>${e(f["Имя клиента"] || "—")}</b></td><td>${e(f["Компания"] || "—")}</td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Адрес"] || "—")}</td><td>${e(f["Услуга"] || "—")}</td><td>${moneyNumber(getM2(f))}</td><td>${e(displayInstallers(f["Монтажники"]) || "—")}</td><td>${calc ? moneyNumber(calc.rate) : "—"}</td><td>${calc ? money(calc.amount) : "—"}</td><td class="status-cell"><span class="status" data-status="${status}">${status || "—"}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть / редактировать</button></td></tr>`;
   });
   const amount = [...detailsById.values()].reduce((s, d) => s + d.amount, 0);
   const m2 = rows.reduce((s, r) => s + getM2(r.fields || {}), 0);
@@ -862,19 +924,20 @@ function renderInstallerDetails() {
   els.installerDetailsBody.innerHTML = detailRows.join("") || '<tr><td colspan="12">По этому монтажнику ничего не найдено</td></tr>';
   bindActionButtons();
 }
-function renderTrash() { const arr = records.filter(isTrashRecord).sort(sortByDateDesc); els.trashBody.innerHTML = arr.map((r) => { const f = r.fields || {}; return `<tr><td>${e(f["Дата записи"] || "")}</td><td><b>${e(f["Имя клиента"] || "—")}</b></td><td>${e(f["Компания"] || "—")}</td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Услуга"] || "")}</td><td>${e(f["Адрес"] || "")}</td><td>${nl2br(f["Причина отмены"] || lastCancelReason(f) || f["Комментарий администратора"] || "")}</td><td class="status-cell"><span class="status" data-status="${e(f["Статус"] || "")}">${e(f["Статус"] || "—")}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button> <button class="restore-btn" data-restore="${e(r.id)}">Восстановить</button></td></tr>`; }).join("") || '<tr><td colspan="8">Корзина пустая</td></tr>'; bindActionButtons(); }
+function renderTrash() { const arr = records.filter(isTrashRecord).sort(sortByDateDesc); els.trashBody.innerHTML = arr.map((r) => { const f = r.fields || {}; return `<tr class="clickable-row" data-open-row="${e(r.id)}"><td>${e(f["Дата записи"] || "")}</td><td><b>${e(f["Имя клиента"] || "—")}</b></td><td>${e(f["Компания"] || "—")}</td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Услуга"] || "")}</td><td>${e(f["Адрес"] || "")}</td><td>${nl2br(f["Причина отмены"] || lastCancelReason(f) || f["Комментарий администратора"] || "")}</td><td class="status-cell"><span class="status" data-status="${e(f["Статус"] || "")}">${e(f["Статус"] || "—")}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button> <button class="restore-btn" data-restore="${e(r.id)}">Восстановить</button></td></tr>`; }).join("") || '<tr><td colspan="8">Корзина пустая</td></tr>'; bindActionButtons(); }
 function renderFiles() {
   renderFilesRequestSelect();
   const q = norm(els.filesSearchInput?.value || ""), type = norm(els.filesTypeFilter?.value || "");
   const byRequest = groupFilesByRequest(filesCache);
-  const ids = new Set([...records.map((r) => String(r.id)), ...Object.keys(byRequest)]);
+  const ids = new Set(Object.keys(byRequest));
   const rows = [...ids].map((id) => ({ record: records.find((r) => String(r.id) === String(id)), id, files: byRequest[id] || [] }))
     .filter(({ record, id, files }) => {
+      if (!files.length) return false;
       const f = record?.fields || {};
       const filesText = files.map((file) => [file.originalName, file.fileType, file.contentType, file.client, file.phone, file.address, file.service].join(" ")).join(" ");
       const hay = norm(["#" + id, f["Имя клиента"], f["Компания"], f["Телефон"], f["Адрес"], f["Услуга"], f["Статус"], f["Комментарий клиента"], f["Комментарий администратора"], f["Файлы"], filesText].join(" "));
       if (q && !hay.includes(q)) return false;
-      if (type && !files.some((file) => fileMatchesType(file, type)) && !norm(f["Файлы"] || "").includes(type)) return false;
+      if (type && !files.some((file) => fileMatchesType(file, type))) return false;
       return true;
     })
     .sort((a, b) => String(b.id).localeCompare(String(a.id), "ru", { numeric: true }));
@@ -882,8 +945,8 @@ function renderFiles() {
   els.filesBody.innerHTML = rows.map(({ record, id, files }) => {
     const f = record?.fields || {};
     const fileHtml = files.length ? files.map(fileMiniHtml).join("") : e(f["Файлы"] || "Пока нет файлов");
-    return `<tr><td>#${e(id)}</td><td>${e(f["Имя клиента"] || files[0]?.client || "—")}</td><td>${phoneLink(f["Телефон"] || files[0]?.phone || "")}</td><td>${e(f["Адрес"] || files[0]?.address || "—")}</td><td>${fileHtml}</td><td class="status-cell"><span class="status" data-status="${e(f["Статус"] || files[0]?.status || "")}">${e(f["Статус"] || files[0]?.status || "—")}</span></td><td>${record ? `<button class="open-btn" data-open="${e(id)}">Открыть</button>` : "—"}</td></tr>`;
-  }).join("") || '<tr><td colspan="7">Файлы не найдены</td></tr>';
+    return `<tr class="clickable-row" data-open-row="${e(id)}"><td>#${e(id)}</td><td>${e(f["Имя клиента"] || files[0]?.client || "—")}</td><td>${phoneLink(f["Телефон"] || files[0]?.phone || "")}</td><td>${e(f["Адрес"] || files[0]?.address || "—")}</td><td>${fileHtml}</td><td class="status-cell"><span class="status" data-status="${e(f["Статус"] || files[0]?.status || "")}">${e(f["Статус"] || files[0]?.status || "—")}</span></td><td>${record ? `<button class="open-btn" data-open="${e(id)}">Открыть</button>` : "—"}</td></tr>`;
+  }).join("") || '<tr><td colspan="7">Нет заявок с прикреплёнными файлами</td></tr>';
   bindActionButtons();
 }
 
@@ -901,7 +964,7 @@ function saveLocalHistory(id, entry) { const all = getLocalHistory(); all[String
 function getLocalHistory() { try { return JSON.parse(localStorage.getItem(storage.history) || "{}"); } catch (_) { return {}; } }
 function parseHistoryField(value) { if (!value) return []; if (Array.isArray(value)) return value; try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch (_) { return String(value).split("\n").filter(Boolean).map((line) => ({ at: "", action: "Запись", details: line })); } }
 function renderRequestHistory(record) { const history = getHistoryForRecord(record); els.requestHistoryBox.innerHTML = history.length ? history.map((h) => `<div class="history-item"><b>${e(h.at || "—")}</b><span>${e(h.action || "")}</span><p>${e(h.details || "")}</p></div>`).join("") : '<p class="muted-text">Истории изменений пока нет.</p>'; }
-function renderHistorySection() { const q = norm(els.historySearchInput?.value || ""); const rows = []; records.forEach((r) => getHistoryForRecord(r).forEach((h) => rows.push({ record: r, h }))); rows.sort((a, b) => String(b.h.at).localeCompare(String(a.h.at))); const filteredRows = rows.filter(({ record, h }) => { const f = record.fields || {}; const hay = norm([h.at, h.action, h.details, record.id, f["Имя клиента"], f["Телефон"]].join(" ")); return !q || hay.includes(q); }); els.historyBody.innerHTML = filteredRows.map(({ record, h }) => `<tr><td>${e(h.at || "—")}</td><td>#${e(record.id)}</td><td>${e((record.fields || {})["Имя клиента"] || h.client || "—")}</td><td><b>${e(h.action || "")}</b></td><td>${e(h.details || "")}</td><td><button class="open-btn" data-open="${e(record.id)}">Открыть</button></td></tr>`).join("") || '<tr><td colspan="6">Истории пока нет</td></tr>'; bindActionButtons(); }
+function renderHistorySection() { const q = norm(els.historySearchInput?.value || ""); const rows = []; records.forEach((r) => getHistoryForRecord(r).forEach((h) => rows.push({ record: r, h }))); rows.sort((a, b) => String(b.h.at).localeCompare(String(a.h.at))); const filteredRows = rows.filter(({ record, h }) => { const f = record.fields || {}; const hay = norm([h.at, h.action, h.details, record.id, f["Имя клиента"], f["Телефон"]].join(" ")); return !q || hay.includes(q); }); els.historyBody.innerHTML = filteredRows.map(({ record, h }) => `<tr class="clickable-row" data-open-row="${e(record.id)}"><td>${e(h.at || "—")}</td><td>#${e(record.id)}</td><td>${e((record.fields || {})["Имя клиента"] || h.client || "—")}</td><td><b>${e(h.action || "")}</b></td><td>${e(h.details || "")}</td><td><button class="open-btn" data-open="${e(record.id)}">Открыть</button></td></tr>`).join("") || '<tr><td colspan="6">Истории пока нет</td></tr>'; bindActionButtons(); }
 function clearLocalHistory() { if (!confirm("Очистить локальную историю изменений в этом браузере? Данные в NocoDB не удаляются.")) return; localStorage.removeItem(storage.history); renderHistorySection(); msg("Локальная история очищена"); }
 
 
@@ -1319,7 +1382,7 @@ function initFileServiceEvents() {
   const requestFilesRefreshBtn = $("requestFilesRefreshBtn");
   const zone = $("filesDropZone");
   if (uploadBtn) uploadBtn.addEventListener("click", () => uploadFilesFromPanel());
-  if (refreshBtn) refreshBtn.addEventListener("click", () => loadFiles(false));
+  if (refreshBtn) refreshBtn.addEventListener("click", () => load());
   if (testBtn) testBtn.addEventListener("click", openGoogleDriveTest);
   if (testBtnSettings) testBtnSettings.addEventListener("click", openGoogleDriveTest);
   if (requestUploadBtn) requestUploadBtn.addEventListener("click", () => uploadFilesForCurrentRequest());
@@ -1477,14 +1540,64 @@ async function uploadFiles(requestId, fileList, input, statusFn = setFilesStatus
     }
     const uploaded = data.uploaded.map((file) => normalizeFileMeta(file, requestId, f));
     const merged = [...parseRecordFiles(record), ...uploaded];
+    const filesJson = JSON.stringify(merged);
     let history = getHistoryForRecord(record);
     history = addHistory(record, "Загрузка файлов в Google Drive", uploaded.map((x) => x.originalName).join(", "), history);
-    await updateRecord(requestId, { "Файлы": JSON.stringify(merged), "История изменений": JSON.stringify(history) }, "Файлы загружены");
+    const updateFields = { "Файлы": filesJson, "История изменений": JSON.stringify(history) };
+    await updateRecord(requestId, updateFields, "Файлы загружены");
+    record.fields = { ...(record.fields || {}), ...updateFields };
+    if (current && String(current.id) === String(requestId)) current.fields = { ...(current.fields || {}), ...updateFields };
+    filesCache = parseFilesFromRecords(records);
+    renderFiles();
+    renderRequestFiles(requestId);
     if (input) input.value = "";
+    const googleText = await syncGoogleCalendarFilesForRecord(record, merged, statusFn);
     await load();
-    statusFn(`Загружено файлов: ${uploaded.length}. Данные сохранены в заявке.`);
+    statusFn(`Загружено файлов: ${uploaded.length}. Данные сохранены в заявке.${googleText ? " " + googleText : ""}`);
   } catch (error) {
     statusFn("Ошибка загрузки: " + error.message);
+  }
+}
+
+async function syncGoogleCalendarFilesForRecord(record, files = null, statusFn = null) {
+  if (!record) return "";
+  const f = record.fields || {};
+  if (!f["Дата записи"] || !f["Время записи"]) {
+    return "В Google Календарь не отправлено: нет даты или времени записи.";
+  }
+  const list = files || parseRecordFiles(record);
+  const fields = { ...f, "Файлы": JSON.stringify(list) };
+  const eventId = f["Google Calendar Event ID"] || "";
+  try {
+    if (statusFn) statusFn("Обновляю Google Календарь и ссылки на файлы...");
+    const res = await fetch("/calendar-create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": pwd() },
+      body: JSON.stringify({ action: eventId ? "upsert" : "create", eventId, fields, recordId: record.id, source: "files" })
+    });
+    const data = await res.json().catch(() => ({ ok: false, error: "Функция календаря вернула не JSON" }));
+    if (!res.ok || !data.ok) throw new Error(data.error || data.appsScript?.error || "ошибка календаря");
+    const updateFields = {
+      "Google Calendar Event ID": data.eventId || eventId || "",
+      "Ссылка на событие": data.htmlLink || f["Ссылка на событие"] || "",
+      "Источник": "Файлы → Google Календарь"
+    };
+    let history = getHistoryForRecord(record);
+    const att = data.attachmentResult;
+    const attText = att?.ok ? `, вложений: ${att.count || list.length}` : ", ссылки добавлены в описание";
+    history = addHistory(record, "Файлы в Google Календаре", `${list.length} файл(ов)${attText}`, history);
+    updateFields["История изменений"] = JSON.stringify(history);
+    await updateRecord(record.id, updateFields, "Google Календарь обновлён");
+    record.fields = { ...(record.fields || {}), ...updateFields };
+    if (current && String(current.id) === String(record.id)) {
+      current.fields = { ...(current.fields || {}), ...updateFields };
+      renderRequestGoogleCalendar(current);
+      renderRequestHistory(current);
+    }
+    if (data.attachmentResult?.ok) return "Файлы добавлены в событие Google Календаря.";
+    return "Ссылки на файлы добавлены в описание события Google Календаря.";
+  } catch (error) {
+    return "Google Календарь не обновился: " + error.message;
   }
 }
 
@@ -1573,9 +1686,14 @@ async function deleteAdminFile(key) {
     const record = records.find((r) => String(r.id) === String(file.requestId));
     if (record) {
       const kept = parseRecordFiles(record).filter((x) => x.key !== key);
+      const filesJson = JSON.stringify(kept);
       let history = getHistoryForRecord(record);
       history = addHistory(record, "Удаление файла", file.originalName || file.name || "Файл", history);
-      await updateRecord(record.id, { "Файлы": JSON.stringify(kept), "История изменений": JSON.stringify(history) }, "Файл удалён");
+      const updateFields = { "Файлы": filesJson, "История изменений": JSON.stringify(history) };
+      await updateRecord(record.id, updateFields, "Файл удалён");
+      record.fields = { ...(record.fields || {}), ...updateFields };
+      if (current && String(current.id) === String(record.id)) current.fields = { ...(current.fields || {}), ...updateFields };
+      await syncGoogleCalendarFilesForRecord(record, kept);
     }
     await load();
   } catch (error) { msg(error.message); }
@@ -2427,7 +2545,7 @@ function openClientCard(key) {
   els.clientCardAddresses.innerHTML = addresses.length ? addresses.map((a) => `<span>${e(a)}</span>`).join("") : '<p class="muted-text">Адресов пока нет.</p>';
   els.clientCardRequestsBody.innerHTML = rows.map((r) => {
     const f = r.fields || {};
-    return `<tr><td>${e(f["Дата записи"] || "")}</td><td>${e(f["Услуга"] || "—")}</td><td>${e(f["Адрес"] || "—")}</td><td>${moneyNumber(getM2(f))}</td><td><span class="status" data-status="${e(f["Статус"] || "")}">${e(f["Статус"] || "—")}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`;
+    return `<tr class="clickable-row" data-open-row="${e(r.id)}"><td>${e(f["Дата записи"] || "")}</td><td>${e(f["Услуга"] || "—")}</td><td>${e(f["Адрес"] || "—")}</td><td>${moneyNumber(getM2(f))}</td><td><span class="status" data-status="${e(f["Статус"] || "")}">${e(f["Статус"] || "—")}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`;
   }).join("") || '<tr><td colspan="6">Заявок пока нет</td></tr>';
 
   const requestIds = new Set(rows.map((r) => String(r.id)));
