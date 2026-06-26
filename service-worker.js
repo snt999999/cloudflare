@@ -1,4 +1,4 @@
-const CACHE_NAME = 'solncanet-pwa-v19';
+const CACHE_NAME = 'solncanet-pwa-v29';
 const APP_SHELL = [
   '/',
   '/index.html',

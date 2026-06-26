@@ -18,7 +18,7 @@ export async function onRequestPost({ request, env }) {
       if (!to) return json({ ok: false, error: "Не указан номер телефона клиента" }, 400);
       const smsResponse = await sendSms({ env, to, message });
       const smsPayload = await smsResponse.clone().json().catch(() => ({}));
-      await logDirectSms({ env, body, to, message, smsPayload });
+      if (!body.skipSmsLog && !body.queueId) await logDirectSms({ env, body, to, message, smsPayload });
       return smsResponse;
     }
 
@@ -146,6 +146,7 @@ async function sendProstor({ env, to, message }) {
     to,
     clientId,
     smscId: first?.smscId || "",
+    status: first?.status || data.status || "",
     result: data,
     error: ok ? "" : (first?.status || data.status || data.raw || "Prostor не подтвердил отправку")
   }, ok ? 200 : 502);

@@ -125,10 +125,30 @@
           </table>
         </section>
 
-        <section id="calendarView" class="card calendar" style="display:none">
-          <div class="monthbar"><button id="prevMonth" type="button">←</button><h2 id="monthTitle">Месяц</h2><button id="nextMonth" type="button">→</button></div>
-          <div class="weekdays"><b>Пн</b><b>Вт</b><b>Ср</b><b>Чт</b><b>Пт</b><b>Сб</b><b>Вс</b></div>
-          <div id="calendarGrid" class="grid"></div>
+        <section id="calendarView" class="card calendar calendar-month-view" style="display:none">
+          <div class="monthbar calendar-monthbar">
+            <button id="prevMonth" type="button" aria-label="Предыдущий месяц">←</button>
+            <div class="monthbar-title">
+              <h2 id="monthTitle">Месяц</h2>
+              <p id="calendarMonthSummary">0 событий</p>
+            </div>
+            <button id="nextMonth" type="button" aria-label="Следующий месяц">→</button>
+          </div>
+          <div class="calendar-month-tools">
+            <button id="calendarTodayBtn" class="btn-green" type="button">Сегодня</button>
+            <span>Нажми на день, чтобы увидеть все события снизу. Нажми на событие — откроется заявка.</span>
+          </div>
+          <div class="weekdays calendar-weekdays"><b>Пн</b><b>Вт</b><b>Ср</b><b>Чт</b><b>Пт</b><b>Сб</b><b>Вс</b></div>
+          <div id="calendarGrid" class="grid calendar-grid-month"></div>
+          <section class="calendar-day-agenda" id="calendarDayAgenda">
+            <div class="calendar-day-agenda-head">
+              <div>
+                <h3 id="calendarSelectedDateTitle">Выберите день</h3>
+                <p id="calendarSelectedDateSummary">События выбранного дня появятся здесь.</p>
+              </div>
+            </div>
+            <div id="calendarSelectedEvents" class="calendar-selected-events"></div>
+          </section>
         </section>
       </section>
 
@@ -261,46 +281,53 @@
       </section>
 
       <section id="smsSection" class="workspace-section" style="display:none">
-        <header class="admin-head"><div><h1>Уведомления</h1><p>SMS клиентам, ручная отправка и автоматические напоминания по расписанию.</p></div><div class="actions"><button id="notificationCheckBtn" type="button">Проверить подключение</button><button id="smsQueueRefreshBtn" type="button">Обновить очередь</button></div></header>
-        <section class="notification-grid notification-grid--two">
+        <header class="admin-head"><div><h1>SMS-уведомления</h1><p>Автоматические напоминания клиентам, тестовая отправка, история и проверка статуса Prostor по ID.</p></div><div class="actions"><button id="notificationCheckBtn" type="button">Проверить подключение</button><button id="smsQueueRefreshBtn" data-sms-refresh type="button">Обновить историю</button></div></header>
+        <section class="notification-grid notification-grid--two sms-overview-grid">
           <div class="notification-card"><b>SMS клиентам</b><p>Подтверждение записи, напоминание, перенос, отмена, выполненные работы и просьба оставить отзыв.</p><span id="notificationSmsStatus" class="pill-status">не проверено</span></div>
           <div class="notification-card"><b>Telegram администратору</b><p>Тестовые сообщения и уведомления в рабочий чат администратора.</p><span id="notificationTelegramStatus" class="pill-status">не проверено</span></div>
         </section>
-        <section class="card notification-console">
-          <h2>Тестовая отправка</h2>
-          <div class="dialog-grid">
-            <label>Канал<select id="testNotifyChannel"><option value="sms">SMS клиенту</option><option value="telegram">Telegram администратору</option></select></label>
-            <label>Телефон / Chat ID<input id="testNotifyTo" placeholder="+7... или пусто для Telegram админа" /></label>
-            <label class="wide">Текст сообщения<textarea id="testNotifyMessage">СОЛНЦАНЕТ: тестовое уведомление. Если вы получили это сообщение, подключение работает.</textarea></label>
-          </div>
-          <div class="dialog-actions"><button id="sendTestNotifyBtn" type="button">Отправить тест</button><button id="copyTestNotifyBtn" type="button" class="ghost">Скопировать текст</button></div>
-          <p id="notificationStatus" class="muted-text"></p>
+        <section class="stats sms-stats compact-stats">
+          <div><span>Всего SMS</span><b id="smsStatTotal">0</b></div>
+          <div><span>Запланировано</span><b id="smsStatPlanned">0</b></div>
+          <div><span>Отправлено</span><b id="smsStatSent">0</b></div>
+          <div><span>Ошибки</span><b id="smsStatErrors">0</b></div>
         </section>
-
-        <section class="card notification-console">
-          <h2>Проверка статуса Prostor</h2>
-          <div class="dialog-grid">
-            <label class="wide">ID Prostor / smscId<input id="prostorStatusId" placeholder="Например: A132571BC" /></label>
+        <section class="card notification-console sms-control-grid">
+          <div>
+            <h2>Тестовая отправка</h2>
+            <div class="dialog-grid">
+              <label>Канал<select id="testNotifyChannel"><option value="sms">SMS клиенту</option><option value="telegram">Telegram администратору</option></select></label>
+              <label>Телефон<input id="testNotifyTo" data-ru-phone placeholder="+7" inputmode="tel" autocomplete="tel" /></label>
+              <label class="wide">Текст сообщения<textarea id="testNotifyMessage">СОЛНЦАНЕТ: Тест</textarea></label>
+            </div>
+            <div class="dialog-actions"><button id="sendTestNotifyBtn" type="button">Отправить тест</button><button id="copyTestNotifyBtn" type="button" class="ghost">Скопировать текст</button></div>
+            <p id="notificationStatus" class="muted-text"></p>
           </div>
-          <div class="dialog-actions"><button id="checkProstorStatusBtn" type="button">Проверить статус</button></div>
-          <p id="prostorStatusText" class="muted-text"></p>
+          <div>
+            <h2>Проверка статуса Prostor</h2>
+            <div class="dialog-grid">
+              <label class="wide">ID Prostor / smscId<input id="prostorStatusId" placeholder="Например: A132571BC" /></label>
+            </div>
+            <div class="dialog-actions"><button id="checkProstorStatusBtn" type="button">Проверить статус</button></div>
+            <p id="prostorStatusText" class="muted-text"></p>
+          </div>
         </section>
         <section class="card notification-console sms-schedule-console">
-          <h2>SMS-очередь</h2>
+          <div class="sms-section-title"><div><h2>История и очередь SMS</h2><p>Нажми на строку SMS, чтобы открыть карточку отправления: ID Prostor, ответ сервиса, статус доставки, телефон, текст и действия.</p></div><button data-sms-refresh type="button" class="ghost">Обновить</button></div>
           <div class="sms-queue-toolbar">
-            <input id="smsQueueSearch" type="search" placeholder="Поиск: клиент, телефон, компания, текст, статус..." />
-            <select id="smsQueueStatus"><option value="">Все статусы</option><option value="Запланировано">Запланировано</option><option value="Отправляется">Отправляется</option><option value="Отправлено">Отправлено</option><option value="Ошибка">Ошибка</option><option value="Отменено">Отменено</option></select>
+            <input id="smsQueueSearch" type="search" placeholder="Поиск: клиент, телефон, ID Prostor, компания, текст, статус..." />
+            <select id="smsQueueStatus"><option value="">Все статусы</option><option value="Запланировано">Запланировано</option><option value="Отправляется">Отправляется</option><option value="Отправлено">Отправлено</option><option value="Ошибка">Ошибка</option><option value="Отменено">Отменено</option><option value="Пропущено">Пропущено</option></select>
             <input id="smsQueueFrom" type="date" />
             <input id="smsQueueTo" type="date" />
           </div>
-          <div class="table-card sms-queue-table"><table><thead><tr><th>Когда</th><th>Клиент</th><th>Телефон</th><th>Тип</th><th>Текст</th><th>Статус</th><th></th></tr></thead><tbody id="smsQueueBody"><tr><td colspan="7">Очередь ещё не загружена</td></tr></tbody></table></div>
+          <div class="table-card sms-queue-table"><table><thead><tr><th>Дата / время</th><th>Клиент</th><th>Телефон</th><th>Сообщение</th><th>ID / доставка</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="smsQueueBody"><tr><td colspan="7">Очередь ещё не загружена</td></tr></tbody></table></div>
           <p id="smsQueueStatusText" class="muted-text"></p>
         </section>
         <section class="card notification-console">
           <h2>Шаблоны сообщений</h2>
           <div id="notificationTemplatesList" class="notification-templates"></div>
         </section>
-        <section class="card table-card"><table><thead><tr><th>Дата</th><th>Канал</th><th>Кому</th><th>Сообщение</th><th>Статус</th></tr></thead><tbody id="notificationLogBody"></tbody></table></section>
+        <section class="card table-card local-notification-log"><h2>Локальный журнал быстрых отправок</h2><p class="muted-text">Основная история хранится выше в NocoDB. Этот блок — быстрый журнал текущего браузера.</p><table><thead><tr><th>Дата</th><th>Канал</th><th>Кому</th><th>Сообщение</th><th>Статус</th></tr></thead><tbody id="notificationLogBody"></tbody></table></section>
       </section>
 
       <section id="filesSection" class="workspace-section" style="display:none">
@@ -356,6 +383,38 @@
       <section class="files-box"><h3>История этой заявки</h3><div id="requestHistoryBox" class="history-box"></div></section>
       <section class="cancel-box"><h3>Отмена / удаление в корзину</h3><p>Физически заявка не удаляется, а переносится в корзину отмен со статусом «Отменена».</p><textarea id="cancelReason" placeholder="Причина отмены или удаления"></textarea></section>
       <div class="dialog-actions"><button id="saveRequestBtn" type="button">Сохранить</button><button id="cancelRequestBtn" class="danger" type="button">Отменить / в корзину</button><button class="ghost" value="cancel">Закрыть</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="smsDetailDialog" class="wide-dialog sms-detail-dialog">
+    <form method="dialog">
+      <button class="close" value="cancel">×</button>
+      <div class="sms-detail-head">
+        <div>
+          <h2 id="smsDetailTitle">Карточка SMS</h2>
+          <p id="smsDetailSubtitle" class="muted-text"></p>
+        </div>
+        <span id="smsDetailStatusPill" class="pill-status">—</span>
+      </div>
+      <section class="sms-detail-grid">
+        <div class="sms-detail-box"><span>Клиент</span><b id="smsDetailClient">—</b></div>
+        <div class="sms-detail-box"><span>Телефон</span><b id="smsDetailPhone">—</b></div>
+        <div class="sms-detail-box"><span>ID заявки</span><b id="smsDetailRequestId">—</b></div>
+        <div class="sms-detail-box"><span>ID Prostor</span><b id="smsDetailProstorId">—</b></div>
+        <div class="sms-detail-box"><span>Client ID</span><b id="smsDetailClientId">—</b></div>
+        <div class="sms-detail-box"><span>Статус доставки</span><b id="smsDetailDelivery">—</b></div>
+      </section>
+      <section class="files-box sms-detail-message"><h3>Текст SMS</h3><pre id="smsDetailMessage">—</pre></section>
+      <section class="files-box sms-detail-message"><h3>Ответ сервиса / ошибка</h3><pre id="smsDetailService">—</pre></section>
+      <div class="dialog-actions sms-detail-actions">
+        <button id="smsDetailCheckBtn" type="button">Проверить статус Prostor</button>
+        <button id="smsDetailCopyIdBtn" type="button" class="ghost">Скопировать ID</button>
+        <button id="smsDetailSendNowBtn" type="button" class="ghost">Отправить сейчас</button>
+        <button id="smsDetailOpenRequestBtn" type="button" class="ghost">Открыть заявку</button>
+        <button id="smsDetailCancelBtn" type="button" class="danger">Отменить SMS</button>
+        <button class="ghost" value="cancel">Закрыть</button>
+      </div>
+      <p id="smsDetailStatusText" class="muted-text"></p>
     </form>
   </dialog>
 
