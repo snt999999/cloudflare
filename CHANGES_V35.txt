@@ -1,0 +1,7 @@
+V35
+- Deleted records now disappear from lists/calendar immediately after successful NocoDB update.
+- Removed all inline “В корзину” buttons from main lists, clients, objects and client card tables.
+- Deletion is only inside the request card and the red button is named “Удалить”.
+- Expanded trash detection: records with status containing удал/отмен/отказ/корзина, or deletion/cancel fields, are hidden from active lists and shown in trash.
+- Restore updates the local interface immediately without page reload.
+- Updated PWA cache to v35.

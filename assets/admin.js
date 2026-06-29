@@ -7,7 +7,7 @@ const WORKER_PROFILES = [
 ];
 const WORKERS = WORKER_PROFILES.map((w) => w.key);
 const WORKER_BY_KEY = Object.fromEntries(WORKER_PROFILES.map((w) => [w.key, w]));
-const TRASH_STATUSES = new Set(["Отменена", "Удалена", "Отказ"]);
+const TRASH_STATUSES = new Set(["Отменена", "Удалена", "Отказ", "В корзине", "Удаление", "Событие (удаление)", "Событие удалено"]);
 const PAYROLL_STATUSES = new Set(["Выполнено", "Оплачено"]);
 const $ = (id) => document.getElementById(id);
 
@@ -268,7 +268,17 @@ function setSection(section) {
 function setView(view, doRender = true) { els.listView.style.display = view === "list" ? "block" : "none"; els.calendarView.style.display = view === "calendar" ? "block" : "none"; els.listBtn.classList.toggle("active", view === "list"); els.calendarBtn.classList.toggle("active", view === "calendar"); if (doRender) render(); }
 function clearFilters() { els.searchInput.value = ""; els.statusFilter.value = ""; els.installerFilter.value = ""; els.dateFrom.value = ""; els.dateTo.value = ""; renderAll(); }
 
-function isTrashRecord(record) { const status = (record.fields || {})["Статус"] || ""; return TRASH_STATUSES.has(status); }
+function isTrashRecord(record) {
+  const f = record.fields || {};
+  const status = String(f["Статус"] || "").trim();
+  const statusNorm = norm(status);
+  if (TRASH_STATUSES.has(status)) return true;
+  if (statusNorm.includes("удал") || statusNorm.includes("отмен") || statusNorm.includes("отказ") || statusNorm.includes("корзин")) return true;
+  if (String(f["Удалено"] || "").toLowerCase() === "true") return true;
+  if (f["Дата удаления"] || f["Дата отмены"] || f["Причина отмены"]) return true;
+  const comment = norm(String(f["Комментарий администратора"] || ""));
+  return comment.includes("корзина") || comment.includes("удалено вручную") || comment.includes("перенос в корзину");
+}
 function activeRecords() { return records.filter((r) => !isTrashRecord(r)); }
 function filtered(includeTrash = false) {
   const q = norm(els.searchInput.value);
@@ -295,7 +305,7 @@ function sortByDateDesc(a, b) { const af = a.fields || {}, bf = b.fields || {}; 
 
 function renderAll() { render(); renderClients(); renderObjects(); renderInstallers(); renderInstallerDetails(); renderTrash(); renderFiles(); renderHistorySection(); renderCalendarImport(); renderSmsQueue(); renderGlobalSearch(false); }
 function render() { const arr = filtered(false); els.requestsBody.innerHTML = arr.map(requestRow).join("") || '<tr><td colspan="10">Нет заявок</td></tr>'; bindActionButtons(); renderCalendar(arr); renderStats(records, arr); }
-function requestRow(r) { const f = r.fields || {}, status = e(f["Статус"] || ""); return `<tr class="clickable-row" data-open-row="${e(r.id)}"><td>${e(f["Дата записи"])}</td><td>${e(f["Время записи"])}</td><td><b>${e(f["Имя клиента"])}</b></td><td>${e(f["Компания"] || "—")}</td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Услуга"])}</td><td>${e(f["Адрес"])}</td><td>${e(f["Итоговый м2"] || f["м2"])}</td><td>${e(f["Монтажники"])}</td><td class="status-cell"><span class="status" data-status="${status}">${status || "—"}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button> <button class="danger-mini" data-trash-record="${e(r.id)}">В корзину</button></td></tr>`; }
+function requestRow(r) { const f = r.fields || {}, status = e(f["Статус"] || ""); return `<tr class="clickable-row" data-open-row="${e(r.id)}"><td>${e(f["Дата записи"])}</td><td>${e(f["Время записи"])}</td><td><b>${e(f["Имя клиента"])}</b></td><td>${e(f["Компания"] || "—")}</td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Услуга"])}</td><td>${e(f["Адрес"])}</td><td>${e(f["Итоговый м2"] || f["м2"])}</td><td>${e(f["Монтажники"])}</td><td class="status-cell"><span class="status" data-status="${status}">${status || "—"}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`; }
 
 function renderCalendar(arr) {
   if (!els.calendarGrid || !els.monthTitle) return;
@@ -469,20 +479,20 @@ async function saveRequest() {
   fields["История изменений"] = JSON.stringify(history);
   await updateRecord(current.id, fields, "Заявка сохранена");
   els.dialog.close();
-  await load();
+  renderAll();
 }
 async function cancelCurrentRequest() {
   if (!current) return;
   const reason = els.cancelReason.value.trim() || "Причина не указана";
-  if (!confirm("Перенести заявку в корзину отмен?")) return;
+  if (!confirm("Удалить заявку? Она сразу попадёт в корзину.")) return;
   const oldFields = current.fields || {};
   const adminComment = [oldFields["Комментарий администратора"] || "", `ОТМЕНА: ${dateTimeY()} — ${reason}`].filter(Boolean).join("\n");
   let history = getHistoryForRecord(current);
   history = addHistory(current, "Отмена / удаление в корзину", `Причина: ${reason}`, history);
-  const fields = { "Статус": "Отменена", "Комментарий администратора": adminComment, "Дата отмены": today(), "Причина отмены": reason, "История изменений": JSON.stringify(history), "__moveToTrash": true };
-  await updateRecord(current.id, fields, "Заявка перенесена в корзину");
+  const fields = { "Статус": "Удалена", "Комментарий администратора": adminComment, "Дата отмены": today(), "Дата удаления": today(), "Удалено": true, "Причина отмены": reason, "История изменений": JSON.stringify(history), "__moveToTrash": true };
+  await updateRecord(current.id, fields, "Заявка удалена и перенесена в корзину");
   els.dialog.close();
-  await load();
+  renderAll();
 }
 async function moveRecordToTrash(record, reason = "Удалено вручную") {
   if (!record) return;
@@ -491,43 +501,54 @@ async function moveRecordToTrash(record, reason = "Удалено вручную
   let history = getHistoryForRecord(record);
   history = addHistory(record, "Перенос в корзину", reason, history);
   const fields = {
-    "Статус": "Отменена",
+    "Статус": "Удалена",
     "Комментарий администратора": adminComment,
     "Дата отмены": today(),
+    "Дата удаления": today(),
+    "Удалено": true,
     "Причина отмены": reason,
     "История изменений": JSON.stringify(history),
     "__moveToTrash": true
   };
-  await updateRecord(record.id, fields, "Запись перенесена в корзину");
+  await updateRecord(record.id, fields, "Запись удалена и перенесена в корзину");
 }
 async function trashRecordById(id, reason = "Удалено вручную") {
   const record = records.find((r) => String(r.id) === String(id));
   if (!record) return msg("Запись не найдена. Обновите страницу.");
-  if (!confirm("Перенести запись в корзину?")) return;
+  if (!confirm("Удалить запись? Она сразу попадёт в корзину.")) return;
   await moveRecordToTrash(record, reason);
-  await load();
+  renderAll();
 }
 async function trashClient(clientKey) {
   const list = records.filter((r) => !isTrashRecord(r) && clientKeyFromFields(r.fields || {}) === clientKey);
   if (!list.length) return msg("Активные заявки клиента не найдены");
   if (!confirm(`Перенести в корзину все активные заявки клиента (${list.length})?`)) return;
   for (const record of list) await moveRecordToTrash(record, "Удаление клиента: все заявки клиента перенесены в корзину");
-  await load();
+  renderAll();
 }
 async function restoreRequest(id) {
   const record = records.find((r) => String(r.id) === String(id));
   if (!record) return;
   let history = getHistoryForRecord(record);
   history = addHistory(record, "Восстановление заявки", "Статус изменён на Новая заявка", history);
-  await updateRecord(id, { "Статус": "Новая заявка", "История изменений": JSON.stringify(history) }, "Заявка восстановлена");
-  await load();
+  await updateRecord(id, { "Статус": "Новая заявка", "Удалено": false, "Дата удаления": "", "Дата отмены": "", "Причина отмены": "", "История изменений": JSON.stringify(history) }, "Заявка восстановлена");
+  renderAll();
 }
 async function updateRecord(id, fields, successText) {
   try {
     const response = await fetch("/update-zayavka", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pwd() }, body: JSON.stringify({ id, fields }) });
     const data = await response.json();
-    if (!response.ok || !data.ok) throw new Error(data.error || "Ошибка сохранения");
+    if (!response.ok || !data.ok) throw new Error(data.error || data.hint || "Ошибка сохранения");
+
+    const saved = data.savedFields || fields || {};
+    const idx = records.findIndex((r) => String(r.id) === String(id));
+    if (idx >= 0) {
+      records[idx].fields = { ...(records[idx].fields || {}), ...saved };
+      if (current && String(current.id) === String(id)) current = records[idx];
+    }
+
     if (data.warning) msg(successText + ". " + data.warning); else msg(successText);
+    return data;
   } catch (error) { msg(error.message); throw error; }
 }
 
@@ -857,7 +878,7 @@ function renderClients() {
   if (els.clientsStatRequests) els.clientsStatRequests.textContent = rows.length;
   if (els.clientsStatM2) els.clientsStatM2.textContent = moneyNumber(rows.reduce((s, r) => s + getM2(r.fields || {}), 0));
   if (els.clientsStatRepeat) els.clientsStatRepeat.textContent = clients.filter((x) => x.count > 1).length;
-  els.clientsBody.innerHTML = clients.map((x) => `<tr class="clickable-row" data-open-client-row="${e(x.key)}"><td><b>${e(x.name)}</b></td><td>${e(x.company || "—")}</td><td>${phoneLink(x.phone)}</td><td>${x.count}</td><td>${e(x.service || "—")}</td><td>${e(x.address || "—")}</td><td>${moneyNumber(x.m2)}</td><td>${e(x.last)}</td><td><button class="open-btn" data-open-client="${e(x.key)}">Карточка</button> <button class="danger-mini" data-trash-client="${e(x.key)}">В корзину</button></td></tr>`).join("") || '<tr><td colspan="9">Клиенты не найдены</td></tr>';
+  els.clientsBody.innerHTML = clients.map((x) => `<tr class="clickable-row" data-open-client-row="${e(x.key)}"><td><b>${e(x.name)}</b></td><td>${e(x.company || "—")}</td><td>${phoneLink(x.phone)}</td><td>${x.count}</td><td>${e(x.service || "—")}</td><td>${e(x.address || "—")}</td><td>${moneyNumber(x.m2)}</td><td>${e(x.last)}</td><td><button class="open-btn" data-open-client="${e(x.key)}">Карточка</button></td></tr>`).join("") || '<tr><td colspan="9">Клиенты не найдены</td></tr>';
   bindActionButtons();
 }
 function renderObjects() {
@@ -866,7 +887,7 @@ function renderObjects() {
   if (els.objectsStatM2) els.objectsStatM2.textContent = moneyNumber(rows.reduce((s, r) => s + getM2(r.fields || {}), 0));
   if (els.objectsStatDone) els.objectsStatDone.textContent = rows.filter((r) => PAYROLL_STATUSES.has((r.fields || {})["Статус"] || "")).length;
   if (els.objectsStatWork) els.objectsStatWork.textContent = rows.filter((r) => (r.fields || {})["Статус"] === "В работе").length;
-  els.objectsBody.innerHTML = rows.map((r) => { const f = r.fields || {}; return `<tr class="clickable-row" data-open-row="${e(r.id)}"><td>${e(f["Дата записи"] || "")}</td><td><b>${e(f["Имя клиента"] || "—")}</b><br>${phoneLink(f["Телефон"])}</td><td>${e(f["Компания"] || "—")}</td><td>${e(f["Адрес"] || "—")}</td><td>${e(f["Услуга"] || "—")}</td><td>${moneyNumber(getM2(f))}</td><td>${e(displayInstallers(f["Монтажники"]) || "—")}</td><td class="status-cell"><span class="status" data-status="${e(f["Статус"] || "")}">${e(f["Статус"] || "—")}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button> <button class="danger-mini" data-trash-record="${e(r.id)}">В корзину</button></td></tr>`; }).join("") || '<tr><td colspan="9">Объекты не найдены</td></tr>';
+  els.objectsBody.innerHTML = rows.map((r) => { const f = r.fields || {}; return `<tr class="clickable-row" data-open-row="${e(r.id)}"><td>${e(f["Дата записи"] || "")}</td><td><b>${e(f["Имя клиента"] || "—")}</b><br>${phoneLink(f["Телефон"])}</td><td>${e(f["Компания"] || "—")}</td><td>${e(f["Адрес"] || "—")}</td><td>${e(f["Услуга"] || "—")}</td><td>${moneyNumber(getM2(f))}</td><td>${e(displayInstallers(f["Монтажники"]) || "—")}</td><td class="status-cell"><span class="status" data-status="${e(f["Статус"] || "")}">${e(f["Статус"] || "—")}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`; }).join("") || '<tr><td colspan="9">Объекты не найдены</td></tr>';
   bindActionButtons();
 }
 function installerRowsForSection() {
@@ -2586,7 +2607,7 @@ function openClientCard(key) {
   els.clientCardAddresses.innerHTML = addresses.length ? addresses.map((a) => `<span>${e(a)}</span>`).join("") : '<p class="muted-text">Адресов пока нет.</p>';
   els.clientCardRequestsBody.innerHTML = rows.map((r) => {
     const f = r.fields || {};
-    return `<tr class="clickable-row" data-open-row="${e(r.id)}"><td>${e(f["Дата записи"] || "")}</td><td>${e(f["Услуга"] || "—")}</td><td>${e(f["Адрес"] || "—")}</td><td>${moneyNumber(getM2(f))}</td><td><span class="status" data-status="${e(f["Статус"] || "")}">${e(f["Статус"] || "—")}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button> <button class="danger-mini" data-trash-record="${e(r.id)}">В корзину</button></td></tr>`;
+    return `<tr class="clickable-row" data-open-row="${e(r.id)}"><td>${e(f["Дата записи"] || "")}</td><td>${e(f["Услуга"] || "—")}</td><td>${e(f["Адрес"] || "—")}</td><td>${moneyNumber(getM2(f))}</td><td><span class="status" data-status="${e(f["Статус"] || "")}">${e(f["Статус"] || "—")}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`;
   }).join("") || '<tr><td colspan="6">Заявок пока нет</td></tr>';
 
   const requestIds = new Set(rows.map((r) => String(r.id)));
