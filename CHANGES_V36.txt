@@ -1,0 +1,14 @@
+V36 — SMS.ru professional module
+
+- Reworked direct SMS sending: success is shown only after SMS.ru returns status_code 100 and sms_id.
+- Removed misleading generic text “Уведомление отправлено” from SMS paths.
+- Added detailed success output: SMS.ru ID, cost, balance, status text, test-mode warning.
+- Added /sms-balance function and “Проверить баланс SMS.ru” button.
+- Improved SMS.ru status check: delivery failures are shown as delivery statuses, not hidden behind generic function errors.
+- SMS queue send-now now saves SMS.ru ID, delivery status, cost, balance and raw API response.
+- SMS cron now saves cost and balance after automatic sending.
+- SMS cards show cost from “Стоимость SMS” and raw service response.
+- Updated PWA cache to v36.
+
+Recommended NocoDB fields for SMS-очередь:
+ID SMS.ru, Статус доставки, Стоимость SMS, Баланс после отправки, Ответ сервиса, Дата проверки статуса.

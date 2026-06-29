@@ -16,10 +16,9 @@ export async function onRequestPost({ request, env }) {
 
     if (channel === "sms") {
       if (!to) return json({ ok: false, error: "Не указан номер телефона клиента" }, 400);
-      const smsResponse = await sendSmsRu({ env, to, message });
-      const smsPayload = await smsResponse.clone().json().catch(() => ({}));
+      const smsPayload = await sendSmsRu({ env, to, message });
       if (!body.skipSmsLog && !body.queueId) await logDirectSms({ env, body, to, message, smsPayload });
-      return smsResponse;
+      return json(smsPayload, smsPayload.ok ? 200 : 502);
     }
 
     if (channel === "telegram" || channel === "admin_telegram") {
@@ -44,7 +43,8 @@ export async function onRequestGet({ request, env }) {
     sms: Boolean(env.SMSRU_API_ID || env.SMS_API_KEY),
     telegram: Boolean(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_ADMIN_CHAT_ID),
     provider: "smsru",
-    sender: env.SMSRU_SENDER || env.SMS_SENDER || ""
+    sender: env.SMSRU_SENDER || env.SMS_SENDER || "",
+    testMode: String(env.SMSRU_TEST || "") === "1"
   });
 }
 
@@ -55,7 +55,7 @@ function yDateTimeParts() {
   const p = Object.fromEntries(parts.map((x) => [x.type, x.value]));
   return { date: `${p.year}-${p.month}-${p.day}`, time: `${p.hour}:${p.minute}` };
 }
-function compactJson(value, max = 1800) {
+function compactJson(value, max = 3000) {
   try { return JSON.stringify(value || {}).slice(0, max); } catch (_) { return String(value || "").slice(0, max); }
 }
 async function createSmsLog(env, fields) {
@@ -83,16 +83,17 @@ async function logDirectSms({ env, body, to, message, smsPayload }) {
     "Дата отправки": now.date,
     "Время отправки": now.time,
     "Статус": smsPayload?.ok ? "Отправлено" : "Ошибка",
-    "Ошибка": smsPayload?.ok ? "" : cleanText(smsPayload?.error || "Ошибка отправки", 400),
+    "Ошибка": smsPayload?.ok ? "" : cleanText(smsPayload?.error || "Ошибка отправки", 700),
     "Дата фактической отправки": smsPayload?.ok ? new Date().toISOString() : "",
     "Создано": new Date().toISOString()
   };
   const extendedFields = {
     ...baseFields,
     "ID SMS.ru": cleanText(smsPayload?.smsId || smsPayload?.sms_id || "", 100),
-    "Статус доставки": cleanText(smsPayload?.status || "accepted", 120),
-    "Ответ сервиса": compactJson(smsPayload?.result || smsPayload),
+    "Статус доставки": cleanText(smsPayload?.statusText || smsPayload?.status || smsPayload?.statusCode || "", 160),
+    "Стоимость SMS": cleanText(smsPayload?.cost ?? "", 80),
     "Баланс после отправки": cleanText(smsPayload?.balance ?? "", 80),
+    "Ответ сервиса": compactJson(smsPayload?.result || smsPayload),
     "Дата проверки статуса": new Date().toISOString()
   };
   const full = await createSmsLog(env, extendedFields);
@@ -101,8 +102,11 @@ async function logDirectSms({ env, body, to, message, smsPayload }) {
 
 async function sendSmsRu({ env, to, message }) {
   const apiId = env.SMSRU_API_ID || env.SMS_API_KEY || "";
-  if (!apiId) return json({ ok: false, provider: "smsru", error: "Не задан SMSRU_API_ID в Cloudflare" }, 400);
+  if (!apiId) return { ok: false, provider: "smsru", error: "Не задан SMSRU_API_ID в Cloudflare" };
   const phone = normalizePhone(to);
+  if (!phone || phone.length !== 11 || !phone.startsWith("7")) {
+    return { ok: false, provider: "smsru", error: "Неверный телефон. Нужен формат 79XXXXXXXXX", to: phone };
+  }
   const url = new URL("https://sms.ru/sms/send");
   url.searchParams.set("api_id", apiId);
   url.searchParams.set("to", phone);
@@ -110,25 +114,32 @@ async function sendSmsRu({ env, to, message }) {
   url.searchParams.set("json", "1");
   const sender = env.SMSRU_SENDER || env.SMS_SENDER || "";
   if (sender) url.searchParams.set("from", sender);
-  if (env.SMSRU_TEST === "1") url.searchParams.set("test", "1");
+  const testMode = String(env.SMSRU_TEST || "") === "1";
+  if (testMode) url.searchParams.set("test", "1");
 
   const response = await fetch(url.toString(), { method: "GET" });
   const raw = await response.text();
   let data;
   try { data = JSON.parse(raw); } catch (_) { data = { raw }; }
   const smsResult = data.sms && (data.sms[phone] || data.sms[to] || Object.values(data.sms)[0]);
-  const ok = response.ok && (data.status === "OK" || smsResult?.status === "OK" || smsResult?.status_code === 100);
-  return json({
+  const statusCode = Number(smsResult?.status_code || data.status_code || 0);
+  const ok = response.ok && data.status === "OK" && statusCode === 100 && Boolean(smsResult?.sms_id);
+  const statusText = smsResult?.status_text || data.status_text || smsResult?.status || data.status || "";
+  return {
     ok,
     provider: "smsru",
     to: phone,
+    sender,
+    testMode,
     smsId: smsResult?.sms_id || "",
     status: smsResult?.status || data.status || "",
-    statusCode: smsResult?.status_code || data.status_code || "",
+    statusCode: statusCode || "",
+    statusText,
+    cost: smsResult?.cost ?? "",
     balance: data.balance ?? "",
     result: data,
-    error: ok ? "" : (smsResult?.status_text || data.status_text || "SMS.ru не подтвердил отправку")
-  }, ok ? 200 : 502);
+    error: ok ? "" : (statusText || "SMS.ru не подтвердил отправку")
+  };
 }
 
 async function sendTelegram({ env, chatId, message }) {

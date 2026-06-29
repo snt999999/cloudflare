@@ -114,6 +114,8 @@ export async function onRequestPost({ request, env }) {
           ...fields,
           "ID SMS.ru": cleanText(body.smsId || body.sms_id || "", 100),
           "Статус доставки": cleanText(body.deliveryStatus || body.smsStatus || "OK", 120),
+          "Стоимость SMS": cleanText(body.cost || body.smsCost || "", 80),
+          "Баланс после отправки": cleanText(body.balance || "", 80),
           "Ответ сервиса": compactJson(body.serviceResponse || body.result || body),
           "Дата проверки статуса": new Date().toISOString()
         };

@@ -59,6 +59,7 @@ async function sendSmsRu(env, to, message) {
   const apiId = env.SMSRU_API_ID || env.SMS_API_KEY || "";
   if (!apiId) return { ok: false, provider: "smsru", error: "Не задан SMSRU_API_ID" };
   const phone = normalizePhone(to);
+  if (!phone || phone.length !== 11 || !phone.startsWith("7")) return { ok: false, provider: "smsru", error: "Неверный телефон. Нужен формат 79XXXXXXXXX", to: phone };
   const url = new URL("https://sms.ru/sms/send");
   url.searchParams.set("api_id", apiId);
   url.searchParams.set("to", phone);
@@ -66,12 +67,15 @@ async function sendSmsRu(env, to, message) {
   url.searchParams.set("json", "1");
   const sender = env.SMSRU_SENDER || env.SMS_SENDER || "";
   if (sender) url.searchParams.set("from", sender);
-  if (env.SMSRU_TEST === "1") url.searchParams.set("test", "1");
+  const testMode = String(env.SMSRU_TEST || "") === "1";
+  if (testMode) url.searchParams.set("test", "1");
   const res = await fetch(url.toString(), { method: "GET" });
   const raw = await res.text(); let data; try { data = JSON.parse(raw); } catch (_) { data = { raw }; }
   const smsResult = data.sms && (data.sms[phone] || data.sms[to] || Object.values(data.sms)[0]);
-  const ok = res.ok && (data.status === "OK" || smsResult?.status === "OK" || smsResult?.status_code === 100);
-  return { ok, provider: "smsru", smsId: smsResult?.sms_id || "", status: smsResult?.status || data.status || "", statusCode: smsResult?.status_code || data.status_code || "", balance: data.balance ?? "", result: data, error: ok ? "" : (smsResult?.status_text || data.status_text || "SMS.ru не подтвердил отправку") };
+  const statusCode = Number(smsResult?.status_code || data.status_code || 0);
+  const ok = res.ok && data.status === "OK" && statusCode === 100 && Boolean(smsResult?.sms_id);
+  const statusText = smsResult?.status_text || data.status_text || smsResult?.status || data.status || "";
+  return { ok, provider: "smsru", smsId: smsResult?.sms_id || "", status: smsResult?.status || data.status || "", statusCode: statusCode || "", statusText, cost: smsResult?.cost ?? "", balance: data.balance ?? "", result: data, error: ok ? "" : (statusText || "SMS.ru не подтвердил отправку") };
 }
 export async function onRequestGet({ request, env }) { return runSmsCron({ request, env, source: "http" }); }
 export async function onRequestPost({ request, env }) { return runSmsCron({ request, env, source: "http" }); }
@@ -98,7 +102,7 @@ async function runSmsCron({ request, env, source }) {
     const sent = await sendSmsRu(env, to, message);
     if (sent.ok) {
       const base = { "Статус": "Отправлено", "Дата фактической отправки": new Date().toISOString(), "Ошибка": "" };
-      const extended = { ...base, "ID SMS.ru": sent.smsId || "", "Статус доставки": sent.status || "OK", "Ответ сервиса": compactJson(sent.result || sent), "Баланс после отправки": String(sent.balance ?? ""), "Дата проверки статуса": new Date().toISOString() };
+      const extended = { ...base, "ID SMS.ru": sent.smsId || "", "Статус доставки": sent.status || "OK", "Ответ сервиса": compactJson(sent.result || sent), "Стоимость SMS": String(sent.cost ?? ""), "Баланс после отправки": String(sent.balance ?? ""), "Дата проверки статуса": new Date().toISOString() };
       await patchSmsSafe(env, record.id, extended, base);
     } else {
       const base = { "Статус": "Ошибка", "Ошибка": sent.error || "Ошибка отправки" };
