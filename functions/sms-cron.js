@@ -65,8 +65,8 @@ async function sendSmsRu(env, to, message) {
   url.searchParams.set("to", phone);
   url.searchParams.set("msg", message);
   url.searchParams.set("json", "1");
-  const sender = env.SMSRU_SENDER || env.SMS_SENDER || "";
-  if (sender) url.searchParams.set("from", sender);
+  // Имя отправителя не передаём — используем стандартный отправитель SMS.ru.
+  const sender = "";
   const testMode = String(env.SMSRU_TEST || "") === "1";
   if (testMode) url.searchParams.set("test", "1");
   const res = await fetch(url.toString(), { method: "GET" });

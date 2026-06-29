@@ -1,0 +1,10 @@
+SMS.ru setup for v38
+
+Required Cloudflare variables:
+SMS_PROVIDER=smsru
+SMSRU_API_ID=your_api_id
+NOCODB_SMS_ENDPOINT=your_NocoDB_SMS_queue_records_endpoint
+SMS_CRON_SECRET=SOLNCANET_SMS_CRON_2026_7B2E9C
+
+Do NOT set SMSRU_SENDER. Leave it empty or delete it.
+The site intentionally does not pass the SMS.ru `from` parameter. SMS.ru will choose the available default sender.

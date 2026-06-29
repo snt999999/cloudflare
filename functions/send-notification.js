@@ -18,7 +18,7 @@ export async function onRequestPost({ request, env }) {
       if (!to) return json({ ok: false, error: "Не указан номер телефона клиента" }, 400);
       const smsPayload = await sendSmsRu({ env, to, message });
       if (!body.skipSmsLog && !body.queueId) await logDirectSms({ env, body, to, message, smsPayload });
-      return json(smsPayload, smsPayload.ok ? 200 : 502);
+      return json(smsPayload, 200);
     }
 
     if (channel === "telegram" || channel === "admin_telegram") {
@@ -43,7 +43,8 @@ export async function onRequestGet({ request, env }) {
     sms: Boolean(env.SMSRU_API_ID || env.SMS_API_KEY),
     telegram: Boolean(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_ADMIN_CHAT_ID),
     provider: "smsru",
-    sender: env.SMSRU_SENDER || env.SMS_SENDER || "",
+    sender: "",
+    senderMode: "default_smsru",
     testMode: String(env.SMSRU_TEST || "") === "1"
   });
 }
@@ -112,8 +113,10 @@ async function sendSmsRu({ env, to, message }) {
   url.searchParams.set("to", phone);
   url.searchParams.set("msg", message);
   url.searchParams.set("json", "1");
-  const sender = env.SMSRU_SENDER || env.SMS_SENDER || "";
-  if (sender) url.searchParams.set("from", sender);
+  // ВАЖНО: имя отправителя специально НЕ передаём.
+  // SMS.ru сам выберет доступный отправитель/маршрут аккаунта.
+  // Это убирает ошибку “оператор не подключён на данном отправителе”.
+  const sender = "";
   const testMode = String(env.SMSRU_TEST || "") === "1";
   if (testMode) url.searchParams.set("test", "1");
 
@@ -130,6 +133,7 @@ async function sendSmsRu({ env, to, message }) {
     provider: "smsru",
     to: phone,
     sender,
+    senderMode: "default_smsru",
     testMode,
     smsId: smsResult?.sms_id || "",
     status: smsResult?.status || data.status || "",
@@ -151,7 +155,7 @@ async function sendTelegram({ env, chatId, message }) {
     body: JSON.stringify({ chat_id: chatId, text: message, disable_web_page_preview: true })
   });
   const data = await response.json().catch(() => ({}));
-  return json({ ok: Boolean(data.ok), provider: "telegram", chatId, result: data, error: data.ok ? "" : (data.description || "Telegram не подтвердил отправку") }, data.ok ? 200 : 502);
+  return json({ ok: Boolean(data.ok), provider: "telegram", chatId, result: data, error: data.ok ? "" : (data.description || "Telegram не подтвердил отправку") }, 200);
 }
 
 function normalizePhone(value) {

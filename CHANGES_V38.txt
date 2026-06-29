@@ -1,0 +1,7 @@
+V38 — SMS.ru without custom sender
+
+- Removed SMS.ru custom sender usage from /send-notification and /sms-cron.
+- SMS requests no longer send the `from` parameter.
+- Cloudflare variable SMSRU_SENDER is no longer required and should be removed/left empty.
+- This prevents errors when an operator is not connected to the sender SOLNCANET.
+- Service worker cache updated to v38.
