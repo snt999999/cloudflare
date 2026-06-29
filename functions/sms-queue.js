@@ -112,15 +112,14 @@ export async function onRequestPost({ request, env }) {
       if (action === "mark_sent") {
         const extended = {
           ...fields,
-          "ID Prostor": cleanText(body.smscId || body.prostorId || "", 100),
-          "Client ID": cleanText(body.clientId || "", 100),
-          "Статус доставки": cleanText(body.deliveryStatus || body.prostorStatus || "accepted", 120),
+          "ID SMS.ru": cleanText(body.smsId || body.sms_id || "", 100),
+          "Статус доставки": cleanText(body.deliveryStatus || body.smsStatus || "OK", 120),
           "Ответ сервиса": compactJson(body.serviceResponse || body.result || body),
           "Дата проверки статуса": new Date().toISOString()
         };
         result = await patchSmsSafe(env, body.id, extended, fields);
       } else if (action === "mark_error") {
-        const extended = { ...fields, "Статус доставки": cleanText(body.deliveryStatus || "error", 120), "Ответ сервиса": compactJson(body.serviceResponse || body.result || body), "Дата проверки статуса": new Date().toISOString() };
+        const extended = { ...fields, "Статус доставки": cleanText(body.deliveryStatus || body.smsStatus || "ERROR", 120), "Ответ сервиса": compactJson(body.serviceResponse || body.result || body), "Дата проверки статуса": new Date().toISOString() };
         result = await patchSmsSafe(env, body.id, extended, fields);
       } else {
         result = await patchSms(env, body.id, fields);

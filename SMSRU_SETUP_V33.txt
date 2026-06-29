@@ -1,0 +1,25 @@
+СОЛНЦАНЕТ v33 — подключение SMS.ru
+
+Cloudflare Pages → Settings → Environment variables:
+
+SMS_PROVIDER=smsru
+SMSRU_API_ID=API_ID_из_SMS.ru
+SMSRU_SENDER=SOLNCANET
+NOCODB_SMS_ENDPOINT=API endpoint таблицы SMS-очередь
+SMS_CRON_SECRET=SOLNCANET_SMS_CRON_2026_7B2E9C
+
+Также должны быть уже настроены:
+ADMIN_PASSWORD=пароль админки
+NOCODB_TOKEN=токен NocoDB
+
+Не добавляйте старые переменные прошлого SMS-сервиса. Они больше не используются.
+
+После изменения переменных обязательно: Cloudflare Pages → Deployments → Redeploy.
+
+Рекомендуемые поля NocoDB для полной истории:
+ID SMS.ru — Single line text
+Статус доставки — Single line text
+Стоимость SMS — Single line text
+Баланс после отправки — Single line text
+Ответ сервиса — Long text
+Дата проверки статуса — DateTime или Single line text

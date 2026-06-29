@@ -32,6 +32,36 @@ async function patchRecord(env, id, fields) {
   const text = await res.text();
   return { ok: res.ok, status: res.status, response: parseJson(text), payload };
 }
+function shortNocodbError(result) {
+  const r = result && result.response;
+  if (!r) return "";
+  if (typeof r === "string") return r.slice(0, 500);
+  return String(r.msg || r.message || r.error || JSON.stringify(r)).slice(0, 700);
+}
+async function tryPatchVariants(env, id, variants) {
+  const attempts = [];
+  for (const fields of variants) {
+    if (!fields || !Object.keys(fields).length) continue;
+    const result = await patchRecord(env, id, fields);
+    attempts.push({ status: result.status, fields, response: result.response });
+    if (result.ok) return { ok: true, result, savedFields: fields, attempts };
+  }
+  return { ok: false, attempts };
+}
+function makeTrashVariants(fields) {
+  const comment = fields["Комментарий администратора"] || "";
+  const variants = [];
+  variants.push(fields);
+  // На разных таблицах NocoDB могут отсутствовать дополнительные колонки или варианты single select.
+  // Поэтому пробуем безопасные варианты: сначала полноценная корзина, потом минимальный статус.
+  variants.push({ "Статус": "Отменена", "Комментарий администратора": comment });
+  variants.push({ "Статус": "Удалена", "Комментарий администратора": comment });
+  variants.push({ "Статус": "Отказ", "Комментарий администратора": comment });
+  variants.push({ "Статус": "Отменена" });
+  variants.push({ "Статус": "Удалена" });
+  variants.push({ "Статус": "Отказ" });
+  return variants;
+}
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -61,25 +91,32 @@ export async function onRequestPost(context) {
   if (!Object.keys(fields).length) return json({ ok: false, error: "Нет данных для сохранения" }, 400);
 
   try {
-    let result = await patchRecord(env, body.id, fields);
-    if (result.ok) return json({ ok: true, nocodbResponse: result.response, savedFields: fields });
-
-    const fallback = {};
-    for (const key of safeKeys) if (Object.prototype.hasOwnProperty.call(fields, key)) fallback[key] = fields[key];
-    if (Object.keys(fallback).length && Object.keys(fallback).length !== Object.keys(fields).length) {
-      const retry = await patchRecord(env, body.id, fallback);
-      if (retry.ok) {
-        return json({
-          ok: true,
-          nocodbResponse: retry.response,
-          savedFields: fallback,
-          warning: "Часть дополнительных полей не сохранена. Если нужна общая история на всех устройствах, добавьте в NocoDB колонки: История изменений, Дата отмены, Причина отмены."
-        });
-      }
-      return json({ ok: false, error: "NocoDB update error", status: retry.status, nocodbResponse: retry.response, sentPayload: retry.payload }, 500);
+    const isTrashMove = requested.__moveToTrash === true || ["Отменена", "Удалена", "Отказ"].includes(String(fields["Статус"] || ""));
+    const variants = [];
+    if (isTrashMove) {
+      variants.push(...makeTrashVariants(fields));
+    } else {
+      variants.push(fields);
+      const fallback = {};
+      for (const key of safeKeys) if (Object.prototype.hasOwnProperty.call(fields, key)) fallback[key] = fields[key];
+      if (Object.keys(fallback).length && Object.keys(fallback).length !== Object.keys(fields).length) variants.push(fallback);
     }
 
-    return json({ ok: false, error: "NocoDB update error", status: result.status, nocodbResponse: result.response, sentPayload: result.payload }, 500);
+    const attempt = await tryPatchVariants(env, body.id, variants);
+    if (attempt.ok) {
+      const warning = Object.keys(attempt.savedFields).length !== Object.keys(fields).length
+        ? "Часть дополнительных полей не сохранена. Добавьте недостающие колонки в NocoDB, если они нужны в истории."
+        : "";
+      return json({ ok: true, nocodbResponse: attempt.result.response, savedFields: attempt.savedFields, warning, attempts: attempt.attempts });
+    }
+
+    return json({
+      ok: false,
+      error: "NocoDB update error",
+      hint: "Не удалось обновить запись даже минимальным набором полей. Проверьте, что в таблице есть колонка Статус и в single select добавлены варианты: Отменена, Удалена или Отказ. Также проверьте права API-токена на обновление записей.",
+      attempts: attempt.attempts,
+      lastError: attempt.attempts.length ? shortNocodbError(attempt.attempts[attempt.attempts.length - 1]) : ""
+    }, 500);
   } catch (error) {
     return json({ ok: false, error: error.message }, 500);
   }

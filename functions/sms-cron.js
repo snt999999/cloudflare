@@ -4,7 +4,6 @@ function json(body, status = 200) { return new Response(JSON.stringify(body, nul
 function parseJson(text) { try { return JSON.parse(text); } catch (_) { return text; } }
 function endpoint(env) { return env.NOCODB_SMS_ENDPOINT || env.NOCODB_NOTIFICATIONS_ENDPOINT || ""; }
 function token(env) { return env.NOCODB_TOKEN || ""; }
-function normRecord(rec) { const fields = rec.fields || rec; const id = rec.id || (rec.id_fields && (rec.id_fields.Id || rec.id_fields.id)) || fields.Id || fields.id || ""; return { id: String(id), fields }; }
 function checkCronAuth(request, env) {
   const secret = env.SMS_CRON_SECRET || "";
   if (!secret) return { ok: false, status: 500, body: { ok: false, error: "SMS_CRON_SECRET is not set" } };
@@ -12,6 +11,7 @@ function checkCronAuth(request, env) {
   if (provided !== secret) return { ok: false, status: 401, body: { ok: false, error: "Неверный SMS_CRON_SECRET" } };
   return { ok: true };
 }
+function normRecord(rec) { const fields = rec.fields || rec; const id = rec.id || (rec.id_fields && (rec.id_fields.Id || rec.id_fields.id)) || fields.Id || fields.id || ""; return { id: String(id), fields }; }
 async function listSms(env) {
   if (!endpoint(env)) return { ok: false, setupRequired: true, records: [], error: "Не задан NOCODB_SMS_ENDPOINT" };
   const url = new URL(endpoint(env));
@@ -55,84 +55,23 @@ function normalizePhone(value) {
   return digits;
 }
 function cleanText(value) { return String(value || "").replace(/[<>]/g, "").trim().slice(0, 900); }
-async function sendSms(env, to, message) {
-  const provider = String(env.SMS_PROVIDER || "smsru").toLowerCase();
-  if (provider === "smsru") return sendSmsRu(env, to, message);
-  if (provider === "smsc") return sendSmsc(env, to, message);
-  if (provider === "prostor") return sendProstor(env, to, message);
-  return { ok: false, error: "SMS_PROVIDER должен быть smsru, smsc или prostor" };
-}
-function prostorBase(env) {
-  const base = String(env.PROSTOR_API_BASE || "https://api.prostor-sms.ru/messages/v2").replace(/\/+$/, "");
-  return base;
-}
-function prostorPhone(value) {
-  const digits = normalizePhone(value);
-  return digits ? "+" + digits : "";
-}
-function makeProstorClientId() {
-  return ("SC" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)).toUpperCase().slice(0, 72);
-}
-function getProstorCredentials(env) {
-  const login = env.PROSTOR_LOGIN || env.PROSTOR_API_LOGIN || "";
-  const password = env.PROSTOR_PASSWORD || env.PROSTOR_API_PASSWORD || env.SMS_API_KEY || "";
-  return { login, password };
-}
-async function sendProstor(env, to, message) {
-  const { login, password } = getProstorCredentials(env);
-  if (!login || !password) return { ok: false, provider: "prostor", error: "Для Prostor нужны PROSTOR_LOGIN и PROSTOR_PASSWORD" };
-  const sender = env.PROSTOR_SENDER || env.SMS_SENDER || "";
-  const url = env.PROSTOR_SEND_URL || (prostorBase(env) + "/send.json");
-  const clientId = makeProstorClientId();
-  const sms = { phone: prostorPhone(to), clientId, text: message };
-  if (sender) sms.sender = sender;
-  const payload = { login, password, messages: [sms] };
-  if (env.PROSTOR_STATUS_QUEUE_NAME) payload.statusQueueName = env.PROSTOR_STATUS_QUEUE_NAME;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json; charset=utf-8", "Accept": "application/json" },
-    body: JSON.stringify(payload)
-  });
-  const raw = await res.text();
-  let data;
-  try { data = JSON.parse(raw); } catch (_) { data = { raw }; }
-  const first = Array.isArray(data.messages) ? data.messages[0] : null;
-  const firstStatus = String(first?.status || "").toLowerCase();
-  const ok = res.ok && String(data.status || "").toLowerCase() === "ok" && firstStatus === "accepted";
-  const error = ok ? "" : (first?.status || data.status || data.raw || "Prostor не подтвердил отправку");
-  return { ok, provider: "prostor", clientId, smscId: first?.smscId || "", status: first?.status || data.status || "", result: data, error };
-}
-
 async function sendSmsRu(env, to, message) {
   const apiId = env.SMSRU_API_ID || env.SMS_API_KEY || "";
-  if (!apiId) return { ok: false, error: "Не задан SMSRU_API_ID или SMS_API_KEY" };
+  if (!apiId) return { ok: false, provider: "smsru", error: "Не задан SMSRU_API_ID" };
+  const phone = normalizePhone(to);
   const url = new URL("https://sms.ru/sms/send");
   url.searchParams.set("api_id", apiId);
-  url.searchParams.set("to", to);
+  url.searchParams.set("to", phone);
   url.searchParams.set("msg", message);
   url.searchParams.set("json", "1");
-  if (env.SMS_SENDER) url.searchParams.set("from", env.SMS_SENDER);
+  const sender = env.SMSRU_SENDER || env.SMS_SENDER || "";
+  if (sender) url.searchParams.set("from", sender);
+  if (env.SMSRU_TEST === "1") url.searchParams.set("test", "1");
   const res = await fetch(url.toString(), { method: "GET" });
   const raw = await res.text(); let data; try { data = JSON.parse(raw); } catch (_) { data = { raw }; }
-  const smsResult = data.sms && (data.sms[to] || Object.values(data.sms)[0]);
-  const ok = data.status === "OK" || smsResult?.status === "OK" || smsResult?.status_code === 100;
-  return { ok, provider: "smsru", result: data, error: ok ? "" : (smsResult?.status_text || data.status_text || "SMS.ru не подтвердил отправку") };
-}
-async function sendSmsc(env, to, message) {
-  const login = env.SMSC_LOGIN || "";
-  const password = env.SMSC_PASSWORD || env.SMS_API_KEY || "";
-  if (!login || !password) return { ok: false, error: "Для SMSC нужны SMSC_LOGIN и SMSC_PASSWORD" };
-  const url = new URL("https://smsc.ru/sys/send.php");
-  url.searchParams.set("login", login);
-  url.searchParams.set("psw", password);
-  url.searchParams.set("phones", to);
-  url.searchParams.set("mes", message);
-  url.searchParams.set("fmt", "3");
-  if (env.SMS_SENDER) url.searchParams.set("sender", env.SMS_SENDER);
-  const res = await fetch(url.toString(), { method: "GET" });
-  const raw = await res.text(); let data; try { data = JSON.parse(raw); } catch (_) { data = { raw }; }
-  const ok = Boolean(data.id || data.cnt);
-  return { ok, provider: "smsc", result: data, error: ok ? "" : (data.error || "SMSC не подтвердил отправку") };
+  const smsResult = data.sms && (data.sms[phone] || data.sms[to] || Object.values(data.sms)[0]);
+  const ok = res.ok && (data.status === "OK" || smsResult?.status === "OK" || smsResult?.status_code === 100);
+  return { ok, provider: "smsru", smsId: smsResult?.sms_id || "", status: smsResult?.status || data.status || "", statusCode: smsResult?.status_code || data.status_code || "", balance: data.balance ?? "", result: data, error: ok ? "" : (smsResult?.status_text || data.status_text || "SMS.ru не подтвердил отправку") };
 }
 export async function onRequestGet({ request, env }) { return runSmsCron({ request, env, source: "http" }); }
 export async function onRequestPost({ request, env }) { return runSmsCron({ request, env, source: "http" }); }
@@ -156,19 +95,19 @@ async function runSmsCron({ request, env, source }) {
       continue;
     }
     await patchSms(env, record.id, { "Статус": "Отправляется", "Ошибка": "" });
-    const sent = await sendSms(env, to, message);
+    const sent = await sendSmsRu(env, to, message);
     if (sent.ok) {
       const base = { "Статус": "Отправлено", "Дата фактической отправки": new Date().toISOString(), "Ошибка": "" };
-      const extended = { ...base, "ID Prostor": sent.smscId || "", "Client ID": sent.clientId || "", "Статус доставки": sent.status || "accepted", "Ответ сервиса": compactJson(sent.result || sent), "Дата проверки статуса": new Date().toISOString() };
+      const extended = { ...base, "ID SMS.ru": sent.smsId || "", "Статус доставки": sent.status || "OK", "Ответ сервиса": compactJson(sent.result || sent), "Баланс после отправки": String(sent.balance ?? ""), "Дата проверки статуса": new Date().toISOString() };
       await patchSmsSafe(env, record.id, extended, base);
     } else {
       const base = { "Статус": "Ошибка", "Ошибка": sent.error || "Ошибка отправки" };
-      const extended = { ...base, "Статус доставки": sent.status || "error", "Ответ сервиса": compactJson(sent.result || sent), "Дата проверки статуса": new Date().toISOString() };
+      const extended = { ...base, "Статус доставки": sent.status || "ERROR", "Ответ сервиса": compactJson(sent.result || sent), "Дата проверки статуса": new Date().toISOString() };
       await patchSmsSafe(env, record.id, extended, base);
     }
-    results.push({ id: record.id, to, ok: sent.ok, error: sent.error || "", provider: sent.provider || "", smscId: sent.smscId || "", clientId: sent.clientId || "", deliveryStatus: sent.status || "" });
+    results.push({ id: record.id, to, ok: sent.ok, error: sent.error || "", provider: "smsru", smsId: sent.smsId || "", deliveryStatus: sent.status || "" });
   }
-  return json({ ok: true, source, now, checked: listed.records.length, due: due.length, processed: results.length, results });
+  return json({ ok: true, source, provider: "smsru", now, checked: listed.records.length, due: due.length, processed: results.length, results });
 }
 export async function onRequest(context) {
   if (context.request.method === "GET") return onRequestGet(context);
