@@ -44,7 +44,7 @@ const els = {
   installersSearchInput: $("installersSearchInput"), installersDateFrom: $("installersDateFrom"), installersDateTo: $("installersDateTo"), installersStatusFilter: $("installersStatusFilter"), installersServiceFilter: $("installersServiceFilter"), installersClearFiltersBtn: $("installersClearFiltersBtn"), installersStatJobs: $("installersStatJobs"), installersStatM2: $("installersStatM2"), installersStatAmount: $("installersStatAmount"), installersStatTotal: $("installersStatTotal"), payrollGuide: $("payrollGuide"),
   installerDetailsPanel: $("installerDetailsPanel"), installerDetailsTitle: $("installerDetailsTitle"), installerDetailsInfo: $("installerDetailsInfo"), installerDetailsCloseBtn: $("installerDetailsCloseBtn"), installerDetailsSearchInput: $("installerDetailsSearchInput"), installerDetailsDateFrom: $("installerDetailsDateFrom"), installerDetailsDateTo: $("installerDetailsDateTo"), installerDetailsStatusFilter: $("installerDetailsStatusFilter"), installerDetailsServiceFilter: $("installerDetailsServiceFilter"), installerDetailsM2Min: $("installerDetailsM2Min"), installerDetailsM2Max: $("installerDetailsM2Max"), installerDetailsClearBtn: $("installerDetailsClearBtn"), installerDetailsStatJobs: $("installerDetailsStatJobs"), installerDetailsStatM2: $("installerDetailsStatM2"), installerDetailsStatAmount: $("installerDetailsStatAmount"), installerDetailsStatRate: $("installerDetailsStatRate"), installerDetailsBody: $("installerDetailsBody"),
   notifyTemplate: $("notifyTemplate"), notifyChannel: $("notifyChannel"), notifyMessage: $("notifyMessage"), sendNotifyBtn: $("sendNotifyBtn"), copyNotifyBtn: $("copyNotifyBtn"), requestNotifyStatus: $("requestNotifyStatus"),
-  notificationCheckBtn: $("notificationCheckBtn"), smsBalanceBtn: $("smsBalanceBtn"), smsBalanceText: $("smsBalanceText"), notificationSmsStatus: $("notificationSmsStatus"), notificationTelegramStatus: $("notificationTelegramStatus"), testNotifyChannel: $("testNotifyChannel"), testNotifyTo: $("testNotifyTo"), testNotifyMessage: $("testNotifyMessage"), sendTestNotifyBtn: $("sendTestNotifyBtn"), copyTestNotifyBtn: $("copyTestNotifyBtn"), notificationStatus: $("notificationStatus"), notificationTemplatesList: $("notificationTemplatesList"), notificationLogBody: $("notificationLogBody"), smsruStatusId: $("smsruStatusId"), checkSmsruStatusBtn: $("checkSmsruStatusBtn"), smsruStatusText: $("smsruStatusText"), smsQueueRefreshBtn: $("smsQueueRefreshBtn"), smsQueueSearch: $("smsQueueSearch"), smsQueueStatus: $("smsQueueStatus"), smsQueueFrom: $("smsQueueFrom"), smsQueueTo: $("smsQueueTo"), smsQueueBody: $("smsQueueBody"), smsQueueStatusText: $("smsQueueStatusText"), smsStatTotal: $("smsStatTotal"), smsStatPlanned: $("smsStatPlanned"), smsStatSent: $("smsStatSent"), smsStatErrors: $("smsStatErrors"), smsDetailDialog: $("smsDetailDialog"), smsDetailTitle: $("smsDetailTitle"), smsDetailSubtitle: $("smsDetailSubtitle"), smsDetailStatusPill: $("smsDetailStatusPill"), smsDetailClient: $("smsDetailClient"), smsDetailPhone: $("smsDetailPhone"), smsDetailRequestId: $("smsDetailRequestId"), smsDetailSmsruId: $("smsDetailSmsruId"), smsDetailClientId: $("smsDetailClientId"), smsDetailDelivery: $("smsDetailDelivery"), smsDetailMessage: $("smsDetailMessage"), smsDetailService: $("smsDetailService"), smsDetailCheckBtn: $("smsDetailCheckBtn"), smsDetailCopyIdBtn: $("smsDetailCopyIdBtn"), smsDetailSendNowBtn: $("smsDetailSendNowBtn"), smsDetailOpenRequestBtn: $("smsDetailOpenRequestBtn"), smsDetailCancelBtn: $("smsDetailCancelBtn"), smsDetailStatusText: $("smsDetailStatusText"), scheduleSmsTemplate: $("scheduleSmsTemplate"), scheduleSmsDate: $("scheduleSmsDate"), scheduleSmsTime: $("scheduleSmsTime"), scheduleSmsMessage: $("scheduleSmsMessage"), scheduleSmsBtn: $("scheduleSmsBtn"), scheduleDefaultSmsBtn: $("scheduleDefaultSmsBtn"), scheduleSmsStatus: $("scheduleSmsStatus"),
+  notificationCheckBtn: $("notificationCheckBtn"), smsBalanceBtn: $("smsBalanceBtn"), smsBalanceText: $("smsBalanceText"), notificationSmsStatus: $("notificationSmsStatus"), notificationTelegramStatus: $("notificationTelegramStatus"), testNotifyChannel: $("testNotifyChannel"), testNotifyTo: $("testNotifyTo"), testNotifyMessage: $("testNotifyMessage"), sendTestNotifyBtn: $("sendTestNotifyBtn"), copyTestNotifyBtn: $("copyTestNotifyBtn"), notificationStatus: $("notificationStatus"), notificationTemplatesList: $("notificationTemplatesList"), notificationLogBody: $("notificationLogBody"), sigmaStatusId: $("sigmaStatusId"), checkSigmaStatusBtn: $("checkSigmaStatusBtn"), sigmaStatusText: $("sigmaStatusText"), smsQueueRefreshBtn: $("smsQueueRefreshBtn"), smsQueueSearch: $("smsQueueSearch"), smsQueueStatus: $("smsQueueStatus"), smsQueueFrom: $("smsQueueFrom"), smsQueueTo: $("smsQueueTo"), smsQueueBody: $("smsQueueBody"), smsQueueStatusText: $("smsQueueStatusText"), smsStatTotal: $("smsStatTotal"), smsStatPlanned: $("smsStatPlanned"), smsStatSent: $("smsStatSent"), smsStatErrors: $("smsStatErrors"), smsDetailDialog: $("smsDetailDialog"), smsDetailTitle: $("smsDetailTitle"), smsDetailSubtitle: $("smsDetailSubtitle"), smsDetailStatusPill: $("smsDetailStatusPill"), smsDetailClient: $("smsDetailClient"), smsDetailPhone: $("smsDetailPhone"), smsDetailRequestId: $("smsDetailRequestId"), smsDetailSigmaId: $("smsDetailSigmaId"), smsDetailClientId: $("smsDetailClientId"), smsDetailDelivery: $("smsDetailDelivery"), smsDetailMessage: $("smsDetailMessage"), smsDetailService: $("smsDetailService"), smsDetailCheckBtn: $("smsDetailCheckBtn"), smsDetailCopyIdBtn: $("smsDetailCopyIdBtn"), smsDetailSendNowBtn: $("smsDetailSendNowBtn"), smsDetailOpenRequestBtn: $("smsDetailOpenRequestBtn"), smsDetailCancelBtn: $("smsDetailCancelBtn"), smsDetailStatusText: $("smsDetailStatusText"), scheduleSmsTemplate: $("scheduleSmsTemplate"), scheduleSmsDate: $("scheduleSmsDate"), scheduleSmsTime: $("scheduleSmsTime"), scheduleSmsMessage: $("scheduleSmsMessage"), scheduleSmsBtn: $("scheduleSmsBtn"), scheduleDefaultSmsBtn: $("scheduleDefaultSmsBtn"), scheduleSmsStatus: $("scheduleSmsStatus"),
   calendarImportCheckBtn: $("calendarImportCheckBtn"), calendarImportLoadBtn: $("calendarImportLoadBtn"), calendarImportSearch: $("calendarImportSearch"), calendarImportFrom: $("calendarImportFrom"), calendarImportTo: $("calendarImportTo"), calendarImportMode: $("calendarImportMode"), calendarImportTodayBtn: $("calendarImportTodayBtn"), calendarImportWeekBtn: $("calendarImportWeekBtn"), calendarImportStatus: $("calendarImportStatus"), calendarImportList: $("calendarImportList"), calendarImportStatTotal: $("calendarImportStatTotal"), calendarImportStatWork: $("calendarImportStatWork"), calendarImportStatImported: $("calendarImportStatImported"), calendarImportStatHidden: $("calendarImportStatHidden"),
   topQuickAddBtn: $("topQuickAddBtn"), topRefreshBtn: $("topRefreshBtn"), topReportsBtn: $("topReportsBtn"), globalSearchInput: $("globalSearchInput"), globalSearchResults: $("globalSearchResults"),
   clientCardDialog: $("clientCardDialog"), clientCardTitle: $("clientCardTitle"), clientCardSubtitle: $("clientCardSubtitle"), clientCardQuickBtn: $("clientCardQuickBtn"), clientCardStatRequests: $("clientCardStatRequests"), clientCardStatM2: $("clientCardStatM2"), clientCardStatDone: $("clientCardStatDone"), clientCardStatLast: $("clientCardStatLast"), clientCardInfo: $("clientCardInfo"), clientCardAddresses: $("clientCardAddresses"), clientCardRequestsBody: $("clientCardRequestsBody"), clientCardFiles: $("clientCardFiles"), clientCardComments: $("clientCardComments")
@@ -1774,7 +1774,7 @@ function initNotifications() {
   if (els.sendNotifyBtn) els.sendNotifyBtn.addEventListener("click", () => sendCurrentRequestNotification());
   if (els.copyNotifyBtn) els.copyNotifyBtn.addEventListener("click", () => copyTextFrom(els.notifyMessage, els.requestNotifyStatus));
   if (els.notificationCheckBtn) els.notificationCheckBtn.addEventListener("click", checkNotificationsConnection);
-  if (els.smsBalanceBtn) els.smsBalanceBtn.addEventListener("click", checkSmsRuBalance);
+  if (els.smsBalanceBtn) els.smsBalanceBtn.addEventListener("click", checkSigmaBalance);
   if (els.sendTestNotifyBtn) els.sendTestNotifyBtn.addEventListener("click", sendTestNotification);
   if (els.copyTestNotifyBtn) els.copyTestNotifyBtn.addEventListener("click", () => copyTextFrom(els.testNotifyMessage, els.notificationStatus));
   initSmsQueue();
@@ -1845,7 +1845,7 @@ async function sendCurrentRequestNotification() {
     let history = getHistoryForRecord(current);
     history = addHistory(current, "Уведомление", `${channel.toUpperCase()}: ${successText} · ${messageText}`, history);
     await updateRecord(current.id, { "История изменений": JSON.stringify(history) }, "Уведомление отправлено и записано в историю").catch(() => null);
-    if (result.smsId && els.smsruStatusId) els.smsruStatusId.value = result.smsId;
+    if (result.smsId && els.sigmaStatusId) els.sigmaStatusId.value = result.smsId;
     await loadSmsQueue(true);
     await load();
   } else {
@@ -1856,8 +1856,8 @@ async function sendCurrentRequestNotification() {
 }
 
 function smsSendSuccessText(result) {
-  if (result.provider !== "smsru") return "Уведомление отправлено";
-  const parts = ["SMS.ru принял сообщение"];
+  if (result.provider !== "sigma") return "Уведомление отправлено";
+  const parts = ["SIGMA принял сообщение"];
   if (result.smsId) parts.push(`ID: ${result.smsId}`);
   if (result.cost !== undefined && result.cost !== "") parts.push(`стоимость: ${result.cost} ₽`);
   if (result.balance !== undefined && result.balance !== "") parts.push(`баланс: ${result.balance} ₽`);
@@ -1866,14 +1866,14 @@ function smsSendSuccessText(result) {
   return parts.join(" · ");
 }
 
-async function checkSmsRuBalance() {
+async function checkSigmaBalance() {
   const target = els.smsBalanceText || els.notificationStatus;
-  setNotificationStatus(target, "Проверяю баланс SMS.ru...", true);
+  setNotificationStatus(target, "Проверяю баланс SIGMA...", true);
   try {
     const response = await fetch("/sms-balance", { headers: { "x-admin-password": pwd(), "Cache-Control": "no-cache" } });
     const data = await response.json().catch(() => ({ ok: false, error: "Функция баланса вернула не JSON" }));
     if (!response.ok || !data.ok) throw new Error(data.error || "Ошибка проверки баланса");
-    setNotificationStatus(target, `Баланс SMS.ru: ${data.balance} ₽`, true);
+    setNotificationStatus(target, `Баланс SIGMA: ${data.balance} ₽`, true);
   } catch (error) {
     setNotificationStatus(target, error.message, false);
   }
@@ -1891,7 +1891,7 @@ async function sendTestNotification() {
     const successText = smsSendSuccessText(result);
     setNotificationStatus(els.notificationStatus, "Тест: " + successText, true);
     saveNotificationLog({ channel, to: to || "Telegram администратор", message: messageText, status: successText });
-    if (result.smsId && els.smsruStatusId) els.smsruStatusId.value = result.smsId;
+    if (result.smsId && els.sigmaStatusId) els.sigmaStatusId.value = result.smsId;
     await loadSmsQueue(true);
   } else {
     const err = result.error || "Ошибка отправки";
@@ -1960,7 +1960,7 @@ function initSmsQueue() {
     el.addEventListener("change", renderSmsQueue);
   });
   if (els.smsQueueBody) els.smsQueueBody.addEventListener("click", handleSmsQueueClick);
-  if (els.checkSmsruStatusBtn) els.checkSmsruStatusBtn.addEventListener("click", checkManualSmsruStatus);
+  if (els.checkSigmaStatusBtn) els.checkSigmaStatusBtn.addEventListener("click", checkManualSigmaStatus);
   if (els.scheduleSmsBtn) els.scheduleSmsBtn.addEventListener("click", scheduleSmsForCurrentRequest);
   if (els.scheduleDefaultSmsBtn) els.scheduleDefaultSmsBtn.addEventListener("click", scheduleDefaultSmsForCurrentRequest);
   if (els.scheduleSmsTemplate) els.scheduleSmsTemplate.addEventListener("change", updateScheduleSmsEditor);
@@ -2028,9 +2028,9 @@ function smsValue(item, key, fallback = "") {
   const f = (item && item.fields) || {};
   return f[key] ?? fallback;
 }
-function smsRuId(item) {
+function smsSigmaId(item) {
   const f = (item && item.fields) || {};
-  return String(f["ID SMS.ru"] || f["SMS.ru ID"] || f["smsId"] || f["sms_id"] || "").trim();
+  return String(f["ID SIGMA"] || f["SIGMA ID"] || f["ID SMS.ru"] || f["smsId"] || f["sms_id"] || "").trim();
 }
 function smsClientId(item) {
   const f = (item && item.fields) || {};
@@ -2046,7 +2046,7 @@ function smsStatusClass(status) {
 }
 function smsStatusTitle(status) {
   const map = {
-    "100": "Принято / в очереди SMS.ru",
+    "100": "Принято / в очереди SIGMA",
     "101": "Передаётся оператору",
     "102": "Отправлено, в пути",
     "103": "Доставлено",
@@ -2056,8 +2056,8 @@ function smsStatusTitle(status) {
     "107": "Не доставлено: неизвестная причина",
     "108": "Не доставлено: отклонено",
     "150": "Не найден маршрут",
-    "OK": "Принято SMS.ru",
-    "ERROR": "Ошибка SMS.ru"
+    "OK": "Принято SIGMA",
+    "ERROR": "Ошибка SIGMA"
   };
   const key = String(status || "");
   return map[key] || status || "—";
@@ -2086,7 +2086,7 @@ function smsQueueFiltered() {
   return smsQueueCache.filter((r) => {
     const f = r.fields || {};
     const d = String(f["Дата отправки"] || f["Дата фактической отправки"] || "").slice(0, 10);
-    const hay = norm([r.id, f["ID заявки"], f["ФИО"], f["Компания"], f["Телефон"], f["Тип уведомления"], f["Текст SMS"], f["Статус"], f["Ошибка"], f["ID SMS.ru"], f["Стоимость"], f["Статус доставки"], f["Ответ сервиса"]].join(" "));
+    const hay = norm([r.id, f["ID заявки"], f["ФИО"], f["Компания"], f["Телефон"], f["Тип уведомления"], f["Текст SMS"], f["Статус"], f["Ошибка"], f["ID SIGMA"], f["ID SMS.ru"], f["Стоимость"], f["Статус доставки"], f["Ответ сервиса"]].join(" "));
     if (status && f["Статус"] !== status) return false;
     if (from && d && d < from) return false;
     if (to && d && d > to) return false;
@@ -2112,7 +2112,7 @@ function renderSmsQueue() {
     const f = r.fields || {};
     const status = f["Статус"] || "—";
     const delivery = f["Статус доставки"] || "";
-    const pid = smsRuId(r);
+    const pid = smsSigmaId(r);
     const cid = smsClientId(r);
     const idAttr = e(smsRecordId(r));
     const statusBtn = pid ? `<button class="open-btn" type="button" data-sms-status="${e(pid)}" data-sms-nocodb="${idAttr}">Статус</button>` : "";
@@ -2176,7 +2176,7 @@ function prettyServiceResponse(value) {
 }
 function renderSmsCard(item) {
   const f = item.fields || {};
-  const pid = smsRuId(item);
+  const pid = smsSigmaId(item);
   const status = f["Статус"] || "—";
   const delivery = f["Статус доставки"] || "—";
   if (els.smsDetailTitle) els.smsDetailTitle.textContent = `SMS #${item.id}`;
@@ -2185,13 +2185,13 @@ function renderSmsCard(item) {
   if (els.smsDetailClient) els.smsDetailClient.textContent = [f["ФИО"] || "—", f["Компания"] || ""].filter(Boolean).join(" / ");
   if (els.smsDetailPhone) els.smsDetailPhone.textContent = formatPhoneForView(f["Телефон"] || "");
   if (els.smsDetailRequestId) els.smsDetailRequestId.textContent = f["ID заявки"] || "—";
-  if (els.smsDetailSmsruId) els.smsDetailSmsruId.textContent = pid || "—";
+  if (els.smsDetailSigmaId) els.smsDetailSigmaId.textContent = pid || "—";
   if (els.smsDetailClientId) els.smsDetailClientId.textContent = (f["Стоимость SMS"] || f["Стоимость"] || "—");
   if (els.smsDetailDelivery) els.smsDetailDelivery.textContent = smsStatusTitle(delivery) || "—";
   if (els.smsDetailMessage) els.smsDetailMessage.textContent = f["Текст SMS"] || "—";
   if (els.smsDetailService) els.smsDetailService.textContent = [f["Ошибка"] ? `Ошибка: ${f["Ошибка"]}` : "", f["Ответ сервиса"] ? prettyServiceResponse(f["Ответ сервиса"]) : ""].filter(Boolean).join("\n\n") || "—";
-  if (els.smsDetailStatusText) els.smsDetailStatusText.textContent = pid ? "ID SMS.ru найден. Можно проверить точный статус." : "ID SMS.ru пока нет. Он появится после отправки через SMS.ru.";
-  if (els.smsruStatusId && pid) els.smsruStatusId.value = pid;
+  if (els.smsDetailStatusText) els.smsDetailStatusText.textContent = pid ? "ID SIGMA найден. Можно проверить точный статус." : "ID SIGMA пока нет. Он появится после отправки через SIGMA.";
+  if (els.sigmaStatusId && pid) els.sigmaStatusId.value = pid;
   if (els.smsDetailCheckBtn) els.smsDetailCheckBtn.disabled = !pid;
   if (els.smsDetailCopyIdBtn) els.smsDetailCopyIdBtn.disabled = !pid;
   if (els.smsDetailSendNowBtn) els.smsDetailSendNowBtn.style.display = status === "Запланировано" ? "" : "none";
@@ -2200,16 +2200,16 @@ function renderSmsCard(item) {
 }
 async function checkCurrentSmsStatusFromCard() {
   const item = getCurrentSms();
-  const pid = smsRuId(item);
-  if (!pid) return setNotificationStatus(els.smsDetailStatusText, "У этой SMS нет ID SMS.ru", false);
+  const pid = smsSigmaId(item);
+  if (!pid) return setNotificationStatus(els.smsDetailStatusText, "У этой SMS нет ID SIGMA", false);
   await checkSmsDeliveryStatus(pid, smsRecordId(item), els.smsDetailStatusText);
   const fresh = smsQueueCache.find((r) => String(r.id) === String(currentSmsId));
   if (fresh) renderSmsCard(fresh);
 }
 async function copyCurrentSmsIdFromCard() {
-  const pid = smsRuId(getCurrentSms());
-  if (!pid) return setNotificationStatus(els.smsDetailStatusText, "ID SMS.ru отсутствует", false);
-  try { await navigator.clipboard.writeText(pid); setNotificationStatus(els.smsDetailStatusText, "ID SMS.ru скопирован", true); }
+  const pid = smsSigmaId(getCurrentSms());
+  if (!pid) return setNotificationStatus(els.smsDetailStatusText, "ID SIGMA отсутствует", false);
+  try { await navigator.clipboard.writeText(pid); setNotificationStatus(els.smsDetailStatusText, "ID SIGMA скопирован", true); }
   catch (_) { setNotificationStatus(els.smsDetailStatusText, "Не удалось скопировать ID", false); }
 }
 function openCurrentSmsRequestFromCard() {
@@ -2226,15 +2226,15 @@ async function cancelCurrentSmsFromCard() {
   if (fresh) renderSmsCard(fresh);
 }
 
-async function checkManualSmsruStatus() {
-  const smsId = els.smsruStatusId?.value.trim() || "";
-  if (!smsId) return setNotificationStatus(els.smsruStatusText, "Введите ID SMS.ru / smsId", false);
-  return checkSmsDeliveryStatus(smsId, "", els.smsruStatusText);
+async function checkManualSigmaStatus() {
+  const smsId = els.sigmaStatusId?.value.trim() || "";
+  if (!smsId) return setNotificationStatus(els.sigmaStatusText, "Введите ID SIGMA / smsId", false);
+  return checkSmsDeliveryStatus(smsId, "", els.sigmaStatusText);
 }
 
 async function checkSmsDeliveryStatus(smsId, nocodbId = "", statusEl = null) {
-  const target = statusEl || els.smsruStatusText || els.smsQueueStatusText;
-  setNotificationStatus(target, "Проверяю статус SMS.ru...", true);
+  const target = statusEl || els.sigmaStatusText || els.smsQueueStatusText;
+  setNotificationStatus(target, "Проверяю статус SIGMA...", true);
   try {
     const response = await fetch("/sms-status", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pwd() }, body: JSON.stringify({ smsId, nocodbId }) });
     const data = await response.json().catch(() => ({ ok: false, error: "Функция статуса вернула не JSON" }));
@@ -2242,9 +2242,9 @@ async function checkSmsDeliveryStatus(smsId, nocodbId = "", statusEl = null) {
     const statusText = data.statusText || data.statusCode || "—";
     const costText = data.cost ? ` · стоимость ${data.cost} ₽` : "";
     const deliveryMark = data.delivered ? "✅ доставлено" : (data.failed ? "❌ не доставлено" : "ℹ️ статус получен");
-    const text = `Статус SMS.ru: ${deliveryMark} · ${smsStatusTitle(statusText)} (${statusText}). ID: ${data.smsId || smsId}${costText}`;
+    const text = `Статус SIGMA: ${deliveryMark} · ${smsStatusTitle(statusText)} (${statusText}). ID: ${data.smsId || smsId}${costText}`;
     setNotificationStatus(target, text, true);
-    if (els.smsruStatusId) els.smsruStatusId.value = data.smsId || smsId;
+    if (els.sigmaStatusId) els.sigmaStatusId.value = data.smsId || smsId;
     await loadSmsQueue(true);
   } catch (error) {
     setNotificationStatus(target, error.message, false);

@@ -112,7 +112,7 @@ export async function onRequestPost({ request, env }) {
       if (action === "mark_sent") {
         const extended = {
           ...fields,
-          "ID SMS.ru": cleanText(body.smsId || body.sms_id || "", 100),
+          "ID SIGMA": cleanText(body.smsId || body.sms_id || body.sigmaId || "", 100),
           "Статус доставки": cleanText(body.deliveryStatus || body.smsStatus || "OK", 120),
           "Стоимость SMS": cleanText(body.cost || body.smsCost || "", 80),
           "Баланс после отправки": cleanText(body.balance || "", 80),

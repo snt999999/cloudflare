@@ -284,7 +284,7 @@
       </section>
 
       <section id="smsSection" class="workspace-section" style="display:none">
-        <header class="admin-head"><div><h1>SMS-уведомления</h1><p>Автоматические напоминания клиентам, тестовая отправка, история и проверка статуса SMS.ru по ID.</p></div><div class="actions"><button id="notificationCheckBtn" type="button">Проверить подключение</button><button id="smsBalanceBtn" type="button">Проверить баланс SMS.ru</button><button id="smsQueueRefreshBtn" data-sms-refresh type="button">Обновить историю</button></div></header>
+        <header class="admin-head"><div><h1>SMS-уведомления</h1><p>Автоматические напоминания клиентам, тестовая отправка, история и проверка статуса SIGMA по ID.</p></div><div class="actions"><button id="notificationCheckBtn" type="button">Проверить подключение</button><button id="smsBalanceBtn" type="button">Проверить баланс SIGMA</button><button id="smsQueueRefreshBtn" data-sms-refresh type="button">Обновить историю</button></div></header>
         <section class="notification-grid notification-grid--two sms-overview-grid">
           <div class="notification-card"><b>SMS клиентам</b><p>Подтверждение записи, напоминание, перенос, отмена, выполненные работы и просьба оставить отзыв.</p><span id="notificationSmsStatus" class="pill-status">не проверено</span></div>
           <div class="notification-card"><b>Telegram администратору</b><p>Тестовые сообщения и уведомления в рабочий чат администратора.</p><span id="notificationTelegramStatus" class="pill-status">не проверено</span></div>
@@ -307,18 +307,18 @@
             <p id="notificationStatus" class="muted-text"></p><p id="smsBalanceText" class="muted-text"></p>
           </div>
           <div>
-            <h2>Проверка статуса SMS.ru</h2>
+            <h2>Проверка статуса SIGMA</h2>
             <div class="dialog-grid">
-              <label class="wide">ID SMS.ru<input id="smsruStatusId" placeholder="Например: 000000-10000000" /></label>
+              <label class="wide">ID SIGMA<input id="sigmaStatusId" placeholder="Например: 000000-10000000" /></label>
             </div>
-            <div class="dialog-actions"><button id="checkSmsruStatusBtn" type="button">Проверить статус</button></div>
-            <p id="smsruStatusText" class="muted-text"></p>
+            <div class="dialog-actions"><button id="checkSigmaStatusBtn" type="button">Проверить статус</button></div>
+            <p id="sigmaStatusText" class="muted-text"></p>
           </div>
         </section>
         <section class="card notification-console sms-schedule-console">
-          <div class="sms-section-title"><div><h2>История и очередь SMS</h2><p>Нажми на строку SMS, чтобы открыть карточку отправления: ID SMS.ru, ответ сервиса, статус доставки, телефон, текст и действия.</p></div><button data-sms-refresh type="button" class="ghost">Обновить</button></div>
+          <div class="sms-section-title"><div><h2>История и очередь SMS</h2><p>Нажми на строку SMS, чтобы открыть карточку отправления: ID SIGMA, ответ сервиса, статус доставки, телефон, текст и действия.</p></div><button data-sms-refresh type="button" class="ghost">Обновить</button></div>
           <div class="sms-queue-toolbar">
-            <input id="smsQueueSearch" type="search" placeholder="Поиск: клиент, телефон, ID SMS.ru, компания, текст, статус..." />
+            <input id="smsQueueSearch" type="search" placeholder="Поиск: клиент, телефон, ID SIGMA, компания, текст, статус..." />
             <select id="smsQueueStatus"><option value="">Все статусы</option><option value="Запланировано">Запланировано</option><option value="Отправляется">Отправляется</option><option value="Отправлено">Отправлено</option><option value="Ошибка">Ошибка</option><option value="Отменено">Отменено</option><option value="Пропущено">Пропущено</option></select>
             <input id="smsQueueFrom" type="date" />
             <input id="smsQueueTo" type="date" />
@@ -404,14 +404,14 @@
         <div class="sms-detail-box"><span>Клиент</span><b id="smsDetailClient">—</b></div>
         <div class="sms-detail-box"><span>Телефон</span><b id="smsDetailPhone">—</b></div>
         <div class="sms-detail-box"><span>ID заявки</span><b id="smsDetailRequestId">—</b></div>
-        <div class="sms-detail-box"><span>ID SMS.ru</span><b id="smsDetailSmsruId">—</b></div>
+        <div class="sms-detail-box"><span>ID SIGMA</span><b id="smsDetailSigmaId">—</b></div>
         <div class="sms-detail-box"><span>Стоимость</span><b id="smsDetailClientId">—</b></div>
         <div class="sms-detail-box"><span>Статус доставки</span><b id="smsDetailDelivery">—</b></div>
       </section>
       <section class="files-box sms-detail-message"><h3>Текст SMS</h3><pre id="smsDetailMessage">—</pre></section>
       <section class="files-box sms-detail-message"><h3>Ответ сервиса / ошибка</h3><pre id="smsDetailService">—</pre></section>
       <div class="dialog-actions sms-detail-actions">
-        <button id="smsDetailCheckBtn" type="button">Проверить статус SMS.ru</button>
+        <button id="smsDetailCheckBtn" type="button">Проверить статус SIGMA</button>
         <button id="smsDetailCopyIdBtn" type="button" class="ghost">Скопировать ID</button>
         <button id="smsDetailSendNowBtn" type="button" class="ghost">Отправить сейчас</button>
         <button id="smsDetailOpenRequestBtn" type="button" class="ghost">Открыть заявку</button>

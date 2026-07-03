@@ -4,6 +4,8 @@ function json(body, status = 200) { return new Response(JSON.stringify(body, nul
 function parseJson(text) { try { return JSON.parse(text); } catch (_) { return text; } }
 function endpoint(env) { return env.NOCODB_SMS_ENDPOINT || env.NOCODB_NOTIFICATIONS_ENDPOINT || ""; }
 function token(env) { return env.NOCODB_TOKEN || ""; }
+function sigmaBase(env) { return (env.SIGMA_API_URL || "https://user.sigmasms.ru/api").replace(/\/+$/, ""); }
+function sigmaToken(env) { return env.SIGMA_API_TOKEN || env.SIGMA_TOKEN || ""; }
 function checkCronAuth(request, env) {
   const secret = env.SMS_CRON_SECRET || "";
   if (!secret) return { ok: false, status: 500, body: { ok: false, error: "SMS_CRON_SECRET is not set" } };
@@ -54,28 +56,43 @@ function normalizePhone(value) {
   if (digits.length === 10 && digits.startsWith("9")) digits = "7" + digits;
   return digits;
 }
-function cleanText(value) { return String(value || "").replace(/[<>]/g, "").trim().slice(0, 900); }
-async function sendSmsRu(env, to, message) {
-  const apiId = env.SMSRU_API_ID || env.SMS_API_KEY || "";
-  if (!apiId) return { ok: false, provider: "smsru", error: "Не задан SMSRU_API_ID" };
+function cleanText(value, max = 900) { return String(value || "").replace(/[<>]/g, "").trim().slice(0, max); }
+function firstSigmaItem(data) {
+  if (Array.isArray(data)) return data[0];
+  if (Array.isArray(data?.data)) return data.data[0];
+  if (Array.isArray(data?.items)) return data.items[0];
+  if (Array.isArray(data?.sendings)) return data.sendings[0];
+  if (Array.isArray(data?.result)) return data.result[0];
+  return data;
+}
+function sigmaId(x) { return cleanText(x?.id || x?._id || x?.uuid || x?.sendingId || x?.messageId || x?.groupId || "", 120); }
+function sigmaState(x) { const s = x?.state || {}; return { status: cleanText(s.status || x?.status || x?.stateStatus || "", 120), error: cleanText(s.error || x?.error || x?.message || x?.errorMessage || "", 700) }; }
+function isSigmaFailed(status, errorText) { return /failed|error|rejected|declined|cancel/i.test(String(status || "")) || Boolean(errorText && errorText !== "false"); }
+function sigmaStatusText(status, errorText) {
+  if (errorText && errorText !== "false") return errorText;
+  const s = String(status || "").toLowerCase();
+  const map = { pending: "В очереди", queued: "В очереди", created: "Создано", processing: "Обрабатывается", sent: "Отправлено", delivered: "Доставлено", failed: "Ошибка", error: "Ошибка", canceled: "Отменено", rejected: "Отклонено" };
+  return map[s] || status || "Принято SIGMA";
+}
+async function sendSigmaSms(env, to, message) {
+  const token = sigmaToken(env);
+  if (!token) return { ok: false, provider: "sigma", error: "Не задан SIGMA_API_TOKEN" };
   const phone = normalizePhone(to);
-  if (!phone || phone.length !== 11 || !phone.startsWith("7")) return { ok: false, provider: "smsru", error: "Неверный телефон. Нужен формат 79XXXXXXXXX", to: phone };
-  const url = new URL("https://sms.ru/sms/send");
-  url.searchParams.set("api_id", apiId);
-  url.searchParams.set("to", phone);
-  url.searchParams.set("msg", message);
-  url.searchParams.set("json", "1");
-  // Имя отправителя не передаём — используем стандартный отправитель SMS.ru.
-  const sender = "";
-  const testMode = String(env.SMSRU_TEST || "") === "1";
-  if (testMode) url.searchParams.set("test", "1");
-  const res = await fetch(url.toString(), { method: "GET" });
+  if (!phone || phone.length !== 11 || !phone.startsWith("7")) return { ok: false, provider: "sigma", error: "Неверный телефон. Нужен формат 79XXXXXXXXX", to: phone };
+  const sender = cleanText(env.SIGMA_SENDER || env.SMS_SENDER || "", 80);
+  const payload = { text: message };
+  if (sender) payload.sender = sender;
+  const requestBody = { recipient: "+" + phone, type: "sms", payload };
+  const url = new URL(`${sigmaBase(env)}/sendings`);
+  url.searchParams.set("return", "each");
+  const res = await fetch(url.toString(), { method: "POST", headers: { "Content-Type": "application/json", "Accept": "application/json", "Authorization": token }, body: JSON.stringify(requestBody) });
   const raw = await res.text(); let data; try { data = JSON.parse(raw); } catch (_) { data = { raw }; }
-  const smsResult = data.sms && (data.sms[phone] || data.sms[to] || Object.values(data.sms)[0]);
-  const statusCode = Number(smsResult?.status_code || data.status_code || 0);
-  const ok = res.ok && data.status === "OK" && statusCode === 100 && Boolean(smsResult?.sms_id);
-  const statusText = smsResult?.status_text || data.status_text || smsResult?.status || data.status || "";
-  return { ok, provider: "smsru", smsId: smsResult?.sms_id || "", status: smsResult?.status || data.status || "", statusCode: statusCode || "", statusText, cost: smsResult?.cost ?? "", balance: data.balance ?? "", result: data, error: ok ? "" : (statusText || "SMS.ru не подтвердил отправку") };
+  const item = firstSigmaItem(data);
+  const id = sigmaId(item || data);
+  const state = sigmaState(item || data);
+  const errorText = state.error || data.message || data.error || data.name || data.raw || "";
+  const ok = res.ok && Boolean(id) && !isSigmaFailed(state.status, errorText);
+  return { ok, provider: "sigma", smsId: id, id, status: state.status || (ok ? "created" : "error"), statusText: sigmaStatusText(state.status, errorText), cost: item?.cost ?? data.cost ?? "", balance: data.balance ?? "", result: data, error: ok ? "" : (sigmaStatusText(state.status, errorText) || `SIGMA не подтвердила отправку. HTTP ${res.status}`) };
 }
 export async function onRequestGet({ request, env }) { return runSmsCron({ request, env, source: "http" }); }
 export async function onRequestPost({ request, env }) { return runSmsCron({ request, env, source: "http" }); }
@@ -99,19 +116,19 @@ async function runSmsCron({ request, env, source }) {
       continue;
     }
     await patchSms(env, record.id, { "Статус": "Отправляется", "Ошибка": "" });
-    const sent = await sendSmsRu(env, to, message);
+    const sent = await sendSigmaSms(env, to, message);
     if (sent.ok) {
       const base = { "Статус": "Отправлено", "Дата фактической отправки": new Date().toISOString(), "Ошибка": "" };
-      const extended = { ...base, "ID SMS.ru": sent.smsId || "", "Статус доставки": sent.status || "OK", "Ответ сервиса": compactJson(sent.result || sent), "Стоимость SMS": String(sent.cost ?? ""), "Баланс после отправки": String(sent.balance ?? ""), "Дата проверки статуса": new Date().toISOString() };
+      const extended = { ...base, "ID SIGMA": sent.smsId || "", "Статус доставки": sent.status || "created", "Ответ сервиса": compactJson(sent.result || sent), "Стоимость SMS": String(sent.cost ?? ""), "Баланс после отправки": String(sent.balance ?? ""), "Дата проверки статуса": new Date().toISOString() };
       await patchSmsSafe(env, record.id, extended, base);
     } else {
       const base = { "Статус": "Ошибка", "Ошибка": sent.error || "Ошибка отправки" };
       const extended = { ...base, "Статус доставки": sent.status || "ERROR", "Ответ сервиса": compactJson(sent.result || sent), "Дата проверки статуса": new Date().toISOString() };
       await patchSmsSafe(env, record.id, extended, base);
     }
-    results.push({ id: record.id, to, ok: sent.ok, error: sent.error || "", provider: "smsru", smsId: sent.smsId || "", deliveryStatus: sent.status || "" });
+    results.push({ id: record.id, to, ok: sent.ok, error: sent.error || "", provider: "sigma", smsId: sent.smsId || "", deliveryStatus: sent.status || "" });
   }
-  return json({ ok: true, source, provider: "smsru", now, checked: listed.records.length, due: due.length, processed: results.length, results });
+  return json({ ok: true, source, provider: "sigma", now, checked: listed.records.length, due: due.length, processed: results.length, results });
 }
 export async function onRequest(context) {
   if (context.request.method === "GET") return onRequestGet(context);

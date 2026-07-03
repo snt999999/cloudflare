@@ -16,7 +16,7 @@ export async function onRequestPost({ request, env }) {
 
     if (channel === "sms") {
       if (!to) return json({ ok: false, error: "Не указан номер телефона клиента" }, 400);
-      const smsPayload = await sendSmsRu({ env, to, message });
+      const smsPayload = await sendSigmaSms({ env, to, message });
       if (!body.skipSmsLog && !body.queueId) await logDirectSms({ env, body, to, message, smsPayload });
       return json(smsPayload, 200);
     }
@@ -40,25 +40,26 @@ export async function onRequestGet({ request, env }) {
   }
   return json({
     ok: true,
-    sms: Boolean(env.SMSRU_API_ID || env.SMS_API_KEY),
+    sms: Boolean(env.SIGMA_API_TOKEN || env.SIGMA_TOKEN),
     telegram: Boolean(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_ADMIN_CHAT_ID),
-    provider: "smsru",
-    sender: "",
-    senderMode: "default_smsru",
-    testMode: String(env.SMSRU_TEST || "") === "1"
+    provider: "sigma",
+    apiBase: sigmaBase(env),
+    sender: env.SIGMA_SENDER || env.SMS_SENDER || "",
+    senderMode: env.SIGMA_SENDER ? "account_sender" : "account_default_or_tariff",
+    testMode: false
   });
 }
 
 function smsEndpoint(env) { return env.NOCODB_SMS_ENDPOINT || env.NOCODB_NOTIFICATIONS_ENDPOINT || ""; }
 function nocodbToken(env) { return env.NOCODB_TOKEN || ""; }
+function sigmaBase(env) { return (env.SIGMA_API_URL || "https://user.sigmasms.ru/api").replace(/\/+$/, ""); }
+function sigmaToken(env) { return env.SIGMA_API_TOKEN || env.SIGMA_TOKEN || ""; }
 function yDateTimeParts() {
   const parts = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Yekaterinburg", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date());
   const p = Object.fromEntries(parts.map((x) => [x.type, x.value]));
   return { date: `${p.year}-${p.month}-${p.day}`, time: `${p.hour}:${p.minute}` };
 }
-function compactJson(value, max = 3000) {
-  try { return JSON.stringify(value || {}).slice(0, max); } catch (_) { return String(value || "").slice(0, max); }
-}
+function compactJson(value, max = 3000) { try { return JSON.stringify(value || {}).slice(0, max); } catch (_) { return String(value || "").slice(0, max); } }
 async function createSmsLog(env, fields) {
   if (!smsEndpoint(env) || !nocodbToken(env)) return { ok: false, skipped: true, error: "NOCODB_SMS_ENDPOINT/NOCODB_TOKEN не заданы" };
   const res = await fetch(smsEndpoint(env), {
@@ -90,8 +91,8 @@ async function logDirectSms({ env, body, to, message, smsPayload }) {
   };
   const extendedFields = {
     ...baseFields,
-    "ID SMS.ru": cleanText(smsPayload?.smsId || smsPayload?.sms_id || "", 100),
-    "Статус доставки": cleanText(smsPayload?.statusText || smsPayload?.status || smsPayload?.statusCode || "", 160),
+    "ID SIGMA": cleanText(smsPayload?.smsId || smsPayload?.id || "", 120),
+    "Статус доставки": cleanText(smsPayload?.statusText || smsPayload?.status || "", 160),
     "Стоимость SMS": cleanText(smsPayload?.cost ?? "", 80),
     "Баланс после отправки": cleanText(smsPayload?.balance ?? "", 80),
     "Ответ сервиса": compactJson(smsPayload?.result || smsPayload),
@@ -101,51 +102,67 @@ async function logDirectSms({ env, body, to, message, smsPayload }) {
   if (!full.ok) await createSmsLog(env, baseFields);
 }
 
-async function sendSmsRu({ env, to, message }) {
-  const apiId = env.SMSRU_API_ID || env.SMS_API_KEY || "";
-  if (!apiId) return { ok: false, provider: "smsru", error: "Не задан SMSRU_API_ID в Cloudflare" };
+async function sendSigmaSms({ env, to, message }) {
+  const token = sigmaToken(env);
+  if (!token) return { ok: false, provider: "sigma", error: "Не задан SIGMA_API_TOKEN в Cloudflare" };
   const phone = normalizePhone(to);
   if (!phone || phone.length !== 11 || !phone.startsWith("7")) {
-    return { ok: false, provider: "smsru", error: "Неверный телефон. Нужен формат 79XXXXXXXXX", to: phone };
+    return { ok: false, provider: "sigma", error: "Неверный телефон. Нужен формат 79XXXXXXXXX", to: phone };
   }
-  const url = new URL("https://sms.ru/sms/send");
-  url.searchParams.set("api_id", apiId);
-  url.searchParams.set("to", phone);
-  url.searchParams.set("msg", message);
-  url.searchParams.set("json", "1");
-  // ВАЖНО: имя отправителя специально НЕ передаём.
-  // SMS.ru сам выберет доступный отправитель/маршрут аккаунта.
-  // Это убирает ошибку “оператор не подключён на данном отправителе”.
-  const sender = "";
-  const testMode = String(env.SMSRU_TEST || "") === "1";
-  if (testMode) url.searchParams.set("test", "1");
-
-  const response = await fetch(url.toString(), { method: "GET" });
+  const recipient = "+" + phone;
+  const sender = cleanText(env.SIGMA_SENDER || env.SMS_SENDER || "", 80);
+  const payload = { text: message };
+  if (sender) payload.sender = sender;
+  const requestBody = { recipient, type: "sms", payload };
+  const url = new URL(`${sigmaBase(env)}/sendings`);
+  url.searchParams.set("return", "each");
+  const response = await fetch(url.toString(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Accept": "application/json", "Authorization": token },
+    body: JSON.stringify(requestBody)
+  });
   const raw = await response.text();
-  let data;
-  try { data = JSON.parse(raw); } catch (_) { data = { raw }; }
-  const smsResult = data.sms && (data.sms[phone] || data.sms[to] || Object.values(data.sms)[0]);
-  const statusCode = Number(smsResult?.status_code || data.status_code || 0);
-  const ok = response.ok && data.status === "OK" && statusCode === 100 && Boolean(smsResult?.sms_id);
-  const statusText = smsResult?.status_text || data.status_text || smsResult?.status || data.status || "";
+  let data; try { data = JSON.parse(raw); } catch (_) { data = { raw }; }
+  const item = firstSigmaItem(data);
+  const id = sigmaId(item || data);
+  const state = sigmaState(item || data);
+  const errorText = state.error || data.message || data.error || data.name || data.raw || "";
+  const ok = response.ok && Boolean(id) && !isSigmaFailed(state.status, errorText);
   return {
     ok,
-    provider: "smsru",
+    provider: "sigma",
     to: phone,
+    recipient,
     sender,
-    senderMode: "default_smsru",
-    testMode,
-    smsId: smsResult?.sms_id || "",
-    status: smsResult?.status || data.status || "",
-    statusCode: statusCode || "",
-    statusText,
-    cost: smsResult?.cost ?? "",
+    smsId: id,
+    id,
+    status: state.status || (ok ? "created" : "error"),
+    statusText: sigmaStatusText(state.status, errorText),
+    cost: item?.cost ?? data.cost ?? "",
     balance: data.balance ?? "",
     result: data,
-    error: ok ? "" : (statusText || "SMS.ru не подтвердил отправку")
+    request: { ...requestBody, payload: { ...payload, text: message } },
+    error: ok ? "" : (sigmaStatusText(state.status, errorText) || `SIGMA не подтвердила отправку. HTTP ${response.status}`)
   };
 }
-
+function firstSigmaItem(data) {
+  if (Array.isArray(data)) return data[0];
+  if (Array.isArray(data?.data)) return data.data[0];
+  if (Array.isArray(data?.items)) return data.items[0];
+  if (Array.isArray(data?.sendings)) return data.sendings[0];
+  if (Array.isArray(data?.result)) return data.result[0];
+  return data;
+}
+function sigmaId(x) { return cleanText(x?.id || x?._id || x?.uuid || x?.sendingId || x?.messageId || x?.groupId || "", 120); }
+function sigmaState(x) { const s = x?.state || {}; return { status: cleanText(s.status || x?.status || x?.stateStatus || "", 120), error: cleanText(s.error || x?.error || x?.errorMessage || "", 700) }; }
+function isSigmaFailed(status, errorText) { return /failed|error|rejected|declined|cancel/i.test(String(status || "")) || Boolean(errorText && errorText !== "false"); }
+function sigmaStatusText(status, errorText) {
+  if (errorText && errorText !== "false") return errorText;
+  const s = String(status || "").toLowerCase();
+  if (!s) return "Принято SIGMA";
+  const map = { pending: "В очереди", queued: "В очереди", created: "Создано", processing: "Обрабатывается", sent: "Отправлено", delivered: "Доставлено", failed: "Ошибка", error: "Ошибка", canceled: "Отменено", rejected: "Отклонено" };
+  return map[s] || status;
+}
 async function sendTelegram({ env, chatId, message }) {
   const token = env.TELEGRAM_BOT_TOKEN || "";
   if (!token) return json({ ok: false, error: "Не задан TELEGRAM_BOT_TOKEN в Cloudflare" }, 400);
@@ -157,7 +174,6 @@ async function sendTelegram({ env, chatId, message }) {
   const data = await response.json().catch(() => ({}));
   return json({ ok: Boolean(data.ok), provider: "telegram", chatId, result: data, error: data.ok ? "" : (data.description || "Telegram не подтвердил отправку") }, 200);
 }
-
 function normalizePhone(value) {
   let digits = String(value || "").replace(/\D/g, "");
   if (digits.length === 11 && digits.startsWith("8")) digits = "7" + digits.slice(1);

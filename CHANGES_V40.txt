@@ -1,0 +1,10 @@
+СОЛНЦАНЕТ v40 — SIGMA SMS integration
+
+- Полностью удалена отправка через SMS.ru из Cloudflare Functions.
+- Подключена SIGMA через REST API: POST https://user.sigmasms.ru/api/sendings.
+- Авторизация через SIGMA_API_TOKEN в Cloudflare.
+- История SMS теперь сохраняет ID SIGMA, статус доставки и ответ сервиса.
+- Проверка статуса выполняется через GET /api/sendings/[id].
+- Автоочередь и cron-отправка работают через SIGMA.
+- Интерфейс админки переименован с SMS.ru на SIGMA.
+- Service Worker обновлен до v40.
