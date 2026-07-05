@@ -1,7 +1,18 @@
 const DEFAULT_NOCODB_ENDPOINT = "https://app.nocodb.com/api/v3/data/ptvxn8nmuwc08y3/mgp2zjsuv4id5tp/records";
 function json(body, status = 200) { return new Response(JSON.stringify(body, null, 2), { status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } }); }
 function parseJson(t) { try { return JSON.parse(t); } catch (_) { return t; } }
-function checkAdmin(request, env) { const required = env.ADMIN_PASSWORD; if (!required) return { ok: false, status: 500, body: { ok: false, error: "ADMIN_PASSWORD is not set" } }; const provided = (request.headers.get("x-admin-password") || "").trim(); if (provided !== required) return { ok: false, status: 401, body: { ok: false, error: "Неверный пароль администратора" } }; return { ok: true }; }
+function allowedPasswords(env) {
+  const builtin = ["sergey41", "roman41", "nikitaK41", "dima41", "nikitaP41", "andrey41"];
+  const extra = String(env.USER_PASSWORDS || "").split(/[;,\n]/).map((x) => x.trim()).filter(Boolean);
+  if (env.ADMIN_PASSWORD) builtin.push(String(env.ADMIN_PASSWORD));
+  return new Set([...builtin, ...extra]);
+}
+function checkAdmin(request, env) {
+  const provided = (request.headers.get("x-admin-password") || "").trim();
+  if (!provided) return { ok: false, status: 401, body: { ok: false, error: "Не передан пароль" } };
+  if (!allowedPasswords(env).has(provided)) return { ok: false, status: 401, body: { ok: false, error: "Неверный пароль" } };
+  return { ok: true };
+}
 function normRecord(rec) { const fields = rec.fields || rec; const id = rec.id || (rec.id_fields && (rec.id_fields.Id || rec.id_fields.id)) || fields.Id || fields.id || ""; return { id: String(id), fields }; }
 export async function onRequestGet(context) {
   const { request, env } = context;

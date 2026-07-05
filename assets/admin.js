@@ -26,6 +26,8 @@ let currentSmsId = null;
 
 const storage = {
   password: "solncanet_admin_password_v9",
+  userName: "solncanet_user_name_v41",
+  workspace: "solncanet_workspace_v41",
   history: "solncanet_history_v9",
   payroll: "solncanet_payroll_settings_v9",
   notificationLog: "solncanet_notification_log_v19",
@@ -35,7 +37,7 @@ const storage = {
 const els = {
   sidebar: $("sidebar"), mobileMenuBtn: $("mobileMenuBtn"), sidebarCloseBtn: $("sidebarCloseBtn"), sidebarOverlay: $("sidebarOverlay"),
   loginPanel: $("loginPanel"), appPanel: $("appPanel"), loginForm: $("loginForm"), passwordInput: $("passwordInput"), loginMessage: $("loginMessage"), logoutBtn: $("logoutBtn"), refreshBtn: $("refreshBtn"), listBtn: $("listBtn"), calendarBtn: $("calendarBtn"), listView: $("listView"), calendarView: $("calendarView"), requestsBody: $("requestsBody"), calendarGrid: $("calendarGrid"), monthTitle: $("monthTitle"), calendarMonthSummary: $("calendarMonthSummary"), calendarTodayBtn: $("calendarTodayBtn"), calendarDayAgenda: $("calendarDayAgenda"), calendarSelectedDateTitle: $("calendarSelectedDateTitle"), calendarSelectedDateSummary: $("calendarSelectedDateSummary"), calendarSelectedEvents: $("calendarSelectedEvents"), prevMonth: $("prevMonth"), nextMonth: $("nextMonth"), searchInput: $("searchInput"), statusFilter: $("statusFilter"), installerFilter: $("installerFilter"), dateFrom: $("dateFrom"), dateTo: $("dateTo"), clearFiltersBtn: $("clearFiltersBtn"), message: $("message"), statTotal: $("statTotal"), statNew: $("statNew"), statToday: $("statToday"), statWork: $("statWork"), statVolume: $("statVolume"), statFiltered: $("statFiltered"),
-  dialog: $("requestDialog"), dialogTitle: $("dialogTitle"), requestInfo: $("requestInfo"), editDate: $("editDate"), editTime: $("editTime"), editStatus: $("editStatus"), editM2: $("editM2"), editResponsible: $("editResponsible"), editCompany: $("editCompany"), editService: $("editService"), editAddress: $("editAddress"), editAdminComment: $("editAdminComment"), saveRequestBtn: $("saveRequestBtn"), cancelRequestBtn: $("cancelRequestBtn"), cancelReason: $("cancelReason"), requestHistoryBox: $("requestHistoryBox"), requestGoogleCalendarBox: $("requestGoogleCalendarBox"), requestGoogleCreateBtn: $("requestGoogleCreateBtn"), requestGoogleOpenLink: $("requestGoogleOpenLink"), requestGoogleStatus: $("requestGoogleStatus"), exportBtn: $("exportBtn"),
+  dialog: $("requestDialog"), dialogTitle: $("dialogTitle"), requestInfo: $("requestInfo"), editDate: $("editDate"), editTime: $("editTime"), editStatus: $("editStatus"), editM2: $("editM2"), editResponsible: $("editResponsible"), editCompany: $("editCompany"), editDirection: $("editDirection"), editAutoFields: $("editAutoFields"), editAuto: $("editAuto"), editFilm: $("editFilm"), editAutoServices: $("editAutoServices"), editAddServiceBtn: $("editAddServiceBtn"), editAutoTotal: $("editAutoTotal"), editService: $("editService"), editAddress: $("editAddress"), editAdminComment: $("editAdminComment"), saveRequestBtn: $("saveRequestBtn"), cancelRequestBtn: $("cancelRequestBtn"), cancelReason: $("cancelReason"), requestHistoryBox: $("requestHistoryBox"), requestGoogleCalendarBox: $("requestGoogleCalendarBox"), requestGoogleCreateBtn: $("requestGoogleCreateBtn"), requestGoogleOpenLink: $("requestGoogleOpenLink"), requestGoogleStatus: $("requestGoogleStatus"), exportBtn: $("exportBtn"),
   clientsBody: $("clientsBody"), objectsBody: $("objectsBody"), installersBody: $("installersBody"), trashBody: $("trashBody"), historyBody: $("historyBody"), historySearchInput: $("historySearchInput"), clearHistoryLocalBtn: $("clearHistoryLocalBtn"), filesBody: $("filesBody"), filesSearchInput: $("filesSearchInput"), filesTypeFilter: $("filesTypeFilter"),
   quickAddBtn: $("quickAddBtn"), quickAddDialog: $("quickAddDialog"), quickSaveBtn: $("quickSaveBtn"), quickName: $("quickName"), quickCompany: $("quickCompany"), quickPhone: $("quickPhone"), quickClientHint: $("quickClientHint"), quickClientSuggestions: $("quickClientSuggestions"), quickGoogleSync: $("quickGoogleSync"), quickService: $("quickService"), quickDate: $("quickDate"), quickTime: $("quickTime"), quickM2: $("quickM2"), quickAddress: $("quickAddress"), quickComment: $("quickComment"),
   reportDialog: $("reportDialog"), reportTitle: $("reportTitle"), reportDateFrom: $("reportDateFrom"), reportDateTo: $("reportDateTo"), reportStatus: $("reportStatus"), reportFormat: $("reportFormat"), reportAllInstallers: $("reportAllInstallers"), downloadReportBtn: $("downloadReportBtn"), payrollOptions: $("payrollOptions"), payrollSplitMode: $("payrollSplitMode"), payrollStatusMode: $("payrollStatusMode"), payrollSettingsBody: $("payrollSettingsBody"), savePayrollSettingsBtn: $("savePayrollSettingsBtn"), previewPayrollBtn: $("previewPayrollBtn"), reportPreview: $("reportPreview"),
@@ -67,7 +69,7 @@ function init() {
   if (saved) login(saved);
 
   els.loginForm.addEventListener("submit", (e) => { e.preventDefault(); login(els.passwordInput.value.trim()); });
-  els.logoutBtn.addEventListener("click", () => { localStorage.removeItem(storage.password); records = []; showLogin(); });
+  els.logoutBtn.addEventListener("click", () => { localStorage.removeItem(storage.password); localStorage.removeItem(storage.userName); records = []; currentUser = null; showLogin(); });
   els.refreshBtn.addEventListener("click", load);
   els.listBtn.addEventListener("click", () => setView("list"));
   els.calendarBtn.addEventListener("click", () => setView("calendar"));
@@ -91,6 +93,11 @@ function init() {
   els.quickAddBtn.addEventListener("click", openQuickAdd);
   if (els.topQuickAddBtn) els.topQuickAddBtn.addEventListener("click", openQuickAdd);
   if (els.topRefreshBtn) els.topRefreshBtn.addEventListener("click", load);
+  if (els.workspaceSelect) els.workspaceSelect.addEventListener("change", () => setWorkspace(els.workspaceSelect.value));
+  if (els.quickDirection) els.quickDirection.addEventListener("change", updateQuickDirectionUI);
+  if (els.editDirection) els.editDirection.addEventListener("change", updateEditDirectionUI);
+  if (els.quickAddServiceBtn) els.quickAddServiceBtn.addEventListener("click", () => addAutoServiceRow("quick"));
+  if (els.editAddServiceBtn) els.editAddServiceBtn.addEventListener("click", () => addAutoServiceRow("edit"));
   if (els.topReportsBtn) els.topReportsBtn.addEventListener("click", () => openReport("payroll"));
   if (els.globalSearchInput) els.globalSearchInput.addEventListener("input", renderGlobalSearch);
   if (els.globalSearchInput) els.globalSearchInput.addEventListener("focus", renderGlobalSearch);
@@ -217,18 +224,51 @@ function setDefaultDates() {
   if (els.quickTime) els.quickTime.value = "10:00";
 }
 
+function accountFromPassword(password) {
+  return APP_ACCOUNTS.find((a) => a.password === password) || null;
+}
+function setWorkspace(value) {
+  currentWorkspace = ["architecture", "auto", "all"].includes(value) ? value : "architecture";
+  localStorage.setItem(storage.workspace, currentWorkspace);
+  updateWorkspaceUI();
+  renderAll();
+}
+function updateWorkspaceUI() {
+  if (els.workspaceSelect) els.workspaceSelect.value = currentWorkspace;
+  if (els.userBadge) {
+    const name = currentUser?.name || localStorage.getItem(storage.userName) || "Сотрудник";
+    els.userBadge.textContent = `${name} · ${WORKSPACES[currentWorkspace] || "Архитектура"}`;
+  }
+  document.body.dataset.workspace = currentWorkspace;
+}
+function recordDirection(recordOrFields) {
+  const f = recordOrFields?.fields || recordOrFields || {};
+  const raw = norm(f["Направление"] || f["Тип направления"] || f["Категория"] || "");
+  const hay = norm([f["Услуга"], f["Авто"], f["Пленка"], f["Авто услуги"], f["Марка"], f["Модель"]].join(" "));
+  if (raw.includes("авто") || hay.includes("авто") || hay.includes("лобов") || hay.includes("фар") || hay.includes("полиурет") || hay.includes("керамик") || hay.includes("атерм")) return "auto";
+  return "architecture";
+}
+function workspaceRecords(list) {
+  if (currentWorkspace === "all") return list;
+  return list.filter((r) => recordDirection(r) === currentWorkspace);
+}
+
 async function login(password) {
   els.loginMessage.textContent = "";
   if (!password) { els.loginMessage.textContent = "Введите пароль"; return; }
+  const account = accountFromPassword(password);
   try {
     const response = await fetch("/list-zayavki", { headers: { "x-admin-password": password } });
     const data = await response.json();
     if (!response.ok || !data.ok) { els.loginMessage.textContent = data.error || "Неверный пароль"; return showLogin(); }
     localStorage.setItem(storage.password, password);
+    if (account) { currentUser = account; localStorage.setItem(storage.userName, account.name); }
+    else { currentUser = { name: "Администратор", role: "admin" }; localStorage.setItem(storage.userName, currentUser.name); }
     records = data.records || [];
     await loadFiles(true);
     await loadSmsQueue(true);
     showApp();
+    setSection("calendar");
     renderAll();
   } catch (error) {
     els.loginMessage.textContent = "Ошибка входа: " + error.message;
@@ -236,7 +276,7 @@ async function login(password) {
   }
 }
 
-function showApp() { document.body.classList.remove("logged-out"); document.body.classList.add("logged-in"); els.loginPanel.style.display = "none"; els.appPanel.style.display = "block"; }
+function showApp() { document.body.classList.remove("logged-out"); document.body.classList.add("logged-in"); els.loginPanel.style.display = "none"; els.appPanel.style.display = "block"; updateWorkspaceUI(); }
 function showLogin() { document.body.classList.remove("logged-in"); document.body.classList.add("logged-out"); els.appPanel.style.display = "none"; els.loginPanel.style.display = "block"; }
 function pwd() { return localStorage.getItem(storage.password) || ""; }
 
@@ -286,7 +326,7 @@ function filtered(includeTrash = false) {
   const installer = els.installerFilter.value;
   const from = els.dateFrom.value;
   const to = els.dateTo.value;
-  const base = includeTrash ? records : activeRecords();
+  const base = workspaceRecords(includeTrash ? records : activeRecords());
 
   return base.filter((r) => {
     const f = r.fields || {};
@@ -305,7 +345,7 @@ function sortByDateDesc(a, b) { const af = a.fields || {}, bf = b.fields || {}; 
 
 function renderAll() { render(); renderClients(); renderObjects(); renderInstallers(); renderInstallerDetails(); renderTrash(); renderFiles(); renderHistorySection(); renderCalendarImport(); renderSmsQueue(); renderGlobalSearch(false); }
 function render() { const arr = filtered(false); els.requestsBody.innerHTML = arr.map(requestRow).join("") || '<tr><td colspan="10">Нет заявок</td></tr>'; bindActionButtons(); renderCalendar(arr); renderStats(records, arr); }
-function requestRow(r) { const f = r.fields || {}, status = e(f["Статус"] || ""); return `<tr class="clickable-row" data-open-row="${e(r.id)}"><td>${e(f["Дата записи"])}</td><td>${e(f["Время записи"])}</td><td><b>${e(f["Имя клиента"])}</b></td><td>${e(f["Компания"] || "—")}</td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Услуга"])}</td><td>${e(f["Адрес"])}</td><td>${e(f["Итоговый м2"] || f["м2"])}</td><td>${e(f["Монтажники"])}</td><td class="status-cell"><span class="status" data-status="${status}">${status || "—"}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`; }
+function requestRow(r) { const f = r.fields || {}, status = e(f["Статус"] || ""), dir = recordDirection(r); return `<tr class="clickable-row direction-${dir}" data-open-row="${e(r.id)}"><td>${e(f["Дата записи"])}</td><td>${e(f["Время записи"])}</td><td><span class="direction-dot direction-${dir}"></span><b>${e(f["Имя клиента"])}</b></td><td>${e(f["Компания"] || "—")}</td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Услуга"])}</td><td>${e(f["Адрес"])}</td><td>${e(f["Итоговый м2"] || f["м2"])}</td><td>${e(f["Монтажники"])}</td><td class="status-cell"><span class="status" data-status="${status}">${status || "—"}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`; }
 
 function renderCalendar(arr) {
   if (!els.calendarGrid || !els.monthTitle) return;
@@ -326,7 +366,7 @@ function renderCalendar(arr) {
     const d = String((r.fields || {})["Дата записи"] || "").slice(0, 10);
     return d >= monthStart && d <= monthEnd;
   }).length;
-  if (els.calendarMonthSummary) els.calendarMonthSummary.textContent = `${monthEventsCount} ${plural(monthEventsCount, "событие", "события", "событий")} в месяце`;
+  if (els.calendarMonthSummary) els.calendarMonthSummary.textContent = `${WORKSPACES[currentWorkspace] || "Архитектура"}: ${monthEventsCount} ${plural(monthEventsCount, "событие", "события", "событий")} в месяце`;
 
   if (!selectedCalendarDate || selectedCalendarDate < monthStart || selectedCalendarDate > monthEnd) {
     selectedCalendarDate = todayStr >= monthStart && todayStr <= monthEnd ? todayStr : monthStart;
@@ -357,7 +397,8 @@ function calendarMonthEventButton(record) {
   const name = f["Имя клиента"] || f["Компания"] || "Без клиента";
   const time = f["Время записи"] || "";
   const status = f["Статус"] || "";
-  return `<button class="event calendar-event-chip" type="button" data-open="${e(record.id)}" title="${e([time, name, f["Услуга"], f["Адрес"]].filter(Boolean).join(" — "))}"><span>${e(time || "—")}</span><b>${e(name)}</b>${status ? `<small>${e(status)}</small>` : ""}</button>`;
+  const dir = recordDirection(record);
+  return `<button class="event calendar-event-chip direction-${dir}" type="button" data-open="${e(record.id)}" title="${e([time, name, f["Услуга"], f["Адрес"]].filter(Boolean).join(" — "))}"><span>${e(time || "—")}</span><b>${e(name)}</b>${status ? `<small>${e(status)}</small>` : ""}</button>`;
 }
 
 function bindCalendarMonthButtons() {
@@ -388,7 +429,8 @@ function renderCalendarSelectedDay(items) {
 function calendarAgendaItemHtml(record) {
   const f = record.fields || {};
   const status = e(f["Статус"] || "");
-  return `<article class="calendar-agenda-item" data-open="${e(record.id)}">
+  const dir = recordDirection(record);
+  return `<article class="calendar-agenda-item direction-${dir}" data-open="${e(record.id)}">
     <div class="calendar-agenda-time"><b>${e(f["Время записи"] || "—")}</b><span class="status" data-status="${status}">${status || "—"}</span></div>
     <div class="calendar-agenda-content">
       <h4>${e(f["Имя клиента"] || "Без клиента")}${f["Компания"] ? ` · ${e(f["Компания"])}` : ""}</h4>
@@ -415,7 +457,7 @@ function plural(n, one, few, many) {
   return many;
 }
 
-function renderStats(all, arr) { const t = today(); const active = activeRecords(); els.statTotal.textContent = active.length; els.statNew.textContent = active.filter((r) => (r.fields || {})["Статус"] === "Новая заявка").length; els.statToday.textContent = active.filter((r) => (r.fields || {})["Дата записи"] === t).length; els.statWork.textContent = active.filter((r) => (r.fields || {})["Статус"] === "В работе").length; els.statFiltered.textContent = arr.length; els.statVolume.textContent = moneyNumber(arr.reduce((s, r) => s + getM2(r.fields || {}), 0)); }
+function renderStats(all, arr) { const t = today(); const active = workspaceRecords(activeRecords()); els.statTotal.textContent = active.length; els.statNew.textContent = active.filter((r) => (r.fields || {})["Статус"] === "Новая заявка").length; els.statToday.textContent = active.filter((r) => (r.fields || {})["Дата записи"] === t).length; els.statWork.textContent = active.filter((r) => (r.fields || {})["Статус"] === "В работе").length; els.statFiltered.textContent = arr.length; els.statVolume.textContent = moneyNumber(arr.reduce((s, r) => s + getM2(r.fields || {}), 0)); }
 function bindActionButtons() {
   document.querySelectorAll("[data-open]").forEach((button) => button.onclick = () => openRequest(button.dataset.open));
   document.querySelectorAll("[data-open-client]").forEach((button) => button.onclick = () => openClientCard(button.dataset.openClient));
@@ -429,18 +471,68 @@ function bindActionButtons() {
 }
 
 
+function parseAutoServices(value, total = "", serviceName = "") {
+  if (Array.isArray(value)) return value;
+  try { const arr = JSON.parse(value || "[]"); if (Array.isArray(arr)) return arr; } catch (_) {}
+  if (serviceName || total) return [{ name: serviceName || "Услуга", price: total || "" }];
+  return [{ name: "", price: "" }];
+}
+function autoServicesTotal(list) {
+  return (list || []).reduce((sum, item) => sum + (parseFloat(String(item.price || "").replace(",", ".")) || 0), 0);
+}
+function autoServiceContainer(prefix) { return prefix === "quick" ? els.quickAutoServices : els.editAutoServices; }
+function renderAutoServiceRows(prefix, list = null) {
+  const box = autoServiceContainer(prefix);
+  if (!box) return;
+  const arr = list && list.length ? list : [{ name: "", price: "" }];
+  box.innerHTML = arr.map((item, i) => `<div class="auto-service-row" data-auto-service-row><input class="auto-service-name" placeholder="Название услуги" value="${e(item.name || "")}" /><input class="auto-service-price" type="number" step="1" placeholder="Сумма" value="${e(item.price || "")}" /><button type="button" class="ghost-small" data-auto-service-remove>×</button></div>`).join("");
+  box.querySelectorAll("input").forEach((input) => input.addEventListener("input", () => updateAutoTotal(prefix)));
+  box.querySelectorAll("[data-auto-service-remove]").forEach((btn) => btn.addEventListener("click", () => { btn.closest("[data-auto-service-row]")?.remove(); updateAutoTotal(prefix); }));
+  updateAutoTotal(prefix);
+}
+function addAutoServiceRow(prefix) {
+  const list = collectAutoServices(prefix);
+  list.push({ name: "", price: "" });
+  renderAutoServiceRows(prefix, list);
+}
+function collectAutoServices(prefix) {
+  const box = autoServiceContainer(prefix);
+  if (!box) return [];
+  return [...box.querySelectorAll("[data-auto-service-row]")].map((row) => ({ name: row.querySelector(".auto-service-name")?.value.trim() || "", price: row.querySelector(".auto-service-price")?.value || "" })).filter((x) => x.name || x.price);
+}
+function updateAutoTotal(prefix) {
+  const total = autoServicesTotal(collectAutoServices(prefix));
+  const target = prefix === "quick" ? els.quickAutoTotal : els.editAutoTotal;
+  if (target) target.textContent = money(total) + " ₽";
+}
+function updateQuickDirectionUI() {
+  const isAuto = (els.quickDirection?.value || currentWorkspace) === "auto";
+  if (els.quickAutoFields) els.quickAutoFields.style.display = isAuto ? "block" : "none";
+  if (isAuto && els.quickAutoServices && !els.quickAutoServices.children.length) renderAutoServiceRows("quick");
+}
+function updateEditDirectionUI() {
+  const isAuto = (els.editDirection?.value || "architecture") === "auto";
+  if (els.editAutoFields) els.editAutoFields.style.display = isAuto ? "block" : "none";
+  if (isAuto && els.editAutoServices && !els.editAutoServices.children.length) renderAutoServiceRows("edit");
+}
+
 function openRequest(id) {
   current = records.find((r) => String(r.id) === String(id));
   if (!current) return;
   const f = current.fields || {};
   els.dialogTitle.textContent = "Заявка #" + current.id;
-  els.requestInfo.innerHTML = `<b>${e(f["Имя клиента"] || "—")}</b>${f["Компания"] ? `<br><b>Компания:</b> ${e(f["Компания"])}` : ""}<br>${phoneLink(f["Телефон"])}<br>${e(f["Дата записи"] || "")} ${e(f["Время записи"] || "")}<br>${e(f["Услуга"] || "")}<br>${e(f["Адрес"] || "")}<br><br>${nl2br(f["Комментарий клиента"] || f["Комментарий"] || "")}`;
+  els.requestInfo.innerHTML = `<b>${e(f["Имя клиента"] || "—")}</b>${f["Компания"] ? `<br><b>Компания:</b> ${e(f["Компания"])}` : ""}<br>${phoneLink(f["Телефон"])}<br>${e(f["Дата записи"] || "")} ${e(f["Время записи"] || "")}<br>${e(f["Услуга"] || "")}<br>${recordDirection(current)==="auto" ? `<b>Авто:</b> ${e(f["Авто"]||"—")}<br><b>Плёнка:</b> ${e(f["Пленка"]||"—")}<br><b>Стоимость:</b> ${e(f["Общая стоимость"]||"0")} ₽<br>` : ""}${e(f["Адрес"] || "")}<br><br>${nl2br(f["Комментарий клиента"] || f["Комментарий"] || "")}`;
   els.editDate.value = f["Дата записи"] || "";
   els.editTime.value = f["Время записи"] || "";
   els.editStatus.value = f["Статус"] || "Новая заявка";
   els.editM2.value = f["Итоговый м2"] || f["м2"] || "";
   els.editResponsible.value = f["Ответственный"] || "";
   if (els.editCompany) els.editCompany.value = f["Компания"] || "";
+  if (els.editDirection) els.editDirection.value = recordDirection(current);
+  if (els.editAuto) els.editAuto.value = f["Авто"] || "";
+  if (els.editFilm) els.editFilm.value = f["Пленка"] || "";
+  renderAutoServiceRows("edit", parseAutoServices(f["Авто услуги"], f["Общая стоимость"], f["Услуга"]));
+  updateEditDirectionUI();
   els.editService.value = f["Услуга"] || "";
   els.editAddress.value = f["Адрес"] || "";
   els.editAdminComment.value = f["Комментарий администратора"] || "";
@@ -456,7 +548,10 @@ function openRequest(id) {
 }
 
 function currentEditFields() {
-  return {
+  const direction = els.editDirection?.value || recordDirection(current);
+  const autoServices = collectAutoServices("edit");
+  const fields = {
+    "Направление": direction === "auto" ? "Авто" : "Архитектура",
     "Дата записи": els.editDate.value,
     "Время записи": els.editTime.value,
     "Статус": els.editStatus.value,
@@ -468,6 +563,13 @@ function currentEditFields() {
     "Комментарий администратора": els.editAdminComment.value.trim(),
     "Монтажники": [...document.querySelectorAll('[name="installer"]:checked')].map((x) => x.value).join(", ")
   };
+  if (direction === "auto") {
+    fields["Авто"] = els.editAuto?.value.trim() || "";
+    fields["Пленка"] = els.editFilm?.value.trim() || "";
+    fields["Авто услуги"] = JSON.stringify(autoServices);
+    fields["Общая стоимость"] = String(autoServicesTotal(autoServices));
+  }
+  return fields;
 }
 async function saveRequest() {
   if (!current) return;
@@ -706,12 +808,18 @@ function openQuickAdd(prefill = null) {
   els.quickAddress.value = prefill?.address || "";
   els.quickComment.value = prefill?.comment || "";
   els.quickM2.value = prefill?.m2 || "";
+  if (els.quickDirection) els.quickDirection.value = prefill?.direction || (currentWorkspace === "auto" ? "auto" : "architecture");
+  renderAutoServiceRows("quick", [{ name: els.quickService?.value || "", price: "" }]);
+  updateQuickDirectionUI();
   els.quickAddDialog.showModal();
 }
 async function saveQuickAdd() {
   const syncGoogle = Boolean(els.quickGoogleSync?.checked);
   const calendarId = quickCalendarEvent?.id ? "gcal-" + quickCalendarEvent.id : "manual-" + Date.now();
-  const record = { "Имя клиента": els.quickName.value.trim(), "Компания": els.quickCompany?.value.trim() || "", "Телефон": formatRussianPhone(els.quickPhone.value), "Услуга": els.quickService.value, "Дата записи": els.quickDate.value, "Время записи": els.quickTime.value, "Адрес": els.quickAddress.value.trim(), "м2": els.quickM2.value ? String(els.quickM2.value) : "", "Комментарий клиента": els.quickComment.value.trim(), "Статус": "Новая заявка", "Cal Booking ID": calendarId };
+  const direction = els.quickDirection?.value || currentWorkspace || "architecture";
+    const autoServices = collectAutoServices("quick");
+    const record = { "Направление": direction === "auto" ? "Авто" : "Архитектура", "Имя клиента": els.quickName.value.trim(), "Компания": els.quickCompany?.value.trim() || "", "Телефон": formatRussianPhone(els.quickPhone.value), "Услуга": els.quickService.value, "Дата записи": els.quickDate.value, "Время записи": els.quickTime.value, "Адрес": els.quickAddress.value.trim(), "м2": els.quickM2.value ? String(els.quickM2.value) : "", "Комментарий клиента": els.quickComment.value.trim(), "Статус": "Новая заявка", "Cal Booking ID": calendarId };
+    if (direction === "auto") { record["Авто"] = els.quickAuto?.value.trim() || ""; record["Пленка"] = els.quickFilm?.value.trim() || ""; record["Авто услуги"] = JSON.stringify(autoServices); record["Общая стоимость"] = String(autoServicesTotal(autoServices)); }
   if (!record["Имя клиента"] || !record["Телефон"] || !record["Дата записи"] || !record["Время записи"]) { msg("Заполните ФИО, телефон, дату и время"); return; }
   try {
     const response = await fetch("/create-zayavka", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pwd() }, body: JSON.stringify({ fields: record }) });

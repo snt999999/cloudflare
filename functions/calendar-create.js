@@ -4,11 +4,16 @@ function json(body, status = 200) {
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }
   });
 }
+function allowedPasswords(env) {
+  const builtin = ["sergey41", "roman41", "nikitaK41", "dima41", "nikitaP41", "andrey41"];
+  const extra = String(env.USER_PASSWORDS || "").split(/[;,\n]/).map((x) => x.trim()).filter(Boolean);
+  if (env.ADMIN_PASSWORD) builtin.push(String(env.ADMIN_PASSWORD));
+  return new Set([...builtin, ...extra]);
+}
 function checkAdmin(request, env) {
-  const required = env.ADMIN_PASSWORD;
-  if (!required) return { ok: false, status: 500, body: { ok: false, error: "ADMIN_PASSWORD is not set" } };
   const provided = (request.headers.get("x-admin-password") || "").trim();
-  if (provided !== required) return { ok: false, status: 401, body: { ok: false, error: "Неверный пароль администратора" } };
+  if (!provided) return { ok: false, status: 401, body: { ok: false, error: "Не передан пароль" } };
+  if (!allowedPasswords(env).has(provided)) return { ok: false, status: 401, body: { ok: false, error: "Неверный пароль" } };
   return { ok: true };
 }
 function parseJson(text) { try { return JSON.parse(text); } catch (_) { return null; } }
