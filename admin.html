@@ -6,7 +6,7 @@
   <title>Админ-панель — СОЛНЦАНЕТ</title>
 
   <link rel="manifest" href="/manifest.webmanifest" />
-  <meta name="theme-color" content="#e71630" />
+  <meta name="theme-color" content="#111827" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="СОЛНЦАНЕТ" />
@@ -28,6 +28,7 @@
       <a href="#installers" data-section="installers">Монтажники</a>
       <a href="#trash" data-section="trash">Корзина отмен</a>
       <a href="#history" data-section="history">История</a>
+      <a href="#activity" data-section="activity">Активность</a>
       <a href="#sms" data-section="sms">Уведомления</a>
       <a href="#files" data-section="files">Файлы</a>
       <a href="#reports" data-section="reports">Отчёты</a>
@@ -51,7 +52,7 @@
     <section id="appPanel" style="display:none">
       <section class="admin-topbar" id="adminTopbar">
         <div class="topbar-left">
-          <button id="topQuickAddBtn" class="btn-green" type="button">+ Быстрая запись</button>
+          <button id="topQuickAddBtn" class="primary" type="button">+ Быстрая запись</button>
           <button id="topRefreshBtn" type="button">Обновить</button>
         </div>
         <div class="global-search-wrap">
@@ -71,7 +72,7 @@
             <h1>Заявки</h1>
           </div>
           <div class="actions">
-            <button id="quickAddBtn" class="btn-green" type="button">+ Быстрая запись</button>
+            <button id="quickAddBtn" class="primary" type="button">+ Быстрая запись</button>
             <button id="listBtn" class="active" type="button">Список</button>
             <button id="calendarBtn" type="button">Календарь</button>
             <button id="exportBtn" type="button">Экспорт / Отчёты</button>
@@ -143,7 +144,7 @@
             <button id="nextMonth" type="button" aria-label="Следующий месяц">→</button>
           </div>
           <div class="calendar-month-tools">
-            <button id="calendarTodayBtn" class="btn-green" type="button">Сегодня</button>
+            <button id="calendarTodayBtn" class="primary" type="button">Сегодня</button>
             
           </div>
           <div class="weekdays calendar-weekdays"><b>Пн</b><b>Вт</b><b>Ср</b><b>Чт</b><b>Пт</b><b>Сб</b><b>Вс</b></div>
@@ -168,7 +169,7 @@
           </div>
           <div class="actions">
             <button id="calendarImportCheckBtn" type="button">Проверить подключение</button>
-            <button id="calendarImportLoadBtn" class="btn-green" type="button">Загрузить события</button>
+            <button id="calendarImportLoadBtn" class="primary" type="button">Загрузить события</button>
           </div>
         </header>
 
@@ -353,6 +354,14 @@
         </section>
       </section>
 
+
+      <section id="activitySection" class="workspace-section" style="display:none">
+        <header class="admin-head"><div><h1>Активность</h1></div></header>
+        <section class="card activity-card">
+          <div id="activityBody" class="activity-body"></div>
+        </section>
+      </section>
+
       <section id="settingsSection" class="workspace-section" style="display:none">
         <header class="admin-head"><div><h1>Настройки</h1></div></header>
         <section class="settings-grid">
@@ -370,7 +379,7 @@
   <dialog id="requestDialog" class="wide-dialog">
     <form method="dialog">
       <button class="close" value="cancel">×</button>
-      <h2 id="dialogTitle">Заявка</h2>
+      <div class="dialog-title-row"><h2 id="dialogTitle">Заявка</h2><span id="requestAutosaveStatus" class="autosave-status">Все изменения сохранены</span></div>
       <div class="request-info" id="requestInfo"></div>
       <div class="dialog-grid">
         <label>Дата записи<input id="editDate" type="date" /></label>
@@ -390,6 +399,7 @@
       <section class="files-box google-calendar-box"><h3>Google Календарь</h3><div id="requestGoogleCalendarBox" class="google-calendar-status-box"></div><div class="dialog-actions"><button id="requestGoogleCreateBtn" type="button">Создать / обновить событие</button><a id="requestGoogleOpenLink" class="dialog-link-button ghost-link" href="#" target="_blank" rel="noopener" hidden>Открыть в Google</a></div><p id="requestGoogleStatus" class="muted-text"></p></section>
       <section class="files-box notification-box"><h3>Уведомление клиенту</h3><div class="dialog-grid"><label>Шаблон<select id="notifyTemplate"><option value="confirm">Запись подтверждена</option><option value="reminder">Напоминание о записи</option><option value="reschedule">Перенос записи</option><option value="cancel">Отмена записи</option><option value="done">Работы выполнены</option><option value="review">Просьба оставить отзыв</option><option value="custom">Свой текст</option></select></label><label>Канал<select id="notifyChannel"><option value="sms">SMS клиенту</option><option value="telegram">Telegram администратору</option></select></label><label class="wide">Текст сообщения<textarea id="notifyMessage" placeholder="Текст уведомления"></textarea></label></div><div class="dialog-actions"><button id="sendNotifyBtn" type="button">Отправить сейчас</button><button id="copyNotifyBtn" type="button" class="ghost">Скопировать</button></div><p id="requestNotifyStatus" class="muted-text"></p></section>
       <section class="files-box notification-box"><h3>Авто-SMS</h3><div class="dialog-grid"><label>Шаблон<select id="scheduleSmsTemplate"><option value="confirm">Запись подтверждена</option><option value="reminder">Напоминание о записи</option><option value="reschedule">Перенос записи</option><option value="cancel">Отмена записи</option><option value="done">Работы выполнены</option><option value="review">Просьба оставить отзыв</option><option value="custom">Свой текст</option></select></label><label>Дата отправки<input id="scheduleSmsDate" type="date" /></label><label>Время отправки<input id="scheduleSmsTime" type="time" /></label><label class="wide">Текст SMS<textarea id="scheduleSmsMessage" placeholder="Текст SMS"></textarea></label></div><div class="dialog-actions"><button id="scheduleSmsBtn" type="button">Запланировать SMS</button><button id="scheduleDefaultSmsBtn" type="button" class="ghost">Создать напоминания за 24 часа и за 2 часа</button></div><p id="scheduleSmsStatus" class="muted-text"></p></section>
+      <section class="files-box"><h3>Комментарии</h3><div id="requestCommentsBox" class="comments-box"></div><div class="comment-add-row"><textarea id="requestCommentText" placeholder="Добавить комментарий по заявке"></textarea><button id="addRequestCommentBtn" type="button" class="ghost">Добавить</button></div></section>
       <section class="files-box"><h3>История этой заявки</h3><div id="requestHistoryBox" class="history-box"></div></section>
       <section class="cancel-box"><h3>Удаление</h3><textarea id="cancelReason" placeholder="Причина удаления"></textarea></section>
       <div class="dialog-actions"><button id="saveRequestBtn" type="button">Сохранить</button><button id="cancelRequestBtn" class="danger" type="button">Удалить</button><button class="ghost" value="cancel">Закрыть</button></div>
@@ -437,7 +447,7 @@
           <p id="clientCardSubtitle" class="muted-text"></p>
         </div>
         <div class="client-card-actions">
-          <button id="clientCardQuickBtn" type="button" class="btn-green">Новая заявка этому клиенту</button>
+          <button id="clientCardQuickBtn" type="button" class="primary">Новая заявка этому клиенту</button>
         </div>
       </div>
       <section class="client-card-stats stats stats-four compact-stats">

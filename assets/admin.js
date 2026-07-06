@@ -23,6 +23,9 @@ let quickCalendarEvent = null;
 let currentClientKey = null;
 let smsQueueCache = [];
 let currentSmsId = null;
+let autosaveTimer = null;
+let autosaveBusy = false;
+let lastAutosaveSnapshot = "";
 
 const storage = {
   password: "solncanet_admin_password_v9",
@@ -31,7 +34,9 @@ const storage = {
   history: "solncanet_history_v9",
   payroll: "solncanet_payroll_settings_v9",
   notificationLog: "solncanet_notification_log_v19",
-  calendarHidden: "solncanet_calendar_hidden_v22"
+  calendarHidden: "solncanet_calendar_hidden_v22",
+  activity: "solncanet_activity_v45",
+  comments: "solncanet_comments_v45"
 };
 
 
@@ -53,7 +58,7 @@ let currentWorkspace = localStorage.getItem(storage.workspace) || "all";
 const els = {
   sidebar: $("sidebar"), mobileMenuBtn: $("mobileMenuBtn"), sidebarCloseBtn: $("sidebarCloseBtn"), sidebarOverlay: $("sidebarOverlay"),
   loginPanel: $("loginPanel"), appPanel: $("appPanel"), loginForm: $("loginForm"), passwordInput: $("passwordInput"), loginMessage: $("loginMessage"), logoutBtn: $("logoutBtn"), refreshBtn: $("refreshBtn"), listBtn: $("listBtn"), calendarBtn: $("calendarBtn"), listView: $("listView"), calendarView: $("calendarView"), requestsBody: $("requestsBody"), calendarGrid: $("calendarGrid"), monthTitle: $("monthTitle"), calendarMonthSummary: $("calendarMonthSummary"), calendarTodayBtn: $("calendarTodayBtn"), calendarDayAgenda: $("calendarDayAgenda"), calendarSelectedDateTitle: $("calendarSelectedDateTitle"), calendarSelectedDateSummary: $("calendarSelectedDateSummary"), calendarSelectedEvents: $("calendarSelectedEvents"), prevMonth: $("prevMonth"), nextMonth: $("nextMonth"), searchInput: $("searchInput"), statusFilter: $("statusFilter"), installerFilter: $("installerFilter"), dateFrom: $("dateFrom"), dateTo: $("dateTo"), clearFiltersBtn: $("clearFiltersBtn"), message: $("message"), statTotal: $("statTotal"), statNew: $("statNew"), statToday: $("statToday"), statWork: $("statWork"), statVolume: $("statVolume"), statFiltered: $("statFiltered"),
-  dialog: $("requestDialog"), dialogTitle: $("dialogTitle"), requestInfo: $("requestInfo"), editDate: $("editDate"), editTime: $("editTime"), editStatus: $("editStatus"), editM2: $("editM2"), editResponsible: $("editResponsible"), editCompany: $("editCompany"), editDirection: $("editDirection"), editAutoFields: $("editAutoFields"), editAuto: $("editAuto"), editFilm: $("editFilm"), editAutoServices: $("editAutoServices"), editAddServiceBtn: $("editAddServiceBtn"), editAutoTotal: $("editAutoTotal"), editService: $("editService"), editAddress: $("editAddress"), editAdminComment: $("editAdminComment"), saveRequestBtn: $("saveRequestBtn"), cancelRequestBtn: $("cancelRequestBtn"), cancelReason: $("cancelReason"), requestHistoryBox: $("requestHistoryBox"), requestGoogleCalendarBox: $("requestGoogleCalendarBox"), requestGoogleCreateBtn: $("requestGoogleCreateBtn"), requestGoogleOpenLink: $("requestGoogleOpenLink"), requestGoogleStatus: $("requestGoogleStatus"), exportBtn: $("exportBtn"),
+  dialog: $("requestDialog"), dialogTitle: $("dialogTitle"), requestInfo: $("requestInfo"), editDate: $("editDate"), editTime: $("editTime"), editStatus: $("editStatus"), editM2: $("editM2"), editResponsible: $("editResponsible"), editCompany: $("editCompany"), editDirection: $("editDirection"), editAutoFields: $("editAutoFields"), editAuto: $("editAuto"), editFilm: $("editFilm"), editAutoServices: $("editAutoServices"), editAddServiceBtn: $("editAddServiceBtn"), editAutoTotal: $("editAutoTotal"), editService: $("editService"), editAddress: $("editAddress"), editAdminComment: $("editAdminComment"), saveRequestBtn: $("saveRequestBtn"), cancelRequestBtn: $("cancelRequestBtn"), cancelReason: $("cancelReason"), requestHistoryBox: $("requestHistoryBox"), requestAutosaveStatus: $("requestAutosaveStatus"), requestCommentsBox: $("requestCommentsBox"), requestCommentText: $("requestCommentText"), addRequestCommentBtn: $("addRequestCommentBtn"), activityBody: $("activityBody"), requestGoogleCalendarBox: $("requestGoogleCalendarBox"), requestGoogleCreateBtn: $("requestGoogleCreateBtn"), requestGoogleOpenLink: $("requestGoogleOpenLink"), requestGoogleStatus: $("requestGoogleStatus"), exportBtn: $("exportBtn"),
   clientsBody: $("clientsBody"), objectsBody: $("objectsBody"), installersBody: $("installersBody"), trashBody: $("trashBody"), historyBody: $("historyBody"), historySearchInput: $("historySearchInput"), clearHistoryLocalBtn: $("clearHistoryLocalBtn"), filesBody: $("filesBody"), filesSearchInput: $("filesSearchInput"), filesTypeFilter: $("filesTypeFilter"),
   quickAddBtn: $("quickAddBtn"), quickAddDialog: $("quickAddDialog"), quickSaveBtn: $("quickSaveBtn"), quickName: $("quickName"), quickCompany: $("quickCompany"), quickPhone: $("quickPhone"), quickClientHint: $("quickClientHint"), quickClientSuggestions: $("quickClientSuggestions"), quickGoogleSync: $("quickGoogleSync"), quickDirection: $("quickDirection"), quickAutoFields: $("quickAutoFields"), quickAuto: $("quickAuto"), quickFilm: $("quickFilm"), quickAutoServices: $("quickAutoServices"), quickAddServiceBtn: $("quickAddServiceBtn"), quickAutoTotal: $("quickAutoTotal"), quickService: $("quickService"), quickDate: $("quickDate"), quickTime: $("quickTime"), quickM2: $("quickM2"), quickAddress: $("quickAddress"), quickComment: $("quickComment"),
   reportDialog: $("reportDialog"), reportTitle: $("reportTitle"), reportDateFrom: $("reportDateFrom"), reportDateTo: $("reportDateTo"), reportStatus: $("reportStatus"), reportFormat: $("reportFormat"), reportAllInstallers: $("reportAllInstallers"), downloadReportBtn: $("downloadReportBtn"), payrollOptions: $("payrollOptions"), payrollSplitMode: $("payrollSplitMode"), payrollStatusMode: $("payrollStatusMode"), payrollSettingsBody: $("payrollSettingsBody"), savePayrollSettingsBtn: $("savePayrollSettingsBtn"), previewPayrollBtn: $("previewPayrollBtn"), reportPreview: $("reportPreview"),
@@ -103,6 +108,8 @@ function init() {
 
   els.clearFiltersBtn.addEventListener("click", clearFilters);
   els.saveRequestBtn.addEventListener("click", saveRequest);
+  initRequestAutosave();
+  if (els.addRequestCommentBtn) els.addRequestCommentBtn.addEventListener("click", addRequestComment);
   if (els.requestGoogleCreateBtn) els.requestGoogleCreateBtn.addEventListener("click", createOrUpdateGoogleCalendarForCurrent);
   els.cancelRequestBtn.addEventListener("click", cancelCurrentRequest);
   els.exportBtn.addEventListener("click", () => setSection("reports"));
@@ -359,7 +366,7 @@ function filtered(includeTrash = false) {
 }
 function sortByDateDesc(a, b) { const af = a.fields || {}, bf = b.fields || {}; return (String(bf["Дата записи"] || "") + " " + String(bf["Время записи"] || "")).localeCompare(String(af["Дата записи"] || "") + " " + String(af["Время записи"] || "")); }
 
-function renderAll() { render(); renderClients(); renderObjects(); renderInstallers(); renderInstallerDetails(); renderTrash(); renderFiles(); renderHistorySection(); renderCalendarImport(); renderSmsQueue(); renderGlobalSearch(false); }
+function renderAll() { render(); renderClients(); renderObjects(); renderInstallers(); renderInstallerDetails(); renderTrash(); renderFiles(); renderHistorySection(); renderCalendarImport(); renderSmsQueue(); renderActivity(); renderGlobalSearch(false); }
 function render() { const arr = filtered(false); els.requestsBody.innerHTML = arr.map(requestRow).join("") || '<tr><td colspan="10">Нет заявок</td></tr>'; bindActionButtons(); renderCalendar(arr); renderStats(records, arr); }
 function requestRow(r) { const f = r.fields || {}, status = e(f["Статус"] || ""), dir = recordDirection(r); return `<tr class="clickable-row direction-${dir}" data-open-row="${e(r.id)}"><td>${e(f["Дата записи"])}</td><td>${e(f["Время записи"])}</td><td><span class="direction-dot direction-${dir}"></span><b>${e(f["Имя клиента"])}</b></td><td>${e(f["Компания"] || "—")}</td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Услуга"])}</td><td>${e(f["Адрес"])}</td><td>${e(f["Итоговый м2"] || f["м2"])}</td><td>${e(f["Монтажники"])}</td><td class="status-cell"><span class="status" data-status="${status}">${status || "—"}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`; }
 
@@ -557,6 +564,9 @@ function openRequest(id) {
   document.querySelectorAll('[name="installer"]').forEach((c) => c.checked = names.includes(c.value));
   renderRequestFiles(current.id);
   renderRequestHistory(current);
+  renderRequestComments(current);
+  lastAutosaveSnapshot = JSON.stringify(currentEditFields());
+  setAutosaveStatus("Все изменения сохранены");
   updateRequestNotificationEditor();
   updateScheduleSmsEditor();
   renderRequestGoogleCalendar(current);
@@ -652,7 +662,7 @@ async function restoreRequest(id) {
   await updateRecord(id, { "Статус": "Новая заявка", "Удалено": false, "Дата удаления": "", "Дата отмены": "", "Причина отмены": "", "История изменений": JSON.stringify(history) }, "Заявка восстановлена");
   renderAll();
 }
-async function updateRecord(id, fields, successText) {
+async function updateRecord(id, fields, successText, options = {}) {
   try {
     const response = await fetch("/update-zayavka", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pwd() }, body: JSON.stringify({ id, fields }) });
     const data = await response.json();
@@ -665,9 +675,94 @@ async function updateRecord(id, fields, successText) {
       if (current && String(current.id) === String(id)) current = records[idx];
     }
 
-    if (data.warning) msg(successText + ". " + data.warning); else msg(successText);
+    if (!options.silent) { if (data.warning) msg(successText + ". " + data.warning); else msg(successText); }
     return data;
   } catch (error) { msg(error.message); throw error; }
+}
+
+
+function currentUserName() {
+  return currentUser?.name || localStorage.getItem(storage.userName) || "Сотрудник";
+}
+function setAutosaveStatus(text) {
+  if (els.requestAutosaveStatus) els.requestAutosaveStatus.textContent = text || "";
+}
+function initRequestAutosave() {
+  const targets = [els.editDate, els.editTime, els.editStatus, els.editM2, els.editResponsible, els.editCompany, els.editDirection, els.editAuto, els.editFilm, els.editService, els.editAddress, els.editAdminComment, els.editAutoServices];
+  targets.forEach((el) => {
+    if (!el) return;
+    el.addEventListener("input", scheduleRequestAutosave);
+    el.addEventListener("change", scheduleRequestAutosave);
+  });
+  document.querySelectorAll('[name="installer"]').forEach((el) => el.addEventListener("change", scheduleRequestAutosave));
+}
+function scheduleRequestAutosave() {
+  if (!current || !els.dialog?.open) return;
+  setAutosaveStatus("Сохраняю…");
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(runRequestAutosave, 900);
+}
+async function runRequestAutosave() {
+  if (!current || autosaveBusy || !els.dialog?.open) return;
+  const fields = currentEditFields();
+  const snapshot = JSON.stringify(fields);
+  if (snapshot === lastAutosaveSnapshot) { setAutosaveStatus("Все изменения сохранены"); return; }
+  autosaveBusy = true;
+  try {
+    const oldFields = current.fields || {};
+    const changes = diffFields(oldFields, fields);
+    let history = getHistoryForRecord(current);
+    if (changes.length) history = addHistory(current, "Автосохранение", changes.join("; "), history);
+    fields["История изменений"] = JSON.stringify(history);
+    await updateRecord(current.id, fields, "Автосохранено", { silent: true });
+    lastAutosaveSnapshot = JSON.stringify(currentEditFields());
+    setAutosaveStatus("Сохранено автоматически");
+    renderAll();
+  } catch (error) {
+    setAutosaveStatus("Ошибка автосохранения");
+  } finally {
+    autosaveBusy = false;
+  }
+}
+function getCommentsForRecord(record) {
+  const f = record?.fields || {};
+  let comments = [];
+  try { comments = JSON.parse(f["Комментарии"] || "[]"); } catch (_) { comments = []; }
+  const local = getLocalComments()[String(record?.id)] || [];
+  return [...comments, ...local].filter(Boolean).sort((a,b)=>String(b.at||"").localeCompare(String(a.at||""))).slice(0,200);
+}
+function getLocalComments() { try { return JSON.parse(localStorage.getItem(storage.comments) || "{}"); } catch (_) { return {}; } }
+function saveLocalComment(id, comment) { const all = getLocalComments(); all[String(id)] ||= []; all[String(id)].unshift(comment); localStorage.setItem(storage.comments, JSON.stringify(all)); }
+function renderRequestComments(record) {
+  if (!els.requestCommentsBox) return;
+  const list = getCommentsForRecord(record);
+  els.requestCommentsBox.innerHTML = list.length ? list.map((c)=>`<div class="comment-item"><b>${e(c.author||"Сотрудник")}</b><span>${e(c.at||"")}</span><p>${nl2br(c.text||"")}</p></div>`).join("") : '<p class="muted-text">Комментариев пока нет.</p>';
+}
+async function addRequestComment() {
+  if (!current || !els.requestCommentText) return;
+  const text = els.requestCommentText.value.trim();
+  if (!text) return;
+  const comment = { at: dateTimeY(), author: currentUserName(), text };
+  const comments = getCommentsForRecord(current).filter((c)=>!c.localOnly);
+  const next = [comment, ...comments].slice(0,200);
+  let history = getHistoryForRecord(current);
+  history = addHistory(current, "Комментарий", text, history);
+  try {
+    await updateRecord(current.id, { "Комментарии": JSON.stringify(next), "История изменений": JSON.stringify(history) }, "Комментарий добавлен");
+  } catch (_) {
+    saveLocalComment(current.id, { ...comment, localOnly: true });
+  }
+  els.requestCommentText.value = "";
+  renderRequestComments(current);
+  renderRequestHistory(current);
+  renderActivity();
+}
+function getActivity() { try { return JSON.parse(localStorage.getItem(storage.activity) || "[]"); } catch (_) { return []; } }
+function saveActivity(entry) { const list = getActivity(); list.unshift(entry); localStorage.setItem(storage.activity, JSON.stringify(list.slice(0,300))); }
+function renderActivity() {
+  if (!els.activityBody) return;
+  const rows = getActivity();
+  els.activityBody.innerHTML = rows.length ? rows.map((a)=>`<div class="activity-item"><div><b>${e(a.action||"")}</b><p>${e(a.details||"")}</p></div><span>${e(a.user||"")} · ${e(a.at||"")}</span></div>`).join("") : '<p class="muted-text">Активность появится после изменений в заявках.</p>';
 }
 
 
@@ -1137,11 +1232,11 @@ function getHistoryForRecord(record) {
   merged.forEach((item) => byKey.set([item.at, item.action, item.details].join("|"), item));
   return [...byKey.values()].sort((a, b) => String(b.at).localeCompare(String(a.at)));
 }
-function addHistory(record, action, details, currentHistory = null) { const history = currentHistory || getHistoryForRecord(record); const entry = { at: dateTimeY(), id: String(record.id), client: (record.fields || {})["Имя клиента"] || "", phone: (record.fields || {})["Телефон"] || "", action, details }; saveLocalHistory(record.id, entry); return [entry, ...history].slice(0, 200); }
+function addHistory(record, action, details, currentHistory = null) { const history = currentHistory || getHistoryForRecord(record); const entry = { at: dateTimeY(), id: String(record.id), user: currentUserName(), client: (record.fields || {})["Имя клиента"] || "", phone: (record.fields || {})["Телефон"] || "", action, details }; saveLocalHistory(record.id, entry); saveActivity({ at: entry.at, user: entry.user, action, details: `${entry.client || "Заявка #" + entry.id}: ${details || ""}`, id: entry.id }); return [entry, ...history].slice(0, 200); }
 function saveLocalHistory(id, entry) { const all = getLocalHistory(); all[String(id)] ||= []; all[String(id)].unshift(entry); all[String(id)] = all[String(id)].slice(0, 200); localStorage.setItem(storage.history, JSON.stringify(all)); }
 function getLocalHistory() { try { return JSON.parse(localStorage.getItem(storage.history) || "{}"); } catch (_) { return {}; } }
 function parseHistoryField(value) { if (!value) return []; if (Array.isArray(value)) return value; try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch (_) { return String(value).split("\n").filter(Boolean).map((line) => ({ at: "", action: "Запись", details: line })); } }
-function renderRequestHistory(record) { const history = getHistoryForRecord(record); els.requestHistoryBox.innerHTML = history.length ? history.map((h) => `<div class="history-item"><b>${e(h.at || "—")}</b><span>${e(h.action || "")}</span><p>${e(h.details || "")}</p></div>`).join("") : '<p class="muted-text">Истории изменений пока нет.</p>'; }
+function renderRequestHistory(record) { const history = getHistoryForRecord(record); els.requestHistoryBox.innerHTML = history.length ? history.map((h) => `<div class="history-item"><b>${e(h.at || "—")}</b><span>${e(h.action || "")} · ${e(h.user || "")}</span><p>${e(h.details || "")}</p></div>`).join("") : '<p class="muted-text">Истории изменений пока нет.</p>'; }
 function renderHistorySection() { const q = norm(els.historySearchInput?.value || ""); const rows = []; records.forEach((r) => getHistoryForRecord(r).forEach((h) => rows.push({ record: r, h }))); rows.sort((a, b) => String(b.h.at).localeCompare(String(a.h.at))); const filteredRows = rows.filter(({ record, h }) => { const f = record.fields || {}; const hay = norm([h.at, h.action, h.details, record.id, f["Имя клиента"], f["Телефон"]].join(" ")); return !q || hay.includes(q); }); els.historyBody.innerHTML = filteredRows.map(({ record, h }) => `<tr class="clickable-row" data-open-row="${e(record.id)}"><td>${e(h.at || "—")}</td><td>#${e(record.id)}</td><td>${e((record.fields || {})["Имя клиента"] || h.client || "—")}</td><td><b>${e(h.action || "")}</b></td><td>${e(h.details || "")}</td><td><button class="open-btn" data-open="${e(record.id)}">Открыть</button></td></tr>`).join("") || '<tr><td colspan="6">Истории пока нет</td></tr>'; bindActionButtons(); }
 function clearLocalHistory() { if (!confirm("Очистить локальную историю изменений в этом браузере? Данные в NocoDB не удаляются.")) return; localStorage.removeItem(storage.history); renderHistorySection(); msg("Локальная история очищена"); }
 
