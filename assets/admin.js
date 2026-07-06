@@ -56,10 +56,13 @@ const APP_ACCOUNTS = [
 let currentWorkspace = localStorage.getItem(storage.workspace) || "all";
 let autoRefreshTimer = null;
 let lastLoadAt = 0;
+let selectedRequestIds = new Set();
+let bulkLastPageIds = [];
+let contextMenuEl = null;
 
 const els = {
   sidebar: $("sidebar"), mobileMenuBtn: $("mobileMenuBtn"), sidebarCloseBtn: $("sidebarCloseBtn"), sidebarOverlay: $("sidebarOverlay"),
-  loginPanel: $("loginPanel"), appPanel: $("appPanel"), loginForm: $("loginForm"), passwordInput: $("passwordInput"), loginMessage: $("loginMessage"), logoutBtn: $("logoutBtn"), refreshBtn: $("refreshBtn"), listBtn: $("listBtn"), calendarBtn: $("calendarBtn"), listView: $("listView"), calendarView: $("calendarView"), requestsBody: $("requestsBody"), calendarGrid: $("calendarGrid"), monthTitle: $("monthTitle"), calendarMonthSummary: $("calendarMonthSummary"), calendarTodayBtn: $("calendarTodayBtn"), calendarDayAgenda: $("calendarDayAgenda"), calendarSelectedDateTitle: $("calendarSelectedDateTitle"), calendarSelectedDateSummary: $("calendarSelectedDateSummary"), calendarSelectedEvents: $("calendarSelectedEvents"), prevMonth: $("prevMonth"), nextMonth: $("nextMonth"), searchInput: $("searchInput"), statusFilter: $("statusFilter"), installerFilter: $("installerFilter"), dateFrom: $("dateFrom"), dateTo: $("dateTo"), clearFiltersBtn: $("clearFiltersBtn"), message: $("message"), statTotal: $("statTotal"), statNew: $("statNew"), statToday: $("statToday"), statWork: $("statWork"), statVolume: $("statVolume"), statFiltered: $("statFiltered"),
+  loginPanel: $("loginPanel"), appPanel: $("appPanel"), loginForm: $("loginForm"), passwordInput: $("passwordInput"), loginMessage: $("loginMessage"), logoutBtn: $("logoutBtn"), refreshBtn: $("refreshBtn"), listBtn: $("listBtn"), calendarBtn: $("calendarBtn"), listView: $("listView"), calendarView: $("calendarView"), requestsBody: $("requestsBody"), calendarGrid: $("calendarGrid"), monthTitle: $("monthTitle"), calendarMonthSummary: $("calendarMonthSummary"), calendarTodayBtn: $("calendarTodayBtn"), calendarDayAgenda: $("calendarDayAgenda"), calendarSelectedDateTitle: $("calendarSelectedDateTitle"), calendarSelectedDateSummary: $("calendarSelectedDateSummary"), calendarSelectedEvents: $("calendarSelectedEvents"), prevMonth: $("prevMonth"), nextMonth: $("nextMonth"), searchInput: $("searchInput"), statusFilter: $("statusFilter"), installerFilter: $("installerFilter"), dateFrom: $("dateFrom"), dateTo: $("dateTo"), clearFiltersBtn: $("clearFiltersBtn"), message: $("message"), statTotal: $("statTotal"), statNew: $("statNew"), statToday: $("statToday"), statWork: $("statWork"), statVolume: $("statVolume"), statFiltered: $("statFiltered"), bulkToolbar: $("bulkToolbar"), bulkSelectedCount: $("bulkSelectedCount"), bulkSelectAll: $("bulkSelectAll"), bulkDeleteBtn: $("bulkDeleteBtn"), bulkStatusSelect: $("bulkStatusSelect"), bulkApplyStatusBtn: $("bulkApplyStatusBtn"), bulkInstallerSelect: $("bulkInstallerSelect"), bulkApplyInstallerBtn: $("bulkApplyInstallerBtn"), bulkExportBtn: $("bulkExportBtn"),
   dialog: $("requestDialog"), dialogTitle: $("dialogTitle"), requestInfo: $("requestInfo"), editDate: $("editDate"), editTime: $("editTime"), editStatus: $("editStatus"), editM2: $("editM2"), editResponsible: $("editResponsible"), editCompany: $("editCompany"), editDirection: $("editDirection"), editAutoFields: $("editAutoFields"), editAuto: $("editAuto"), editFilm: $("editFilm"), editAutoServices: $("editAutoServices"), editAddServiceBtn: $("editAddServiceBtn"), editAutoTotal: $("editAutoTotal"), editService: $("editService"), editAddress: $("editAddress"), editAdminComment: $("editAdminComment"), saveRequestBtn: $("saveRequestBtn"), cancelRequestBtn: $("cancelRequestBtn"), cancelReason: $("cancelReason"), requestHistoryBox: $("requestHistoryBox"), requestAutosaveStatus: $("requestAutosaveStatus"), requestCommentsBox: $("requestCommentsBox"), requestCommentText: $("requestCommentText"), addRequestCommentBtn: $("addRequestCommentBtn"), activityBody: $("activityBody"), requestGoogleCalendarBox: $("requestGoogleCalendarBox"), requestGoogleCreateBtn: $("requestGoogleCreateBtn"), requestGoogleOpenLink: $("requestGoogleOpenLink"), requestGoogleStatus: $("requestGoogleStatus"), exportBtn: $("exportBtn"),
   clientsBody: $("clientsBody"), objectsBody: $("objectsBody"), installersBody: $("installersBody"), trashBody: $("trashBody"), historyBody: $("historyBody"), historySearchInput: $("historySearchInput"), clearHistoryLocalBtn: $("clearHistoryLocalBtn"), filesBody: $("filesBody"), filesSearchInput: $("filesSearchInput"), filesTypeFilter: $("filesTypeFilter"),
   quickAddBtn: $("quickAddBtn"), quickAddDialog: $("quickAddDialog"), quickSaveBtn: $("quickSaveBtn"), quickName: $("quickName"), quickCompany: $("quickCompany"), quickPhone: $("quickPhone"), quickClientHint: $("quickClientHint"), quickClientSuggestions: $("quickClientSuggestions"), quickGoogleSync: $("quickGoogleSync"), quickDirection: $("quickDirection"), quickAutoFields: $("quickAutoFields"), quickAuto: $("quickAuto"), quickFilm: $("quickFilm"), quickAutoServices: $("quickAutoServices"), quickAddServiceBtn: $("quickAddServiceBtn"), quickAutoTotal: $("quickAutoTotal"), quickService: $("quickService"), quickDate: $("quickDate"), quickTime: $("quickTime"), quickM2: $("quickM2"), quickAddress: $("quickAddress"), quickComment: $("quickComment"),
@@ -101,6 +104,7 @@ function init() {
   if (els.calendarTodayBtn) els.calendarTodayBtn.addEventListener("click", () => { const now = new Date(); cal = new Date(now.getFullYear(), now.getMonth(), 1); selectedCalendarDate = today(); render(); });
   initMobileSidebar();
   initClickableRows();
+  initContextMenu();
   initDialogBackdropClose();
 
   [els.searchInput, els.statusFilter, els.installerFilter, els.dateFrom, els.dateTo].forEach((el) => {
@@ -109,6 +113,11 @@ function init() {
   });
 
   els.clearFiltersBtn.addEventListener("click", clearFilters);
+  if (els.bulkSelectAll) els.bulkSelectAll.addEventListener("change", () => setBulkPageSelection(els.bulkSelectAll.checked));
+  if (els.bulkDeleteBtn) els.bulkDeleteBtn.addEventListener("click", bulkMoveToTrash);
+  if (els.bulkApplyStatusBtn) els.bulkApplyStatusBtn.addEventListener("click", bulkApplyStatus);
+  if (els.bulkApplyInstallerBtn) els.bulkApplyInstallerBtn.addEventListener("click", bulkApplyInstaller);
+  if (els.bulkExportBtn) els.bulkExportBtn.addEventListener("click", bulkExportSelected);
   els.saveRequestBtn.addEventListener("click", saveRequest);
   initRequestAutosave();
   if (els.addRequestCommentBtn) els.addRequestCommentBtn.addEventListener("click", addRequestComment);
@@ -359,14 +368,19 @@ function clearFilters() { els.searchInput.value = ""; els.statusFilter.value = "
 
 function isTrashRecord(record) {
   const f = record.fields || {};
-  const status = String(f["Статус"] || "").trim();
-  const statusNorm = norm(status);
-  if (TRASH_STATUSES.has(status)) return true;
-  if (statusNorm.includes("удал") || statusNorm.includes("отмен") || statusNorm.includes("отказ") || statusNorm.includes("корзин")) return true;
-  if (String(f["Удалено"] || "").toLowerCase() === "true") return true;
-  if (f["Дата удаления"] || f["Дата отмены"] || f["Причина отмены"]) return true;
-  const comment = norm(String(f["Комментарий администратора"] || ""));
-  return comment.includes("корзина") || comment.includes("удалено вручную") || comment.includes("перенос в корзину");
+  const statusText = fieldText(f["Статус"] || f["Status"] || f["Статус заявки"] || f["Состояние"] || "").trim();
+  const statusNorm = norm(statusText);
+  if (TRASH_STATUSES.has(statusText)) return true;
+  if (statusNorm.includes("удал") || statusNorm.includes("отмен") || statusNorm.includes("отказ") || statusNorm.includes("корзин") || statusNorm.includes("delete") || statusNorm.includes("trash") || statusNorm.includes("cancel")) return true;
+  const deletedValue = norm(fieldText(f["Удалено"] || f["Deleted"] || f["В корзине"] || ""));
+  if (["true", "1", "да", "yes"].includes(deletedValue)) return true;
+  if (f["Дата удаления"] || f["Дата отмены"] || f["Причина отмены"] || f["Deleted At"] || f["deletedAt"]) return true;
+  const comment = norm(fieldText(f["Комментарий администратора"] || f["Комментарий"] || f["История изменений"] || ""));
+  if (comment.includes("корзина") || comment.includes("удалено вручную") || comment.includes("перенос в корзину") || comment.includes("отмена / удаление")) return true;
+  // Последний защитный фильтр: если NocoDB хранит статус как объект/массив или в другом служебном поле,
+  // всё равно убираем запись из активных списков и календаря при любом явном признаке удаления.
+  const allFields = norm(fieldText(Object.entries(f).filter(([key]) => /статус|удален|удаление|корзин|отмен|отказ|delete|trash|cancel/i.test(key)).map(([, value]) => value)));
+  return allFields.includes("удал") || allFields.includes("корзин") || allFields.includes("отмен") || allFields.includes("отказ") || allFields.includes("delete") || allFields.includes("trash") || allFields.includes("cancel");
 }
 function activeRecords() { return records.filter((r) => !isTrashRecord(r)); }
 function filtered(includeTrash = false) {
@@ -393,8 +407,20 @@ function filtered(includeTrash = false) {
 function sortByDateDesc(a, b) { const af = a.fields || {}, bf = b.fields || {}; return (String(bf["Дата записи"] || "") + " " + String(bf["Время записи"] || "")).localeCompare(String(af["Дата записи"] || "") + " " + String(af["Время записи"] || "")); }
 
 function renderAll() { render(); renderClients(); renderObjects(); renderInstallers(); renderInstallerDetails(); renderTrash(); renderFiles(); renderHistorySection(); renderCalendarImport(); renderSmsQueue(); renderActivity(); renderGlobalSearch(false); }
-function render() { const arr = filtered(false); els.requestsBody.innerHTML = arr.map(requestRow).join("") || '<tr><td colspan="10">Нет заявок</td></tr>'; bindActionButtons(); renderCalendar(arr); renderStats(records, arr); }
-function requestRow(r) { const f = r.fields || {}, status = e(f["Статус"] || ""), dir = recordDirection(r); return `<tr class="clickable-row direction-${dir}" data-open-row="${e(r.id)}"><td>${e(f["Дата записи"])}</td><td>${e(f["Время записи"])}</td><td><span class="direction-dot direction-${dir}"></span><b>${e(f["Имя клиента"])}</b></td><td>${e(f["Компания"] || "—")}</td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Услуга"])}</td><td>${e(f["Адрес"])}</td><td>${e(f["Итоговый м2"] || f["м2"])}</td><td>${e(f["Монтажники"])}</td><td class="status-cell"><span class="status" data-status="${status}">${status || "—"}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`; }
+function render() {
+  const arr = filtered(false);
+  bulkLastPageIds = arr.map((r) => String(r.id));
+  selectedRequestIds = new Set([...selectedRequestIds].filter((id) => bulkLastPageIds.includes(String(id))));
+  els.requestsBody.innerHTML = arr.map(requestRow).join("") || '<tr><td colspan="12">Нет заявок</td></tr>';
+  bindActionButtons();
+  updateBulkUI();
+  renderCalendar(arr);
+  renderStats(records, arr);
+}
+function requestRow(r) {
+  const f = r.fields || {}, status = e(f["Статус"] || ""), dir = recordDirection(r), checked = selectedRequestIds.has(String(r.id)) ? "checked" : "";
+  return `<tr class="clickable-row direction-${dir}" data-open-row="${e(r.id)}" data-context-row="${e(r.id)}"><td class="bulk-check-cell"><input type="checkbox" class="bulk-row-check" data-bulk-id="${e(r.id)}" ${checked} /></td><td>${e(f["Дата записи"])}</td><td>${e(f["Время записи"])}</td><td><span class="direction-dot direction-${dir}"></span><b>${e(f["Имя клиента"])}</b></td><td>${e(f["Компания"] || "—")}</td><td>${phoneLink(f["Телефон"])}</td><td>${e(f["Услуга"])}</td><td>${e(f["Адрес"])}</td><td>${e(f["Итоговый м2"] || f["м2"])}</td><td>${e(f["Монтажники"])}</td><td class="status-cell"><span class="status" data-status="${status}">${status || "—"}</span></td><td><button class="open-btn" data-open="${e(r.id)}">Открыть</button></td></tr>`;
+}
 
 function renderCalendar(arr) {
   if (!els.calendarGrid || !els.monthTitle) return;
@@ -517,6 +543,117 @@ function bindActionButtons() {
   document.querySelectorAll("[data-file-delete]").forEach((button) => button.onclick = () => deleteAdminFile(button.dataset.fileDelete));
   document.querySelectorAll("[data-trash-client]").forEach((button) => button.onclick = (event) => { event.stopPropagation(); trashClient(button.dataset.trashClient); });
   document.querySelectorAll("[data-trash-record]").forEach((button) => button.onclick = (event) => { event.stopPropagation(); trashRecordById(button.dataset.trashRecord); });
+  document.querySelectorAll(".bulk-row-check").forEach((box) => box.onchange = (event) => { event.stopPropagation(); toggleBulkSelection(box.dataset.bulkId, box.checked); });
+}
+
+function updateBulkUI() {
+  if (!els.bulkToolbar) return;
+  const count = selectedRequestIds.size;
+  els.bulkToolbar.hidden = count === 0;
+  if (els.bulkSelectedCount) els.bulkSelectedCount.textContent = count ? `Выбрано: ${count}` : "";
+  if (els.bulkSelectAll) {
+    const pageCount = bulkLastPageIds.length;
+    const selectedOnPage = bulkLastPageIds.filter((id) => selectedRequestIds.has(String(id))).length;
+    els.bulkSelectAll.checked = pageCount > 0 && selectedOnPage === pageCount;
+    els.bulkSelectAll.indeterminate = selectedOnPage > 0 && selectedOnPage < pageCount;
+  }
+}
+function toggleBulkSelection(id, checked) {
+  if (!id) return;
+  if (checked) selectedRequestIds.add(String(id)); else selectedRequestIds.delete(String(id));
+  updateBulkUI();
+}
+function setBulkPageSelection(checked) {
+  bulkLastPageIds.forEach((id) => checked ? selectedRequestIds.add(String(id)) : selectedRequestIds.delete(String(id)));
+  document.querySelectorAll(".bulk-row-check").forEach((box) => { box.checked = checked; });
+  updateBulkUI();
+}
+function selectedBulkRecords() {
+  return [...selectedRequestIds].map((id) => records.find((r) => String(r.id) === String(id))).filter(Boolean);
+}
+async function bulkMoveToTrash() {
+  const list = selectedBulkRecords();
+  if (!list.length) return msg("Выберите заявки");
+  if (!confirm(`Удалить выбранные заявки (${list.length})? Они попадут в корзину.`)) return;
+  for (const record of list) await moveRecordToTrash(record, "Массовое удаление");
+  selectedRequestIds.clear();
+  renderAll();
+  msg(`Удалено заявок: ${list.length}`);
+}
+async function bulkApplyStatus() {
+  const status = els.bulkStatusSelect?.value || "";
+  const list = selectedBulkRecords();
+  if (!status) return msg("Выберите статус");
+  if (!list.length) return msg("Выберите заявки");
+  for (const record of list) {
+    let history = getHistoryForRecord(record);
+    history = addHistory(record, "Массовое изменение статуса", `${record.fields?.["Статус"] || "—"} → ${status}`, history);
+    await updateRecord(record.id, { "Статус": status, "История изменений": JSON.stringify(history) }, "Статус изменён", { silent: true });
+  }
+  selectedRequestIds.clear();
+  renderAll();
+  msg(`Статус изменён у заявок: ${list.length}`);
+}
+async function bulkApplyInstaller() {
+  const installer = els.bulkInstallerSelect?.value || "";
+  const list = selectedBulkRecords();
+  if (!installer) return msg("Выберите исполнителя");
+  if (!list.length) return msg("Выберите заявки");
+  for (const record of list) {
+    let history = getHistoryForRecord(record);
+    history = addHistory(record, "Массовое назначение исполнителя", installer, history);
+    await updateRecord(record.id, { "Монтажники": installer, "История изменений": JSON.stringify(history) }, "Исполнитель назначен", { silent: true });
+  }
+  selectedRequestIds.clear();
+  renderAll();
+  msg(`Исполнитель назначен заявкам: ${list.length}`);
+}
+function bulkExportSelected() {
+  const list = selectedBulkRecords();
+  if (!list.length) return msg("Выберите заявки");
+  const headers = ["ID", "Дата", "Время", "Клиент", "Компания", "Телефон", "Услуга", "Адрес", "м2", "Монтажники", "Статус"];
+  const rows = list.map((r) => { const f = r.fields || {}; return [r.id, f["Дата записи"], f["Время записи"], f["Имя клиента"], f["Компания"], f["Телефон"], f["Услуга"], f["Адрес"], f["Итоговый м2"] || f["м2"], f["Монтажники"], f["Статус"]].map((v) => `"${String(v || "").replace(/"/g, '""')}"`).join(";"); });
+  downloadText(`solncanet_selected_${today()}.csv`, [headers.join(";"), ...rows].join("\n"), "text/csv;charset=utf-8");
+}
+function ensureContextMenu() {
+  if (contextMenuEl) return contextMenuEl;
+  contextMenuEl = document.createElement("div");
+  contextMenuEl.className = "row-context-menu";
+  contextMenuEl.hidden = true;
+  document.body.appendChild(contextMenuEl);
+  document.addEventListener("click", () => hideContextMenu());
+  window.addEventListener("scroll", () => hideContextMenu(), true);
+  return contextMenuEl;
+}
+function hideContextMenu() { if (contextMenuEl) contextMenuEl.hidden = true; }
+function showRowContextMenu(event, id) {
+  event.preventDefault();
+  const record = records.find((r) => String(r.id) === String(id));
+  if (!record) return;
+  const f = record.fields || {};
+  const menu = ensureContextMenu();
+  menu.innerHTML = `<button data-ctx="open">Открыть</button><button data-ctx="copy-phone">Копировать телефон</button><button data-ctx="copy-address">Копировать адрес</button><button data-ctx="client">История клиента</button><button data-ctx="delete" class="danger-context">Удалить</button>`;
+  menu.style.left = Math.min(event.clientX, window.innerWidth - 240) + "px";
+  menu.style.top = Math.min(event.clientY, window.innerHeight - 230) + "px";
+  menu.hidden = false;
+  menu.querySelectorAll("button").forEach((btn) => btn.onclick = async (ev) => {
+    ev.stopPropagation();
+    const action = btn.dataset.ctx;
+    hideContextMenu();
+    if (action === "open") return openRequest(id);
+    if (action === "copy-phone") { await navigator.clipboard?.writeText(String(f["Телефон"] || "")); return msg("Телефон скопирован"); }
+    if (action === "copy-address") { await navigator.clipboard?.writeText(String(f["Адрес"] || "")); return msg("Адрес скопирован"); }
+    if (action === "client") return openClientCard(clientKeyFromFields(f));
+    if (action === "delete") return trashRecordById(id);
+  });
+}
+function initContextMenu() {
+  document.addEventListener("contextmenu", (event) => {
+    const row = event.target.closest("tr[data-context-row], tr[data-open-row]");
+    if (!row || rowClickIgnored(event.target)) return;
+    const id = row.dataset.contextRow || row.dataset.openRow;
+    if (id) showRowContextMenu(event, id);
+  });
 }
 
 
@@ -643,7 +780,7 @@ async function cancelCurrentRequest() {
   const adminComment = [oldFields["Комментарий администратора"] || "", `ОТМЕНА: ${dateTimeY()} — ${reason}`].filter(Boolean).join("\n");
   let history = getHistoryForRecord(current);
   history = addHistory(current, "Отмена / удаление в корзину", `Причина: ${reason}`, history);
-  const fields = { "Статус": "Удалена", "Комментарий администратора": adminComment, "Дата отмены": today(), "Дата удаления": today(), "Удалено": true, "Причина отмены": reason, "История изменений": JSON.stringify(history), "__moveToTrash": true };
+  const fields = { "Удалено": true, "Дата удаления": dateTimeY(), "Дата отмены": today(), "Кто удалил": currentUserName(), "Причина отмены": reason, "Комментарий администратора": adminComment, "История изменений": JSON.stringify(history), "__moveToTrash": true };
   await updateRecord(current.id, fields, "Заявка удалена и перенесена в корзину");
   els.dialog.close();
   renderAll();
@@ -655,12 +792,12 @@ async function moveRecordToTrash(record, reason = "Удалено вручную
   let history = getHistoryForRecord(record);
   history = addHistory(record, "Перенос в корзину", reason, history);
   const fields = {
-    "Статус": "Удалена",
-    "Комментарий администратора": adminComment,
-    "Дата отмены": today(),
-    "Дата удаления": today(),
     "Удалено": true,
+    "Дата удаления": dateTimeY(),
+    "Дата отмены": today(),
+    "Кто удалил": currentUserName(),
     "Причина отмены": reason,
+    "Комментарий администратора": adminComment,
     "История изменений": JSON.stringify(history),
     "__moveToTrash": true
   };
@@ -685,7 +822,7 @@ async function restoreRequest(id) {
   if (!record) return;
   let history = getHistoryForRecord(record);
   history = addHistory(record, "Восстановление заявки", "Статус изменён на Новая заявка", history);
-  await updateRecord(id, { "Статус": "Новая заявка", "Удалено": false, "Дата удаления": "", "Дата отмены": "", "Причина отмены": "", "История изменений": JSON.stringify(history) }, "Заявка восстановлена");
+  await updateRecord(id, { "Статус": "Новая заявка", "Удалено": false, "Дата удаления": "", "Дата отмены": "", "Кто удалил": "", "Причина отмены": "", "История изменений": JSON.stringify(history) }, "Заявка восстановлена");
   renderAll();
 }
 async function updateRecord(id, fields, successText, options = {}) {
@@ -1668,6 +1805,17 @@ function num(value) { return Number(String(value || 0).replace(",", ".")) || 0; 
 function moneyNumber(value) { return Math.round((Number(value) || 0) * 100) / 100; }
 function money(value) { return moneyNumber(value).toLocaleString("ru-RU") + " ₽"; }
 function norm(value) { return String(value || "").toLowerCase().replace(/ё/g, "е").trim(); }
+function fieldText(value) {
+  if (value === null || value === undefined) return "";
+  if (Array.isArray(value)) return value.map(fieldText).filter(Boolean).join(" ");
+  if (typeof value === "object") {
+    return [value.name, value.title, value.value, value.label, value.text, value.display, value.status, value.Name, value.Title]
+      .filter((v) => v !== null && v !== undefined && v !== "")
+      .map(String)
+      .join(" ") || JSON.stringify(value);
+  }
+  return String(value);
+}
 function downloadText(filename, content, type = "text/plain;charset=utf-8") { const blob = new Blob([content], { type }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href); }
 
 

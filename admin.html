@@ -128,11 +128,40 @@
         </section>
         <div id="message"></div>
 
+        <section id="bulkToolbar" class="bulk-toolbar" hidden>
+          <label class="bulk-select-all"><input id="bulkSelectAll" type="checkbox" /> Выделить всё на странице</label>
+          <b id="bulkSelectedCount">Выбрано: 0</b>
+          <select id="bulkStatusSelect" title="Новый статус">
+            <option value="">Статус</option>
+            <option>Новая заявка</option>
+            <option>Связались</option>
+            <option>Замер</option>
+            <option>Согласовано</option>
+            <option>В работе</option>
+            <option>Выполнено</option>
+            <option>Оплачено</option>
+            <option>Ожидает</option>
+          </select>
+          <button id="bulkApplyStatusBtn" type="button">Изменить статус</button>
+          <select id="bulkInstallerSelect" title="Исполнитель">
+            <option value="">Исполнитель</option>
+            <option value="Сергей">Сергей</option>
+            <option value="Роман">Роман</option>
+            <option value="Никита К">Никита К</option>
+            <option value="Дмитрий П">Дима</option>
+            <option value="Никита П">Никита П</option>
+            <option value="Андрей Ш">Андрей</option>
+          </select>
+          <button id="bulkApplyInstallerBtn" type="button">Назначить</button>
+          <button id="bulkExportBtn" type="button">Экспорт CSV</button>
+          <button id="bulkDeleteBtn" class="danger" type="button">Удалить</button>
+        </section>
+
         <section id="listView" class="card table-card">
           <table>
             <thead>
               <tr>
-                <th>Дата</th><th>Время</th><th>Клиент</th><th>Компания</th><th>Телефон</th><th>Услуга</th><th>Адрес</th><th>м²</th><th>Монтажники</th><th class="status-th">Статус</th><th></th>
+                <th class="bulk-check-col"></th><th>Дата</th><th>Время</th><th>Клиент</th><th>Компания</th><th>Телефон</th><th>Услуга</th><th>Адрес</th><th>м²</th><th>Монтажники</th><th class="status-th">Статус</th><th></th>
               </tr>
             </thead>
             <tbody id="requestsBody"></tbody>

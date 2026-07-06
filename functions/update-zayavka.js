@@ -57,11 +57,19 @@ function makeTrashVariants(fields) {
   const comment = fields["Комментарий администратора"] || "";
   const variants = [];
   variants.push(fields);
+  // Самый надежный вариант корзины: отдельная галочка, которую пользователь добавил в NocoDB.
+  variants.push({ "Удалено": true, "Дата удаления": fields["Дата удаления"] || new Date().toISOString(), "Кто удалил": fields["Кто удалил"] || "" });
+  variants.push({ "Удалено": true, "Дата удаления": fields["Дата удаления"] || new Date().toISOString() });
+  variants.push({ "Удалено": true });
   // На разных таблицах NocoDB могут отсутствовать дополнительные колонки или варианты single select.
-  // Поэтому пробуем безопасные варианты: сначала полноценная корзина, потом минимальный статус.
+  // Поэтому пробуем безопасные варианты: сначала статус, который уже есть в вашей таблице, потом минимальные статусы.
+  variants.push({ "Статус": "Событие (удаление)", "Комментарий администратора": comment });
+  variants.push({ "Статус": "Удаление", "Комментарий администратора": comment });
   variants.push({ "Статус": "Удалена", "Комментарий администратора": comment });
   variants.push({ "Статус": "Отменена", "Комментарий администратора": comment });
   variants.push({ "Статус": "Отказ", "Комментарий администратора": comment });
+  variants.push({ "Статус": "Событие (удаление)" });
+  variants.push({ "Статус": "Удаление" });
   variants.push({ "Статус": "Удалена" });
   variants.push({ "Статус": "Отменена" });
   variants.push({ "Статус": "Отказ" });
@@ -82,7 +90,7 @@ export async function onRequestPost(context) {
     "Статус", "Итоговый м2", "Ответственный", "Комментарий администратора", "Создан объект", "Монтажники",
     "Дата записи", "Время записи", "Услуга", "Адрес", "м2", "Имя клиента", "Компания", "Телефон", "Файлы", "Google Calendar Event ID", "Ссылка на событие", "Источник"
   ];
-  const extendedKeys = ["История изменений", "Дата отмены", "Причина отмены", "Удалено", "Дата удаления"];
+  const extendedKeys = ["История изменений", "Дата отмены", "Причина отмены", "Удалено", "Дата удаления", "Кто удалил"];
   const requested = body.fields || {};
   const fields = {};
 
@@ -96,7 +104,8 @@ export async function onRequestPost(context) {
   if (!Object.keys(fields).length) return json({ ok: false, error: "Нет данных для сохранения" }, 400);
 
   try {
-    const isTrashMove = requested.__moveToTrash === true || ["Отменена", "Удалена", "Отказ"].includes(String(fields["Статус"] || ""));
+    const st = String(fields["Статус"] || "");
+    const isTrashMove = requested.__moveToTrash === true || ["Отменена", "Удалена", "Отказ", "Удаление", "Событие (удаление)", "Событие удалено"].includes(st) || st.toLowerCase().includes("удал") || st.toLowerCase().includes("отмен") || st.toLowerCase().includes("отказ");
     const variants = [];
     if (isTrashMove) {
       variants.push(...makeTrashVariants(fields));
@@ -118,7 +127,7 @@ export async function onRequestPost(context) {
     return json({
       ok: false,
       error: "NocoDB update error",
-      hint: "Не удалось обновить запись даже минимальным набором полей. Проверьте, что в таблице есть колонка Статус и в single select добавлены варианты: Отменена, Удалена или Отказ. Также проверьте права API-токена на обновление записей.",
+      hint: "Не удалось обновить запись даже минимальным набором полей. Проверьте, что в таблице есть колонка Статус и в single select добавлен вариант: Событие (удаление) или Удаление. Также проверьте права API-токена на обновление записей.",
       attempts: attempt.attempts,
       lastError: attempt.attempts.length ? shortNocodbError(attempt.attempts[attempt.attempts.length - 1]) : ""
     }, 500);
