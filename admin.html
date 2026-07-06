@@ -60,11 +60,6 @@
         </div>
         <div class="topbar-right">
           <span id="userBadge" class="user-badge">Сотрудник · Архитектура</span>
-          <select id="workspaceSelect" class="workspace-select" title="Направление">
-            <option value="architecture">Архитектура</option>
-            <option value="auto">Авто</option>
-            <option value="all">Все</option>
-          </select>
           <button id="topReportsBtn" type="button">Отчёты</button>
           <a href="zapis.html" target="_blank" rel="noopener">Запись</a>
         </div>
@@ -74,7 +69,6 @@
         <header class="admin-head">
           <div>
             <h1>Заявки</h1>
-            <p>Все заявки с сайта, Cal.com и быстрой записи. Есть фильтры, отмена, история и отчёты.</p>
           </div>
           <div class="actions">
             <button id="quickAddBtn" class="btn-green" type="button">+ Быстрая запись</button>
@@ -107,6 +101,11 @@
             <option>Оплачено</option>
             <option>Отказ</option>
             <option>Отменена</option>
+          </select>
+          <select id="workspaceSelect" class="workspace-select calendar-mode-select" title="Режим календаря и списков">
+            <option value="all">Все направления</option>
+            <option value="architecture">Архитектура</option>
+            <option value="auto">Авто</option>
           </select>
           <select id="installerFilter">
             <option value="">Все монтажники</option>
@@ -145,7 +144,7 @@
           </div>
           <div class="calendar-month-tools">
             <button id="calendarTodayBtn" class="btn-green" type="button">Сегодня</button>
-            <span>Нажми на день, чтобы увидеть все события снизу. Нажми на событие — откроется заявка.</span>
+            
           </div>
           <div class="weekdays calendar-weekdays"><b>Пн</b><b>Вт</b><b>Ср</b><b>Чт</b><b>Пт</b><b>Сб</b><b>Вс</b></div>
           <div id="calendarGrid" class="grid calendar-grid-month"></div>
@@ -166,7 +165,6 @@
         <header class="admin-head">
           <div>
             <h1>Импорт из Google Календаря</h1>
-            <p>Быстрый ручной перенос рабочих событий в заявки. Личные события можно скрывать, чтобы они не мешались.</p>
           </div>
           <div class="actions">
             <button id="calendarImportCheckBtn" type="button">Проверить подключение</button>
@@ -205,7 +203,7 @@
       </section>
 
       <section id="clientsSection" class="workspace-section" style="display:none">
-        <header class="admin-head"><div><h1>Клиенты</h1><p>Быстрый поиск по имени, компании, телефону, услуге, плёнке, адресу и датам обращений.</p></div></header>
+        <header class="admin-head"><div><h1>Клиенты</h1></div></header>
         <section class="section-filters clients-filters">
           <input id="clientsSearchInput" placeholder="Поиск: имя, компания, телефон, услуга, плёнка, адрес, комментарий..." />
           <input id="clientsDateFrom" type="date" title="С даты" />
@@ -220,7 +218,7 @@
       </section>
 
       <section id="objectsSection" class="workspace-section" style="display:none">
-        <header class="admin-head"><div><h1>Объекты</h1><p>Интерактивный поиск по адресу, объекту, клиенту, услуге, монтажнику, статусу и объёму.</p></div></header>
+        <header class="admin-head"><div><h1>Объекты</h1></div></header>
         <section class="section-filters objects-filters">
           <input id="objectsSearchInput" placeholder="Поиск: адрес, объект, клиент, компания, телефон, комментарий..." />
           <input id="objectsDateFrom" type="date" title="С даты" />
@@ -237,7 +235,7 @@
       </section>
 
       <section id="installersSection" class="workspace-section" style="display:none">
-        <header class="admin-head"><div><h1>Монтажники</h1><p>Гибкая сводка по сотрудникам: даты, статус, услуга, поиск и быстрый переход к расчёту зарплаты.</p></div><div class="actions"><button data-report="payroll" type="button">Отчёт по зарплате</button></div></header>
+        <header class="admin-head"><div><h1>Монтажники</h1></div><div class="actions"><button data-report="payroll" type="button">Отчёт по зарплате</button></div></header>
         <section class="section-filters installers-filters">
           <input id="installersSearchInput" placeholder="Поиск: монтажник, клиент, адрес, услуга..." />
           <input id="installersDateFrom" type="date" title="С даты" />
@@ -273,27 +271,27 @@
             <div><span>Начислено</span><b id="installerDetailsStatAmount">0 ₽</b></div>
             <div><span>Средняя ставка</span><b id="installerDetailsStatRate">0 ₽</b></div>
           </section>
-          <div class="installer-history-note">Нажмите «Открыть / редактировать» у нужного объекта — откроется карточка заявки, где можно изменить статус, м², услугу, адрес, комментарии и монтажников.</div>
+          
           <div class="table-card installer-history-table"><table><thead><tr><th>Дата</th><th>Клиент</th><th>Компания</th><th>Телефон</th><th>Адрес / объект</th><th>Услуга</th><th>м² объекта</th><th>Бригада</th><th>Ставка</th><th>Начислено</th><th>Статус</th><th></th></tr></thead><tbody id="installerDetailsBody"></tbody></table></div>
         </section>
       </section>
 
       <section id="trashSection" class="workspace-section" style="display:none">
-        <header class="admin-head"><div><h1>Корзина отмен</h1><p>Здесь отображаются отменённые, удалённые и отказные заявки. Их можно восстановить.</p></div></header>
+        <header class="admin-head"><div><h1>Корзина отмен</h1></div></header>
         <section class="card table-card"><table><thead><tr><th>Дата</th><th>Клиент</th><th>Телефон</th><th>Услуга</th><th>Адрес</th><th>Причина / комментарий</th><th>Статус</th><th></th></tr></thead><tbody id="trashBody"></tbody></table></section>
       </section>
 
       <section id="historySection" class="workspace-section" style="display:none">
-        <header class="admin-head"><div><h1>История изменений</h1><p>Отдельный журнал изменений по заявкам: статус, монтажники, м², комментарии, отмены и восстановления.</p></div></header>
+        <header class="admin-head"><div><h1>История изменений</h1></div></header>
         <section class="file-search-panel"><input id="historySearchInput" placeholder="Поиск по истории: клиент, телефон, действие, заявка..." /><button id="clearHistoryLocalBtn" type="button">Очистить локальную историю</button></section>
         <section class="card table-card"><table><thead><tr><th>Дата и время</th><th>Заявка</th><th>Клиент</th><th>Действие</th><th>Что изменилось</th><th></th></tr></thead><tbody id="historyBody"></tbody></table></section>
       </section>
 
       <section id="smsSection" class="workspace-section" style="display:none">
-        <header class="admin-head"><div><h1>SMS-уведомления</h1><p>Автоматические напоминания клиентам, тестовая отправка, история и проверка статуса SIGMA по ID.</p></div><div class="actions"><button id="notificationCheckBtn" type="button">Проверить подключение</button><button id="smsBalanceBtn" type="button">Проверить баланс SIGMA</button><button id="smsQueueRefreshBtn" data-sms-refresh type="button">Обновить историю</button></div></header>
+        <header class="admin-head"><div><h1>SMS-уведомления</h1></div><div class="actions"><button id="notificationCheckBtn" type="button">Проверить подключение</button><button id="smsBalanceBtn" type="button">Проверить баланс SIGMA</button><button id="smsQueueRefreshBtn" data-sms-refresh type="button">Обновить историю</button></div></header>
         <section class="notification-grid notification-grid--two sms-overview-grid">
-          <div class="notification-card"><b>SMS клиентам</b><p>Подтверждение записи, напоминание, перенос, отмена, выполненные работы и просьба оставить отзыв.</p><span id="notificationSmsStatus" class="pill-status">не проверено</span></div>
-          <div class="notification-card"><b>Telegram администратору</b><p>Тестовые сообщения и уведомления в рабочий чат администратора.</p><span id="notificationTelegramStatus" class="pill-status">не проверено</span></div>
+          <div class="notification-card"><b>SMS клиентам</b><span id="notificationSmsStatus" class="pill-status">не проверено</span></div>
+          <div class="notification-card"><b>Telegram администратору</b><span id="notificationTelegramStatus" class="pill-status">не проверено</span></div>
         </section>
         <section class="stats sms-stats compact-stats">
           <div><span>Всего SMS</span><b id="smsStatTotal">0</b></div>
@@ -322,7 +320,7 @@
           </div>
         </section>
         <section class="card notification-console sms-schedule-console">
-          <div class="sms-section-title"><div><h2>История и очередь SMS</h2><p>Нажми на строку SMS, чтобы открыть карточку отправления: ID SIGMA, ответ сервиса, статус доставки, телефон, текст и действия.</p></div><button data-sms-refresh type="button" class="ghost">Обновить</button></div>
+          <div class="sms-section-title"><div><h2>История и очередь SMS</h2></div><button data-sms-refresh type="button" class="ghost">Обновить</button></div>
           <div class="sms-queue-toolbar">
             <input id="smsQueueSearch" type="search" placeholder="Поиск: клиент, телефон, ID SIGMA, компания, текст, статус..." />
             <select id="smsQueueStatus"><option value="">Все статусы</option><option value="Запланировано">Запланировано</option><option value="Отправляется">Отправляется</option><option value="Отправлено">Отправлено</option><option value="Ошибка">Ошибка</option><option value="Отменено">Отменено</option><option value="Пропущено">Пропущено</option></select>
@@ -340,13 +338,13 @@
       </section>
 
       <section id="filesSection" class="workspace-section" style="display:none">
-        <header class="admin-head"><div><h1>Файлы</h1><p>Показываются только заявки, к которым уже прикреплены файлы. Файлы хранятся в Google Drive и открываются прямо из карточки заявки.</p></div></header>
+        <header class="admin-head"><div><h1>Файлы</h1></div></header>
         <section class="file-search-panel file-search-panel--wide"><input id="filesSearchInput" placeholder="Быстрый поиск: номер заявки, файл, телефон, адрес, объект, клиент..." /><select id="filesTypeFilter"><option value="">Все типы</option><option value="фото">Фото</option><option value="видео">Видео</option><option value="pdf">PDF / документы</option><option value="документ">Другие документы</option></select><button id="filesRefreshBtn" type="button">Обновить файлы</button><button id="googleDriveTestBtn" type="button">Проверить Google Drive</button></section>
-        <section class="files-dashboard"><div class="upload-zone" id="filesDropZone"><b>Загрузка файлов в Google Drive</b><p>Выберите заявку, прикрепите фото/видео/PDF/документы. Сайт сохранит связь файла с заявкой и обновит событие в Google Календаре, чтобы сотрудники видели ссылки на телефоне.</p><label>Заявка<select id="filesRequestSelect"><option value="">Сначала загрузите заявки</option></select></label><input id="filesUploadInput" type="file" multiple /><button id="filesUploadBtn" type="button">Загрузить файлы</button><p id="filesStatus" class="muted-text"></p></div><div class="card"><table><thead><tr><th>Заявка</th><th>Клиент</th><th>Телефон</th><th>Адрес / объект</th><th>Файлы</th><th>Статус</th><th></th></tr></thead><tbody id="filesBody"></tbody></table></div></section>
+        <section class="files-dashboard"><div class="upload-zone" id="filesDropZone"><b>Загрузка файлов</b><label>Заявка<select id="filesRequestSelect"><option value="">Сначала загрузите заявки</option></select></label><input id="filesUploadInput" type="file" multiple /><button id="filesUploadBtn" type="button">Загрузить файлы</button><p id="filesStatus" class="muted-text"></p></div><div class="card"><table><thead><tr><th>Заявка</th><th>Клиент</th><th>Телефон</th><th>Адрес / объект</th><th>Файлы</th><th>Статус</th><th></th></tr></thead><tbody id="filesBody"></tbody></table></div></section>
       </section>
 
       <section id="reportsSection" class="workspace-section" style="display:none">
-        <header class="admin-head"><div><h1>Отчёты</h1><p>Каждый отчёт открывает гибкие настройки: даты, монтажники, статусы, ставки и формат выгрузки.</p></div></header>
+        <header class="admin-head"><div><h1>Отчёты</h1></div></header>
         <section class="report-cards">
           <button class="report-card" data-report="requests" type="button"><b>Заявки</b><span>Клиенты, услуги, даты, статусы</span></button>
           <button class="report-card" data-report="payroll" type="button"><b>Зарплата монтажников</b><span>Рабочий расчёт по м², ставкам, доплатам и авансам</span></button>
@@ -356,7 +354,7 @@
       </section>
 
       <section id="settingsSection" class="workspace-section" style="display:none">
-        <header class="admin-head"><div><h1>Настройки</h1><p>Проверка рабочих подключений и быстрые ссылки.</p></div></header>
+        <header class="admin-head"><div><h1>Настройки</h1></div></header>
         <section class="settings-grid">
           <a href="/test" target="_blank">Проверить сайт</a>
           <a href="/nocodb-test" target="_blank">Проверить базу заявок</a>
@@ -364,7 +362,7 @@
           <button id="googleDriveTestBtnSettings" type="button">Проверить Google Drive</button>
           <a href="zapis.html" target="_blank">Открыть страницу записи</a>
         </section>
-        <section class="card settings-note"><h2>Статус сервиса</h2><p>Все рабочие проверки вынесены в кнопки выше. Технические инструкции убраны с интерфейса, чтобы админка не была перегружена.</p></section>
+        
       </section></section>
     </section>
   </main>
@@ -393,7 +391,7 @@
       <section class="files-box notification-box"><h3>Уведомление клиенту</h3><div class="dialog-grid"><label>Шаблон<select id="notifyTemplate"><option value="confirm">Запись подтверждена</option><option value="reminder">Напоминание о записи</option><option value="reschedule">Перенос записи</option><option value="cancel">Отмена записи</option><option value="done">Работы выполнены</option><option value="review">Просьба оставить отзыв</option><option value="custom">Свой текст</option></select></label><label>Канал<select id="notifyChannel"><option value="sms">SMS клиенту</option><option value="telegram">Telegram администратору</option></select></label><label class="wide">Текст сообщения<textarea id="notifyMessage" placeholder="Текст уведомления"></textarea></label></div><div class="dialog-actions"><button id="sendNotifyBtn" type="button">Отправить сейчас</button><button id="copyNotifyBtn" type="button" class="ghost">Скопировать</button></div><p id="requestNotifyStatus" class="muted-text"></p></section>
       <section class="files-box notification-box"><h3>Авто-SMS</h3><div class="dialog-grid"><label>Шаблон<select id="scheduleSmsTemplate"><option value="confirm">Запись подтверждена</option><option value="reminder">Напоминание о записи</option><option value="reschedule">Перенос записи</option><option value="cancel">Отмена записи</option><option value="done">Работы выполнены</option><option value="review">Просьба оставить отзыв</option><option value="custom">Свой текст</option></select></label><label>Дата отправки<input id="scheduleSmsDate" type="date" /></label><label>Время отправки<input id="scheduleSmsTime" type="time" /></label><label class="wide">Текст SMS<textarea id="scheduleSmsMessage" placeholder="Текст SMS"></textarea></label></div><div class="dialog-actions"><button id="scheduleSmsBtn" type="button">Запланировать SMS</button><button id="scheduleDefaultSmsBtn" type="button" class="ghost">Создать напоминания за 24 часа и за 2 часа</button></div><p id="scheduleSmsStatus" class="muted-text"></p></section>
       <section class="files-box"><h3>История этой заявки</h3><div id="requestHistoryBox" class="history-box"></div></section>
-      <section class="cancel-box"><h3>Отмена / удаление в корзину</h3><p>Физически заявка не удаляется, а переносится в корзину отмен со статусом «Отменена».</p><textarea id="cancelReason" placeholder="Причина отмены или удаления"></textarea></section>
+      <section class="cancel-box"><h3>Удаление</h3><textarea id="cancelReason" placeholder="Причина удаления"></textarea></section>
       <div class="dialog-actions"><button id="saveRequestBtn" type="button">Сохранить</button><button id="cancelRequestBtn" class="danger" type="button">Удалить</button><button class="ghost" value="cancel">Закрыть</button></div>
     </form>
   </dialog>

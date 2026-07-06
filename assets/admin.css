@@ -104,3 +104,38 @@ tr.direction-architecture .direction-dot{background:#38bdf8;box-shadow:0 0 0 3px
 body[data-workspace="auto"] .admin-head h1::after{content:" · Авто";color:#7b3ff2}
 body[data-workspace="architecture"] .admin-head h1::after{content:" · Архитектура";color:#38bdf8}
 @media(max-width:760px){.topbar-right{gap:8px;flex-wrap:wrap}.user-badge{font-size:12px;padding:7px 9px}.workspace-select{height:36px;min-width:130px}.auto-service-row{grid-template-columns:1fr 105px 34px}.auto-fields{padding:12px}}
+
+/* v43: спокойный минималистичный интерфейс и корректный переключатель направлений */
+:root{
+  --surface:#ffffff;
+  --soft:#f6f8fb;
+  --line:#e6ebf2;
+  --text:#182033;
+  --muted2:#7b8598;
+}
+.admin-main{background:#f5f7fb;color:var(--text)}
+.admin-topbar{background:rgba(255,255,255,.92);backdrop-filter:blur(14px);border:1px solid rgba(224,231,241,.9);box-shadow:0 10px 28px rgba(22,35,58,.06);border-radius:22px;margin-bottom:18px}
+.admin-head{background:transparent;border:0;box-shadow:none;padding:4px 0 0;margin-bottom:14px}
+.admin-head h1{font-size:clamp(26px,3vw,38px);letter-spacing:-.035em;color:#111827;margin:0}
+.admin-head p,.calendar-import-help,.settings-note{display:none!important}
+.card,.stats div,.table-card,.filters,.filters-advanced,.section-filters,.sms-panel,.notification-card,.upload-zone{border:1px solid var(--line);box-shadow:0 10px 30px rgba(17,24,39,.05);background:var(--surface)}
+.filters,.filters-advanced,.section-filters{border-radius:20px;padding:12px;align-items:center;gap:10px;margin-bottom:14px}
+.filters input,.filters select,.section-filters input,.section-filters select{border:1px solid #d8e0ec;background:#fff;border-radius:13px;min-height:42px;color:#172033;font-weight:650;box-shadow:none}
+.filters button,.actions button,.admin-topbar button,.admin-topbar a{border-radius:13px;min-height:42px;font-weight:800;box-shadow:none}
+.workspace-select.calendar-mode-select{min-width:168px;border:1px solid #cfd8e6;background:#f8fbff;color:#102040;border-radius:13px;height:42px;padding:0 12px;font-weight:900}
+.user-badge{background:#eef4ff;color:#1c3763;border:1px solid #d7e5ff;font-weight:850}
+.topbar-right .workspace-select{display:none}
+body[data-workspace="auto"] .admin-head h1::after,body[data-workspace="architecture"] .admin-head h1::after{content:""!important}
+.calendar-month-tools{display:flex;justify-content:flex-start;background:transparent;border:0;padding:0;margin:0 0 12px;box-shadow:none}
+.calendar-month-tools span{display:none!important}
+.calendar-month-tools button{background:#132b5c;border-radius:13px;min-height:42px}
+.calendar-month-view{border-radius:22px;border:1px solid var(--line)}
+.calendar-weekdays{background:#f0f5fb;border-color:#e4ebf5}.calendar-weekdays b{color:#475569;font-weight:850}
+.calendar-grid-month{background:#e7edf6;border-color:#e7edf6}.calendar-day{border:0;transition:background .15s ease,box-shadow .15s ease}.calendar-day:hover{background:#f8fbff}.calendar-day.selected{box-shadow:inset 0 0 0 2px #254a85}.calendar-day.today{box-shadow:inset 0 0 0 2px #7cc7f6}.calendar-day-number{background:#f1f5f9;color:#1f2937}.calendar-day.today .calendar-day-number{background:#38bdf8}.calendar-day.selected .calendar-day-number{background:#254a85;color:#fff}
+.calendar-event-chip{border-radius:9px;background:#f3f7fb;color:#172033}.calendar-agenda-item{box-shadow:none;border-color:#e4ebf5}.calendar-agenda-item:hover{box-shadow:0 10px 24px rgba(17,24,39,.07)}
+.direction-dot{width:11px;height:11px}.calendar-event-chip.direction-auto{border-left-color:#7b3ff2;background:rgba(123,63,242,.075)}.calendar-event-chip.direction-architecture{border-left-color:#38bdf8;background:rgba(56,189,248,.10)}
+.table-card th{background:#f5f8fc;color:#526174;text-transform:none;letter-spacing:0;font-size:12px}.table-card td{border-color:#eef2f7;color:#1f2937}.clickable-row:hover,tr[data-open-row]:hover,tr[data-open-client-row]:hover,tr[data-installer-row]:hover{background:#f7fbff}
+.status{border-radius:999px;font-weight:850}.stats span{color:#718096;text-transform:none;letter-spacing:0}.stats b{letter-spacing:-.025em}
+.notification-card p,.sms-section-title p,.upload-zone p:not(#filesStatus){display:none!important}
+@media(max-width:1000px){.admin-topbar{border-radius:18px}.filters,.filters-advanced{grid-template-columns:1fr 1fr}.workspace-select.calendar-mode-select{width:100%;min-width:0}.admin-head{margin-top:4px}.topbar-right{display:none!important}.global-search-wrap input{font-size:16px}}
+@media(max-width:620px){.filters,.filters-advanced{grid-template-columns:1fr}.calendar-monthbar{padding:2px 0}.monthbar-title h2{font-size:22px}.calendar-month-view{padding:10px;border-radius:18px}.workspace-select.calendar-mode-select{height:44px}.calendar-month-tools button{width:100%}.card,.table-card,.stats div{box-shadow:0 8px 22px rgba(17,24,39,.055)}}

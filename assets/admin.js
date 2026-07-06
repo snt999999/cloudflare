@@ -27,7 +27,7 @@ let currentSmsId = null;
 const storage = {
   password: "solncanet_admin_password_v9",
   userName: "solncanet_user_name_v41",
-  workspace: "solncanet_workspace_v41",
+  workspace: "solncanet_workspace_v43",
   history: "solncanet_history_v9",
   payroll: "solncanet_payroll_settings_v9",
   notificationLog: "solncanet_notification_log_v19",
@@ -48,7 +48,7 @@ const APP_ACCOUNTS = [
   { name: "Никита П", role: "staff", password: "nikitaP41" },
   { name: "Андрей", role: "staff", password: "andrey41" }
 ];
-let currentWorkspace = localStorage.getItem(storage.workspace) || "architecture";
+let currentWorkspace = localStorage.getItem(storage.workspace) || "all";
 
 const els = {
   sidebar: $("sidebar"), mobileMenuBtn: $("mobileMenuBtn"), sidebarCloseBtn: $("sidebarCloseBtn"), sidebarOverlay: $("sidebarOverlay"),
@@ -244,7 +244,7 @@ function accountFromPassword(password) {
   return APP_ACCOUNTS.find((a) => a.password === password) || null;
 }
 function setWorkspace(value) {
-  currentWorkspace = ["architecture", "auto", "all"].includes(value) ? value : "architecture";
+  currentWorkspace = ["architecture", "auto", "all"].includes(value) ? value : "all";
   localStorage.setItem(storage.workspace, currentWorkspace);
   updateWorkspaceUI();
   renderAll();
@@ -253,7 +253,7 @@ function updateWorkspaceUI() {
   if (els.workspaceSelect) els.workspaceSelect.value = currentWorkspace;
   if (els.userBadge) {
     const name = currentUser?.name || localStorage.getItem(storage.userName) || "Сотрудник";
-    els.userBadge.textContent = `${name} · ${WORKSPACES[currentWorkspace] || "Архитектура"}`;
+    els.userBadge.textContent = `${name} · ${WORKSPACES[currentWorkspace] || "Все"}`;
   }
   document.body.dataset.workspace = currentWorkspace;
 }
@@ -382,7 +382,7 @@ function renderCalendar(arr) {
     const d = String((r.fields || {})["Дата записи"] || "").slice(0, 10);
     return d >= monthStart && d <= monthEnd;
   }).length;
-  if (els.calendarMonthSummary) els.calendarMonthSummary.textContent = `${WORKSPACES[currentWorkspace] || "Архитектура"}: ${monthEventsCount} ${plural(monthEventsCount, "событие", "события", "событий")} в месяце`;
+  if (els.calendarMonthSummary) els.calendarMonthSummary.textContent = `${monthEventsCount} ${plural(monthEventsCount, "событие", "события", "событий")} в месяце`;
 
   if (!selectedCalendarDate || selectedCalendarDate < monthStart || selectedCalendarDate > monthEnd) {
     selectedCalendarDate = todayStr >= monthStart && todayStr <= monthEnd ? todayStr : monthStart;
