@@ -30,7 +30,7 @@ let lastAutosaveSnapshot = "";
 const storage = {
   password: "solncanet_admin_password_v9",
   userName: "solncanet_user_name_v41",
-  workspace: "solncanet_workspace_v43",
+  workspace: "solncanet_workspace_v46",
   history: "solncanet_history_v9",
   payroll: "solncanet_payroll_settings_v9",
   notificationLog: "solncanet_notification_log_v19",
@@ -54,6 +54,8 @@ const APP_ACCOUNTS = [
   { name: "Андрей", role: "staff", password: "andrey41" }
 ];
 let currentWorkspace = localStorage.getItem(storage.workspace) || "all";
+let autoRefreshTimer = null;
+let lastLoadAt = 0;
 
 const els = {
   sidebar: $("sidebar"), mobileMenuBtn: $("mobileMenuBtn"), sidebarCloseBtn: $("sidebarCloseBtn"), sidebarOverlay: $("sidebarOverlay"),
@@ -117,6 +119,7 @@ function init() {
   if (els.topQuickAddBtn) els.topQuickAddBtn.addEventListener("click", openQuickAdd);
   if (els.topRefreshBtn) els.topRefreshBtn.addEventListener("click", load);
   if (els.workspaceSelect) els.workspaceSelect.addEventListener("change", () => setWorkspace(els.workspaceSelect.value));
+  initWorkspaceSegment();
   if (els.quickDirection) els.quickDirection.addEventListener("change", updateQuickDirectionUI);
   if (els.editDirection) els.editDirection.addEventListener("change", updateEditDirectionUI);
   if (els.quickAddServiceBtn) els.quickAddServiceBtn.addEventListener("click", () => addAutoServiceRow("quick"));
@@ -263,6 +266,17 @@ function updateWorkspaceUI() {
     els.userBadge.textContent = `${name} · ${WORKSPACES[currentWorkspace] || "Все"}`;
   }
   document.body.dataset.workspace = currentWorkspace;
+  document.querySelectorAll("[data-workspace-mode]").forEach((button) => {
+    const active = button.dataset.workspaceMode === currentWorkspace;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+}
+function initWorkspaceSegment() {
+  document.querySelectorAll("[data-workspace-mode]").forEach((button) => {
+    button.addEventListener("click", () => setWorkspace(button.dataset.workspaceMode));
+  });
+  updateWorkspaceUI();
 }
 function recordDirection(recordOrFields) {
   const f = recordOrFields?.fields || recordOrFields || {};
@@ -299,22 +313,34 @@ async function login(password) {
   }
 }
 
-function showApp() { document.body.classList.remove("logged-out"); document.body.classList.add("logged-in"); els.loginPanel.style.display = "none"; els.appPanel.style.display = "block"; updateWorkspaceUI(); }
-function showLogin() { document.body.classList.remove("logged-in"); document.body.classList.add("logged-out"); els.appPanel.style.display = "none"; els.loginPanel.style.display = "block"; }
+function showApp() { document.body.classList.remove("logged-out"); document.body.classList.add("logged-in"); els.loginPanel.style.display = "none"; els.appPanel.style.display = "block"; updateWorkspaceUI(); startAutoRefresh(); }
+function showLogin() { if (autoRefreshTimer) clearInterval(autoRefreshTimer); autoRefreshTimer = null; document.body.classList.remove("logged-in"); document.body.classList.add("logged-out"); els.appPanel.style.display = "none"; els.loginPanel.style.display = "block"; }
 function pwd() { return localStorage.getItem(storage.password) || ""; }
 
-async function load() {
-  msg("Загружаю...");
+async function load(options = {}) {
+  const silent = Boolean(options.silent);
+  if (!silent) msg("Загружаю...");
   try {
-    const response = await fetch("/list-zayavki", { headers: { "x-admin-password": pwd() } });
+    const response = await fetch("/list-zayavki", { headers: { "x-admin-password": pwd() }, cache: "no-store" });
     const data = await response.json();
     if (!response.ok || !data.ok) throw new Error(data.error || "Ошибка загрузки");
     records = data.records || [];
     await loadFiles(true);
     await loadSmsQueue(true);
     renderAll();
-    msg("Готово");
-  } catch (error) { msg(error.message); }
+    lastLoadAt = Date.now();
+    if (!silent) msg("Готово");
+  } catch (error) { if (!silent) msg(error.message); }
+}
+
+function startAutoRefresh() {
+  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+  autoRefreshTimer = setInterval(() => {
+    if (!document.body.classList.contains("logged-in")) return;
+    if (document.hidden) return;
+    if (document.querySelector("dialog[open]")) return;
+    load({ silent: true });
+  }, 15000);
 }
 
 function setSection(section) {

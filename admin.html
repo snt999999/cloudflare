@@ -103,11 +103,16 @@
             <option>Отказ</option>
             <option>Отменена</option>
           </select>
-          <select id="workspaceSelect" class="workspace-select calendar-mode-select" title="Режим календаря и списков">
-            <option value="all">Все направления</option>
+          <select id="workspaceSelect" class="workspace-select calendar-mode-select workspace-select-hidden" title="Режим календаря и списков" aria-hidden="true" tabindex="-1">
+            <option value="all">Все</option>
             <option value="architecture">Архитектура</option>
             <option value="auto">Авто</option>
           </select>
+          <div class="workspace-segment" role="group" aria-label="Направление">
+            <button type="button" class="workspace-pill" data-workspace-mode="all">Все</button>
+            <button type="button" class="workspace-pill workspace-pill-architecture" data-workspace-mode="architecture">Архитектура</button>
+            <button type="button" class="workspace-pill workspace-pill-auto" data-workspace-mode="auto">Авто</button>
+          </div>
           <select id="installerFilter">
             <option value="">Все монтажники</option>
             <option value="Никита П">Пахнев Никита</option>
