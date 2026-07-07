@@ -1469,7 +1469,7 @@ function clearLocalHistory() { if (!confirm("Очистить локальную
 
 function openReport(type) {
   currentReportType = type;
-  const titles = { requests: "Отчёт по заявкам", payroll: "Отчёт по зарплате монтажников", autoPayroll: "Авто: отчёт по оплате", objects: "Отчёт по объектам и объёму", clients: "Отчёт по клиентам" };
+  const titles = { requests: "Отчёт по заявкам", payroll: "Отчёт по зарплате монтажников", autoPayroll: "Отчет по авто", objects: "Отчёт по объектам и объёму", clients: "Отчёт по клиентам" };
   els.reportTitle.textContent = titles[type] || "Настройка отчёта";
   els.reportDateFrom.value = els.dateFrom.value || monthStart();
   els.reportDateTo.value = els.dateTo.value || today();
@@ -1494,6 +1494,145 @@ function reportFiltered() {
     return true;
   }).sort(sortByDateDesc);
 }
+
+function autoReportRows() {
+  const from = els.reportDateFrom?.value || "";
+  const to = els.reportDateTo?.value || "";
+  const status = els.reportStatus?.value || "";
+  const selected = reportSelectedInstallers();
+  return records.filter((r) => {
+    if (isTrashRecord(r)) return false;
+    if (recordDirection(r) !== "auto") return false;
+    const f = r.fields || {};
+    const date = String(f["Дата записи"] || "");
+    if (from && date < from) return false;
+    if (to && date > to) return false;
+    if (status && f["Статус"] !== status) return false;
+    const names = splitInstallers(f["Монтажники"] || f["Ответственный"] || "");
+    if (!els.reportAllInstallers?.checked && selected.length && (!names.length || !names.some((n) => selected.includes(n)))) return false;
+    return true;
+  }).sort((a, b) => String((a.fields || {})["Дата записи"] || "").localeCompare(String((b.fields || {})["Дата записи"] || "")) || String((a.fields || {})["Время записи"] || "").localeCompare(String((b.fields || {})["Время записи"] || "")) || String(a.id).localeCompare(String(b.id)));
+}
+function autoMaterialText(f) {
+  return String(f["Пленка"] || f["Плёнка"] || f["Материал"] || f["Пленка / материал"] || "").trim();
+}
+function autoRecordServices(f) {
+  const parsed = parseAutoServices(f["Авто услуги"], f["Общая стоимость"] || f["Стоимость"] || "", f["Услуга"] || "");
+  return parsed.filter((x) => String(x.name || x.price || "").trim());
+}
+function autoRecordPay(f) {
+  return autoServicesPayTotal(autoRecordServices(f));
+}
+function renderAutoPayrollPreview() {
+  const rows = autoReportRows();
+  const totalOrder = rows.reduce((sum, r) => sum + (num((r.fields || {})["Общая стоимость"] || (r.fields || {})["Стоимость"]) || autoServicesTotal(autoRecordServices(r.fields || {}))), 0);
+  const totalPay = rows.reduce((sum, r) => sum + autoRecordPay(r.fields || {}), 0);
+  const servicesCount = rows.reduce((sum, r) => sum + autoRecordServices(r.fields || {}).length, 0);
+  if (!els.reportPreview) return;
+  els.reportPreview.innerHTML = `<div class="report-mini-grid"><div><b>${rows.length}</b><span>авто</span></div><div><b>${servicesCount}</b><span>услуг</span></div><div><b>${moneyNumber(totalOrder)} ₽</b><span>сумма заказов</span></div><div><b>${moneyNumber(totalPay)} ₽</b><span>оплата</span></div></div>`;
+}
+function downloadAutoPayrollReport() {
+  const rows = autoReportRows();
+  const data = buildAutoPayrollWorkbookData(rows);
+  const xml = buildAutoPayrollSpreadsheetXml(data);
+  const period = `${data.from || "start"}_${data.to || "end"}`.replace(/[^0-9a-zA-Zа-яА-Я_-]+/g, "_");
+  downloadText(`solncanet_otchet_po_avto_${period}.xls`, "\uFEFF" + xml, "application/vnd.ms-excel;charset=utf-8");
+  els.reportDialog.close();
+}
+function buildAutoPayrollWorkbookData(rows) {
+  const autoRows = rows.map((r) => {
+    const f = r.fields || {};
+    const services = autoRecordServices(f);
+    const orderTotal = num(f["Общая стоимость"] || f["Стоимость"]) || autoServicesTotal(services);
+    const payTotal = autoServicesPayTotal(services);
+    return {
+      id: String(r.id || ""),
+      date: String(f["Дата записи"] || ""),
+      time: String(f["Время записи"] || ""),
+      client: String(f["Имя клиента"] || ""),
+      company: String(f["Компания"] || ""),
+      phone: String(f["Телефон"] || ""),
+      auto: String(f["Авто"] || f["Марка"] || f["Модель"] || ""),
+      material: autoMaterialText(f),
+      services,
+      servicesText: services.map((s) => `${s.name || "Услуга"}${s.price ? ` — ${moneyNumber(num(s.price))} ₽` : ""}`).join("; "),
+      address: String(f["Адрес"] || ""),
+      status: String(f["Статус"] || ""),
+      installer: String(f["Монтажники"] || f["Ответственный"] || AUTO_DEFAULT_INSTALLER),
+      orderTotal,
+      payTotal,
+      comment: String(f["Комментарий администратора"] || f["Комментарий"] || f["Комментарий клиента"] || "")
+    };
+  });
+  const serviceRows = [];
+  autoRows.forEach((r) => r.services.forEach((s) => {
+    const pay = autoServicePay(s);
+    serviceRows.push({
+      id: r.id, date: r.date, client: r.client, auto: r.auto, material: r.material,
+      service: String(s.name || ""), price: num(s.price), pay: pay.amount, rateText: pay.rateText, code: pay.code, direction: pay.direction
+    });
+  }));
+  return { generatedAt: dateTimeY(), from: els.reportDateFrom?.value || "", to: els.reportDateTo?.value || "", autoRows, serviceRows };
+}
+function buildAutoPayrollSpreadsheetXml(data) {
+  const styles = `
+  <Styles>
+    <Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Center"/><Font ss:FontName="Arial" ss:Size="10"/></Style>
+    <Style ss:ID="Title"><Font ss:FontName="Arial" ss:Size="16" ss:Bold="1" ss:Color="#0B2A66"/></Style>
+    <Style ss:ID="Header"><Interior ss:Color="#4F46E5" ss:Pattern="Solid"/><Font ss:FontName="Arial" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#334155"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/></Borders></Style>
+    <Style ss:ID="Cell"><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders><Alignment ss:Vertical="Top" ss:WrapText="1"/></Style>
+    <Style ss:ID="Money"><NumberFormat ss:Format="# ##0 ₽"/><Alignment ss:Horizontal="Right"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style>
+    <Style ss:ID="Number"><NumberFormat ss:Format="0"/><Alignment ss:Horizontal="Right"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style>
+    <Style ss:ID="Kpi"><Interior ss:Color="#EEF2FF" ss:Pattern="Solid"/><Font ss:FontName="Arial" ss:Bold="1" ss:Size="11"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/></Borders></Style>
+  </Styles>`;
+  const sheets = [buildAutoSummarySheet(data), buildAutoMainSheet(data), buildAutoServicesSheet(data), buildAutoRatesSheet(data)];
+  return `<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html="http://www.w3.org/TR/REC-html40">\n<DocumentProperties xmlns="urn:schemas-microsoft-com:office:office"><Author>СОЛНЦАНЕТ</Author><Company>СОЛНЦАНЕТ</Company><Title>Отчет по авто</Title><Created>${new Date().toISOString()}</Created></DocumentProperties>\n<ExcelWorkbook xmlns="urn:schemas-microsoft-com:office:excel"><WindowHeight>9000</WindowHeight><WindowWidth>16000</WindowWidth><ProtectStructure>False</ProtectStructure><ProtectWindows>False</ProtectWindows></ExcelWorkbook>\n${styles}\n${sheets.join("\n")}\n</Workbook>`;
+}
+function buildAutoSummarySheet(data) {
+  const totalOrders = data.autoRows.reduce((s, r) => s + r.orderTotal, 0);
+  const totalPay = data.autoRows.reduce((s, r) => s + r.payTotal, 0);
+  const avgCheck = data.autoRows.length ? totalOrders / data.autoRows.length : 0;
+  const byService = new Map();
+  data.serviceRows.forEach((r) => {
+    const key = r.service || "Без названия";
+    const cur = byService.get(key) || { count: 0, revenue: 0, pay: 0 };
+    cur.count += 1; cur.revenue += r.price; cur.pay += r.pay; byService.set(key, cur);
+  });
+  const rows = [];
+  rows.push(xRow([xCell("Отчет по авто", "Title")], 22));
+  rows.push(xRow([xCell("Период", "Kpi"), xCell(`${data.from || "—"} — ${data.to || "—"}`, "Cell") ]));
+  rows.push(xRow([xCell("Создан", "Kpi"), xCell(data.generatedAt, "Cell") ]));
+  rows.push(xRow([xCell("Автомобилей", "Kpi"), xCell(data.autoRows.length, "Number", "Number") ]));
+  rows.push(xRow([xCell("Услуг", "Kpi"), xCell(data.serviceRows.length, "Number", "Number") ]));
+  rows.push(xRow([xCell("Сумма заказов", "Kpi"), xCell(totalOrders, "Money", "Number") ]));
+  rows.push(xRow([xCell("Оплата за авто", "Kpi"), xCell(totalPay, "Money", "Number") ]));
+  rows.push(xRow([xCell("Средний чек", "Kpi"), xCell(avgCheck, "Money", "Number") ]));
+  rows.push(xRow([xCell("", "Cell")], 4));
+  rows.push(xRow(["Услуга", "Кол-во", "Сумма услуг", "Оплата"].map((h) => xCell(h, "Header"))));
+  [...byService.entries()].sort((a,b)=>b[1].pay-a[1].pay).forEach(([name, x]) => rows.push(xRow([xCell(name), xCell(x.count,"Number","Number"), xCell(x.revenue,"Money","Number"), xCell(x.pay,"Money","Number")])));
+  return xWorksheet("Сводка", [28, 16, 18, 18], rows, 10);
+}
+function buildAutoMainSheet(data) {
+  const rows = [];
+  rows.push(xRow(["ID", "Дата", "Время", "Клиент", "Компания", "Телефон", "Авто", "Материал", "Услуги", "Адрес", "Статус", "Монтажник", "Сумма заказа", "Оплата", "Комментарий"].map((h) => xCell(h, "Header"))));
+  data.autoRows.forEach((r) => rows.push(xRow([xCell(r.id), xCell(r.date), xCell(r.time), xCell(r.client), xCell(r.company), xCell(r.phone), xCell(r.auto), xCell(r.material), xCell(r.servicesText), xCell(r.address), xCell(r.status), xCell(r.installer), xCell(r.orderTotal,"Money","Number"), xCell(r.payTotal,"Money","Number"), xCell(r.comment)])));
+  rows.push(xRow([xCell("ИТОГО", "Kpi"), xCell("", "Kpi"), xCell("", "Kpi"), xCell("", "Kpi"), xCell("", "Kpi"), xCell("", "Kpi"), xCell("", "Kpi"), xCell("", "Kpi"), xCell("", "Kpi"), xCell("", "Kpi"), xCell("", "Kpi"), xCell("", "Kpi"), xCell(data.autoRows.reduce((s,r)=>s+r.orderTotal,0),"Money","Number"), xCell(data.autoRows.reduce((s,r)=>s+r.payTotal,0),"Money","Number"), xCell("", "Kpi") ]));
+  return xWorksheet("Авто", [10, 12, 10, 24, 24, 18, 28, 24, 52, 42, 18, 18, 16, 16, 42], rows, 1);
+}
+function buildAutoServicesSheet(data) {
+  const rows = [];
+  rows.push(xRow(["ID", "Дата", "Клиент", "Авто", "Материал", "Услуга", "Код прайса", "Направление", "Сумма услуги", "Правило оплаты", "Оплата"].map((h) => xCell(h, "Header"))));
+  data.serviceRows.forEach((r) => rows.push(xRow([xCell(r.id), xCell(r.date), xCell(r.client), xCell(r.auto), xCell(r.material), xCell(r.service), xCell(r.code), xCell(r.direction), xCell(r.price,"Money","Number"), xCell(r.rateText), xCell(r.pay,"Money","Number")])));
+  rows.push(xRow([xCell("ИТОГО", "Kpi"), xCell("", "Kpi"), xCell("", "Kpi"), xCell("", "Kpi"), xCell("", "Kpi"), xCell("", "Kpi"), xCell("", "Kpi"), xCell("", "Kpi"), xCell(data.serviceRows.reduce((s,r)=>s+r.price,0),"Money","Number"), xCell("", "Kpi"), xCell(data.serviceRows.reduce((s,r)=>s+r.pay,0),"Money","Number") ]));
+  return xWorksheet("Детализация услуг", [10, 12, 24, 28, 24, 34, 18, 18, 16, 18, 16], rows, 1);
+}
+function buildAutoRatesSheet(data) {
+  const rows = [];
+  rows.push(xRow(["Код", "Группа", "Услуга", "Ед.", "Оплата", "Процент", "Особое правило"].map((h) => xCell(h, "Header"))));
+  AUTO_PAY_RATES.forEach((r) => rows.push(xRow([xCell(r.code), xCell(r.direction), xCell(r.service), xCell(r.unit), xCell(r.pay || 0,"Money","Number"), xCell(r.percent ? Math.round(r.percent * 100) + "%" : ""), xCell(r.payFromPrice ? "по сумме услуги" : "")])));
+  return xWorksheet("Прайс оплаты", [20, 18, 40, 12, 14, 12, 22], rows, 1);
+}
+
 function updateReportPreview() {
   if (!els.reportPreview) return;
   if (currentReportType === "payroll") renderPayrollPreview();
