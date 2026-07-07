@@ -90,7 +90,7 @@ const els = {
   loginPanel: $("loginPanel"), appPanel: $("appPanel"), loginForm: $("loginForm"), passwordInput: $("passwordInput"), loginMessage: $("loginMessage"), logoutBtn: $("logoutBtn"), refreshBtn: $("refreshBtn"), listBtn: $("listBtn"), calendarBtn: $("calendarBtn"), listView: $("listView"), calendarView: $("calendarView"), requestsBody: $("requestsBody"), calendarGrid: $("calendarGrid"), monthTitle: $("monthTitle"), calendarMonthSummary: $("calendarMonthSummary"), calendarTodayBtn: $("calendarTodayBtn"), calendarDayAgenda: $("calendarDayAgenda"), calendarSelectedDateTitle: $("calendarSelectedDateTitle"), calendarSelectedDateSummary: $("calendarSelectedDateSummary"), calendarSelectedEvents: $("calendarSelectedEvents"), prevMonth: $("prevMonth"), nextMonth: $("nextMonth"), searchInput: $("searchInput"), statusFilter: $("statusFilter"), installerFilter: $("installerFilter"), dateFrom: $("dateFrom"), dateTo: $("dateTo"), clearFiltersBtn: $("clearFiltersBtn"), message: $("message"), statTotal: $("statTotal"), statNew: $("statNew"), statToday: $("statToday"), statWork: $("statWork"), statVolume: $("statVolume"), statFiltered: $("statFiltered"), bulkToolbar: $("bulkToolbar"), bulkSelectedCount: $("bulkSelectedCount"), bulkSelectAll: $("bulkSelectAll"), bulkDeleteBtn: $("bulkDeleteBtn"), bulkStatusSelect: $("bulkStatusSelect"), bulkApplyStatusBtn: $("bulkApplyStatusBtn"), bulkInstallerSelect: $("bulkInstallerSelect"), bulkApplyInstallerBtn: $("bulkApplyInstallerBtn"), bulkExportBtn: $("bulkExportBtn"),
   dialog: $("requestDialog"), dialogTitle: $("dialogTitle"), requestInfo: $("requestInfo"), editDate: $("editDate"), editTime: $("editTime"), editStatus: $("editStatus"), editM2: $("editM2"), editResponsible: $("editResponsible"), editCompany: $("editCompany"), editDirection: $("editDirection"), editAutoFields: $("editAutoFields"), editAuto: $("editAuto"), editFilm: $("editFilm"), editAutoServices: $("editAutoServices"), editAddServiceBtn: $("editAddServiceBtn"), editAutoTotal: $("editAutoTotal"), editService: $("editService"), editAddress: $("editAddress"), editAdminComment: $("editAdminComment"), saveRequestBtn: $("saveRequestBtn"), cancelRequestBtn: $("cancelRequestBtn"), cancelReason: $("cancelReason"), requestHistoryBox: $("requestHistoryBox"), requestAutosaveStatus: $("requestAutosaveStatus"), requestCommentsBox: $("requestCommentsBox"), requestCommentText: $("requestCommentText"), addRequestCommentBtn: $("addRequestCommentBtn"), activityBody: $("activityBody"), requestGoogleCalendarBox: $("requestGoogleCalendarBox"), requestGoogleCreateBtn: $("requestGoogleCreateBtn"), requestGoogleOpenLink: $("requestGoogleOpenLink"), requestGoogleStatus: $("requestGoogleStatus"), exportBtn: $("exportBtn"),
   clientsBody: $("clientsBody"), objectsBody: $("objectsBody"), installersBody: $("installersBody"), trashBody: $("trashBody"), historyBody: $("historyBody"), historySearchInput: $("historySearchInput"), clearHistoryLocalBtn: $("clearHistoryLocalBtn"), filesBody: $("filesBody"), filesSearchInput: $("filesSearchInput"), filesTypeFilter: $("filesTypeFilter"),
-  quickAddBtn: $("quickAddBtn"), quickAddDialog: $("quickAddDialog"), quickSaveBtn: $("quickSaveBtn"), quickName: $("quickName"), quickCompany: $("quickCompany"), quickPhone: $("quickPhone"), quickClientHint: $("quickClientHint"), quickClientSuggestions: $("quickClientSuggestions"), quickGoogleSync: $("quickGoogleSync"), quickDirection: $("quickDirection"), quickAutoFields: $("quickAutoFields"), quickAuto: $("quickAuto"), quickFilm: $("quickFilm"), quickAutoServices: $("quickAutoServices"), quickAddServiceBtn: $("quickAddServiceBtn"), quickAutoTotal: $("quickAutoTotal"), quickService: $("quickService"), quickDate: $("quickDate"), quickTime: $("quickTime"), quickM2: $("quickM2"), quickAddress: $("quickAddress"), quickComment: $("quickComment"),
+  quickAddBtn: $("quickAddBtn"), quickAddDialog: $("quickAddDialog"), quickSaveBtn: $("quickSaveBtn"), quickName: $("quickName"), quickCompany: $("quickCompany"), quickPhone: $("quickPhone"), quickClientHint: $("quickClientHint"), quickClientSuggestions: $("quickClientSuggestions"), quickGoogleSync: $("quickGoogleSync"), quickDirection: $("quickDirection"), quickAutoFields: $("quickAutoFields"), quickAuto: $("quickAuto"), quickFilm: $("quickFilm"), quickAutoServices: $("quickAutoServices"), quickAddServiceBtn: $("quickAddServiceBtn"), quickAutoTotal: $("quickAutoTotal"), quickService: $("quickService"), quickServiceLabel: $("quickServiceLabel"), quickM2Label: $("quickM2Label"), quickAddressLabel: $("quickAddressLabel"), editServiceLabel: $("editServiceLabel"), quickDate: $("quickDate"), quickTime: $("quickTime"), quickM2: $("quickM2"), quickAddress: $("quickAddress"), quickComment: $("quickComment"),
   reportDialog: $("reportDialog"), reportTitle: $("reportTitle"), reportDateFrom: $("reportDateFrom"), reportDateTo: $("reportDateTo"), reportStatus: $("reportStatus"), reportFormat: $("reportFormat"), reportAllInstallers: $("reportAllInstallers"), downloadReportBtn: $("downloadReportBtn"), payrollOptions: $("payrollOptions"), payrollSplitMode: $("payrollSplitMode"), payrollStatusMode: $("payrollStatusMode"), payrollSettingsBody: $("payrollSettingsBody"), savePayrollSettingsBtn: $("savePayrollSettingsBtn"), previewPayrollBtn: $("previewPayrollBtn"), reportPreview: $("reportPreview"),
   clientsSearchInput: $("clientsSearchInput"), clientsDateFrom: $("clientsDateFrom"), clientsDateTo: $("clientsDateTo"), clientsServiceFilter: $("clientsServiceFilter"), clientsFilmFilter: $("clientsFilmFilter"), clientsStatusFilter: $("clientsStatusFilter"), clientsClearFiltersBtn: $("clientsClearFiltersBtn"), clientsStatCount: $("clientsStatCount"), clientsStatRequests: $("clientsStatRequests"), clientsStatM2: $("clientsStatM2"), clientsStatRepeat: $("clientsStatRepeat"),
   objectsSearchInput: $("objectsSearchInput"), objectsDateFrom: $("objectsDateFrom"), objectsDateTo: $("objectsDateTo"), objectsServiceFilter: $("objectsServiceFilter"), objectsStatusFilter: $("objectsStatusFilter"), objectsInstallerFilter: $("objectsInstallerFilter"), objectsM2Min: $("objectsM2Min"), objectsM2Max: $("objectsM2Max"), objectsClearFiltersBtn: $("objectsClearFiltersBtn"), objectsStatCount: $("objectsStatCount"), objectsStatM2: $("objectsStatM2"), objectsStatDone: $("objectsStatDone"), objectsStatWork: $("objectsStatWork"),
@@ -753,11 +753,13 @@ function updateAutoTotal(prefix) {
 function updateQuickDirectionUI() {
   const isAuto = (els.quickDirection?.value || currentWorkspace) === "auto";
   if (els.quickAutoFields) els.quickAutoFields.style.display = isAuto ? "block" : "none";
+  [els.quickServiceLabel, els.quickM2Label, els.quickAddressLabel].forEach((node) => { if (node) node.style.display = isAuto ? "none" : ""; });
   if (isAuto && els.quickAutoServices && !els.quickAutoServices.children.length) renderAutoServiceRows("quick");
 }
 function updateEditDirectionUI() {
   const isAuto = (els.editDirection?.value || "architecture") === "auto";
   if (els.editAutoFields) els.editAutoFields.style.display = isAuto ? "block" : "none";
+  if (els.editServiceLabel) els.editServiceLabel.style.display = isAuto ? "none" : "";
   if (isAuto && els.editAutoServices && !els.editAutoServices.children.length) renderAutoServiceRows("edit");
   ensureRomanInstallerForAuto("edit");
 }
@@ -810,7 +812,7 @@ function currentEditFields() {
     "Итоговый м2": els.editM2.value,
     "Ответственный": direction === "auto" ? (els.editResponsible.value.trim() || AUTO_DEFAULT_RESPONSIBLE) : els.editResponsible.value.trim(),
     "Компания": els.editCompany?.value.trim() || "",
-    "Услуга": els.editService.value.trim(),
+    "Услуга": direction === "auto" ? (autoServices.map((s) => s.name).filter(Boolean).join("; ") || "Авто") : els.editService.value.trim(),
     "Адрес": els.editAddress.value.trim(),
     "Комментарий администратора": els.editAdminComment.value.trim(),
     "Монтажники": selectedInstallers.join(", ")
@@ -1146,7 +1148,7 @@ function openQuickAdd(prefill = null) {
   els.quickComment.value = prefill?.comment || "";
   els.quickM2.value = prefill?.m2 || "";
   if (els.quickDirection) els.quickDirection.value = prefill?.direction || (currentWorkspace === "auto" ? "auto" : "architecture");
-  renderAutoServiceRows("quick", [{ name: els.quickService?.value || "", price: "" }]);
+  renderAutoServiceRows("quick", prefill?.service ? [{ name: prefill.service, price: "" }] : [{ name: "", price: "" }]);
   updateQuickDirectionUI();
   els.quickAddDialog.showModal();
 }
@@ -1154,9 +1156,25 @@ async function saveQuickAdd() {
   const syncGoogle = Boolean(els.quickGoogleSync?.checked);
   const calendarId = quickCalendarEvent?.id ? "gcal-" + quickCalendarEvent.id : "manual-" + Date.now();
   const direction = els.quickDirection?.value || currentWorkspace || "architecture";
-    const autoServices = collectAutoServices("quick");
-    const record = { "Направление": direction === "auto" ? "Авто" : "Архитектура", "Имя клиента": els.quickName.value.trim(), "Компания": els.quickCompany?.value.trim() || "", "Телефон": formatRussianPhone(els.quickPhone.value), "Услуга": els.quickService.value, "Дата записи": els.quickDate.value, "Время записи": els.quickTime.value, "Адрес": els.quickAddress.value.trim(), "м2": els.quickM2.value ? String(els.quickM2.value) : "", "Комментарий клиента": els.quickComment.value.trim(), "Статус": "Новая заявка", "Cal Booking ID": calendarId };
-    if (direction === "auto") { record["Авто"] = els.quickAuto?.value.trim() || ""; record["Пленка"] = els.quickFilm?.value.trim() || ""; record["Авто услуги"] = JSON.stringify(autoServices); record["Общая стоимость"] = String(autoServicesTotal(autoServices)); record["Монтажники"] = AUTO_DEFAULT_INSTALLER; record["Ответственный"] = AUTO_DEFAULT_RESPONSIBLE; }
+  const isAuto = direction === "auto";
+  const autoServices = collectAutoServices("quick");
+  if (isAuto && !autoServices.length) { msg("Добавьте хотя бы одну услугу по авто"); return; }
+  const autoServiceTitle = autoServices.map((s) => s.name).filter(Boolean).join("; ") || "Авто";
+  const record = {
+    "Направление": isAuto ? "Авто" : "Архитектура",
+    "Имя клиента": els.quickName.value.trim(),
+    "Компания": els.quickCompany?.value.trim() || "",
+    "Телефон": formatRussianPhone(els.quickPhone.value),
+    "Услуга": isAuto ? autoServiceTitle : els.quickService.value,
+    "Дата записи": els.quickDate.value,
+    "Время записи": els.quickTime.value,
+    "Адрес": isAuto ? "" : els.quickAddress.value.trim(),
+    "м2": isAuto ? "" : (els.quickM2.value ? String(els.quickM2.value) : ""),
+    "Комментарий клиента": els.quickComment.value.trim(),
+    "Статус": "Новая заявка",
+    "Cal Booking ID": calendarId
+  };
+  if (isAuto) { record["Авто"] = els.quickAuto?.value.trim() || ""; record["Пленка"] = els.quickFilm?.value.trim() || ""; record["Авто услуги"] = JSON.stringify(autoServices); record["Общая стоимость"] = String(autoServicesTotal(autoServices)); record["Монтажники"] = AUTO_DEFAULT_INSTALLER; record["Ответственный"] = AUTO_DEFAULT_RESPONSIBLE; }
   if (!record["Имя клиента"] || !record["Телефон"] || !record["Дата записи"] || !record["Время записи"]) { msg("Заполните ФИО, телефон, дату и время"); return; }
   try {
     const response = await fetch("/create-zayavka", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pwd() }, body: JSON.stringify({ fields: record }) });
