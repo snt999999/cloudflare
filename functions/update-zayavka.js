@@ -53,6 +53,19 @@ async function tryPatchVariants(env, id, variants) {
   }
   return { ok: false, attempts };
 }
+
+async function tryPatchProgressive(env, id, fields) {
+  const attempts = [];
+  const savedFields = {};
+  for (const [key, value] of Object.entries(fields || {})) {
+    const part = { [key]: value };
+    const result = await patchRecord(env, id, part);
+    attempts.push({ status: result.status, fields: part, response: result.response });
+    if (result.ok) savedFields[key] = value;
+  }
+  return { ok: Object.keys(savedFields).length > 0, savedFields, attempts };
+}
+
 function makeTrashVariants(fields) {
   const comment = fields["Комментарий администратора"] || "";
   const variants = [];
@@ -88,7 +101,9 @@ export async function onRequestPost(context) {
 
   const safeKeys = [
     "Статус", "Итоговый м2", "Ответственный", "Комментарий администратора", "Создан объект", "Монтажники",
-    "Дата записи", "Время записи", "Услуга", "Адрес", "м2", "Имя клиента", "Компания", "Телефон", "Файлы", "Google Calendar Event ID", "Ссылка на событие", "Источник"
+    "Дата записи", "Время записи", "Услуга", "Адрес", "м2", "Имя клиента", "Компания", "Телефон", "Файлы",
+    "Google Calendar Event ID", "Ссылка на событие", "Источник",
+    "Направление", "Авто", "Пленка", "Плёнка", "Авто услуги", "Общая стоимость", "Комментарии"
   ];
   const extendedKeys = ["История изменений", "Дата отмены", "Причина отмены", "Удалено", "Дата удаления", "Кто удалил"];
   const requested = body.fields || {};
@@ -124,11 +139,23 @@ export async function onRequestPost(context) {
       return json({ ok: true, nocodbResponse: attempt.result.response, savedFields: attempt.savedFields, warning, attempts: attempt.attempts });
     }
 
+    // v55: если один из новых столбцов отсутствует в NocoDB, не теряем всё сохранение.
+    // Пробуем сохранить поля по одному и возвращаем успешную часть с предупреждением.
+    const progressive = await tryPatchProgressive(env, body.id, fields);
+    if (progressive.ok) {
+      return json({
+        ok: true,
+        savedFields: progressive.savedFields,
+        warning: "Часть полей не сохранена, потому что в NocoDB нет соответствующих колонок или значений single select. Основные изменения сохранены.",
+        attempts: [...attempt.attempts, ...progressive.attempts]
+      });
+    }
+
     return json({
       ok: false,
       error: "NocoDB update error",
-      hint: "Не удалось обновить запись даже минимальным набором полей. Проверьте, что в таблице есть колонка Статус и в single select добавлен вариант: Событие (удаление) или Удаление. Также проверьте права API-токена на обновление записей.",
-      attempts: attempt.attempts,
+      hint: "Не удалось обновить запись. Проверьте права API-токена и наличие колонок в таблице NocoDB: Дата записи, Время записи, Статус, Направление, Авто, Пленка, Авто услуги, Общая стоимость, Файлы, Удалено.",
+      attempts: [...attempt.attempts, ...progressive.attempts],
       lastError: attempt.attempts.length ? shortNocodbError(attempt.attempts[attempt.attempts.length - 1]) : ""
     }, 500);
   } catch (error) {
