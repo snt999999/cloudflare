@@ -62,7 +62,7 @@ const storage = {
   calendarHidden: "solncanet_calendar_hidden_v22",
   activity: "solncanet_activity_v45",
   comments: "solncanet_comments_v45",
-  filesFallback: "solncanet_files_fallback_v53"
+  filesFallback: "solncanet_files_fallback_v54"
 };
 
 
@@ -687,8 +687,8 @@ function initContextMenu() {
 function parseAutoServices(value, total = "", serviceName = "") {
   if (Array.isArray(value)) return value;
   try { const arr = JSON.parse(value || "[]"); if (Array.isArray(arr)) return arr; } catch (_) {}
-  if (serviceName || total) return [{ name: serviceName || "Услуга", price: total || "" }];
-  return [{ name: "", price: "" }];
+  if (serviceName || total) return [{ name: serviceName || "Услуга", material: "", price: total || "" }];
+  return [{ name: "", material: "", price: "" }];
 }
 function autoServicesTotal(list) {
   return (list || []).reduce((sum, item) => sum + (parseFloat(String(item.price || "").replace(",", ".")) || 0), 0);
@@ -697,14 +697,14 @@ function autoServiceContainer(prefix) { return prefix === "quick" ? els.quickAut
 function initAutoServiceDatalist() {
   const dl = document.getElementById("autoServiceDatalist");
   if (!dl) return;
-  dl.innerHTML = AUTO_PAY_RATES.map((r) => `<option value="${e(r.service)}"></option><option value="${e(r.code)}"></option>`).join("");
+  dl.innerHTML = AUTO_PAY_RATES.map((r) => `<option value="${e(String(r.service || "").trim())}"></option>`).join("");
 }
 function autoRateForService(name) {
   const n = norm(name);
   if (!n) return null;
-  let rate = AUTO_PAY_RATES.find((r) => norm(r.service) === n || norm(r.code) === n);
+  let rate = AUTO_PAY_RATES.find((r) => norm(r.service) === n);
   if (rate) return rate;
-  rate = AUTO_PAY_RATES.find((r) => n.includes(norm(r.service)) || n.includes(norm(r.code)) || norm(r.service).includes(n));
+  rate = AUTO_PAY_RATES.find((r) => n.includes(norm(r.service)) || norm(r.service).includes(n));
   return rate || null;
 }
 function autoServicePay(item) {
@@ -727,24 +727,46 @@ function ensureRomanInstallerForAuto(prefix) {
     if (els.editResponsible && !els.editResponsible.value.trim()) els.editResponsible.value = AUTO_DEFAULT_RESPONSIBLE;
   }
 }
+function defaultAutoServicePrice(name) {
+  const rate = autoRateForService(name || "");
+  if (!rate) return "";
+  if (rate.payFromPrice || rate.percent) return "";
+  return String(Number(rate.pay) || "");
+}
+function applyAutoServiceDefault(row) {
+  if (!row) return;
+  const nameInput = row.querySelector(".auto-service-name");
+  const priceInput = row.querySelector(".auto-service-price");
+  if (!nameInput || !priceInput) return;
+  const rate = autoRateForService(nameInput.value || "");
+  if (rate && norm(nameInput.value) !== norm(rate.service)) nameInput.value = rate.service;
+  if (rate && !String(priceInput.value || "").trim()) {
+    const p = defaultAutoServicePrice(rate.service);
+    if (p) priceInput.value = p;
+  }
+}
 function renderAutoServiceRows(prefix, list = null) {
   const box = autoServiceContainer(prefix);
   if (!box) return;
-  const arr = list && list.length ? list : [{ name: "", price: "" }];
-  box.innerHTML = arr.map((item, i) => `<div class="auto-service-row" data-auto-service-row><input class="auto-service-name" list="autoServiceDatalist" placeholder="Название услуги" value="${e(item.name || "")}" /><input class="auto-service-price" type="number" step="1" placeholder="Сумма" value="${e(item.price || "")}" /><button type="button" class="ghost-small" data-auto-service-remove>×</button></div>`).join("");
+  const arr = list && list.length ? list : [{ name: "", material: "", price: "" }];
+  box.innerHTML = arr.map((item, i) => `<div class="auto-service-row" data-auto-service-row><input class="auto-service-name" list="autoServiceDatalist" placeholder="Полное название услуги" value="${e(item.name || "")}" /><input class="auto-service-material" placeholder="Материал" value="${e(item.material || item["Материал"] || "")}" /><input class="auto-service-price" type="number" step="1" placeholder="Сумма" value="${e(item.price || "")}" /><button type="button" class="ghost-small" data-auto-service-remove>×</button></div>`).join("");
+  box.querySelectorAll(".auto-service-name").forEach((input) => {
+    input.addEventListener("change", () => { applyAutoServiceDefault(input.closest("[data-auto-service-row]")); updateAutoTotal(prefix); });
+    input.addEventListener("blur", () => { applyAutoServiceDefault(input.closest("[data-auto-service-row]")); updateAutoTotal(prefix); });
+  });
   box.querySelectorAll("input").forEach((input) => input.addEventListener("input", () => updateAutoTotal(prefix)));
   box.querySelectorAll("[data-auto-service-remove]").forEach((btn) => btn.addEventListener("click", () => { btn.closest("[data-auto-service-row]")?.remove(); updateAutoTotal(prefix); }));
   updateAutoTotal(prefix);
 }
 function addAutoServiceRow(prefix) {
   const list = collectAutoServices(prefix);
-  list.push({ name: "", price: "" });
+  list.push({ name: "", material: "", price: "" });
   renderAutoServiceRows(prefix, list);
 }
 function collectAutoServices(prefix) {
   const box = autoServiceContainer(prefix);
   if (!box) return [];
-  return [...box.querySelectorAll("[data-auto-service-row]")].map((row) => ({ name: row.querySelector(".auto-service-name")?.value.trim() || "", price: row.querySelector(".auto-service-price")?.value || "" })).filter((x) => x.name || x.price);
+  return [...box.querySelectorAll("[data-auto-service-row]")].map((row) => ({ name: row.querySelector(".auto-service-name")?.value.trim() || "", material: row.querySelector(".auto-service-material")?.value.trim() || "", price: row.querySelector(".auto-service-price")?.value || "" })).filter((x) => x.name || x.material || x.price);
 }
 function updateAutoTotal(prefix) {
   const total = autoServicesTotal(collectAutoServices(prefix));
@@ -1574,7 +1596,7 @@ function buildAutoPayrollWorkbookData(rows) {
       auto: String(f["Авто"] || f["Марка"] || f["Модель"] || ""),
       material: autoMaterialText(f),
       services,
-      servicesText: services.map((s) => `${s.name || "Услуга"}${s.price ? ` — ${moneyNumber(num(s.price))} ₽` : ""}`).join("; "),
+      servicesText: services.map((s) => `${s.name || "Услуга"}${s.material ? ` (${s.material})` : ""}${s.price ? ` — ${moneyNumber(num(s.price))} ₽` : ""}`).join("; "),
       address: String(f["Адрес"] || ""),
       status: String(f["Статус"] || ""),
       installer: String(f["Монтажники"] || f["Ответственный"] || AUTO_DEFAULT_INSTALLER),
@@ -1587,7 +1609,7 @@ function buildAutoPayrollWorkbookData(rows) {
   autoRows.forEach((r) => r.services.forEach((s) => {
     const pay = autoServicePay(s);
     serviceRows.push({
-      id: r.id, date: r.date, client: r.client, auto: r.auto, material: r.material,
+      id: r.id, date: r.date, client: r.client, auto: r.auto, material: String(s.material || r.material || ""),
       service: String(s.name || ""), price: num(s.price), pay: pay.amount, rateText: pay.rateText, code: pay.code, direction: pay.direction
     });
   }));
