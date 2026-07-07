@@ -7,6 +7,31 @@ const WORKER_PROFILES = [
 ];
 const WORKERS = WORKER_PROFILES.map((w) => w.key);
 const WORKER_BY_KEY = Object.fromEntries(WORKER_PROFILES.map((w) => [w.key, w]));
+
+const AUTO_DEFAULT_INSTALLER = "Роман З";
+const AUTO_DEFAULT_RESPONSIBLE = "Роман";
+const AUTO_PAY_RATES = [
+  { code: "Зад.полусфера", direction: "Тонировка", service: "Задняя полусфера", unit: "авто", pay: 3000 },
+  { code: "Форточки", direction: "Тонировка", service: "Форточки", unit: "пара", pay: 1000 },
+  { code: "Пер. боковые", direction: "Тонировка", service: "Передняя полусфера", unit: "авто", pay: 4000 },
+  { code: "Боковые", direction: "Тонировка", service: "Боковые стекла", unit: "пара", pay: 2000 },
+  { code: "1 боковое", direction: "Тонировка", service: "1 боковое стекло", unit: "шт.", pay: 1000 },
+  { code: "Лоб. Стекло", direction: "Тонировка", service: "Лобовое стекло", unit: "шт.", pay: 2000 },
+  { code: "Зад стекло", direction: "Тонировка", service: "Заднее стекло", unit: "шт.", pay: 1500 },
+  { code: "Полоса лоб", direction: "Тонировка", service: "Полоса на лобовое стекло", unit: "шт.", pay: 1200 },
+  { code: "Панорама", direction: "Тонировка", service: "Панорамная крыша", unit: "шт.", pay: 4000 },
+  { code: "Люк", direction: "Тонировка", service: "Люк", unit: "шт.", percent: 0.5 },
+  { code: "Демонтаж пленки", direction: "Демонтаж", service: "Демонтаж плёнки", unit: "пара", percent: 0.5 },
+  { code: "Демонтаж клея", direction: "Демонтаж", service: "Демонтаж клея", unit: "пара", percent: 0.5 },
+  { code: "Брон. Лобового", direction: "Бронирование", service: "Бронирование лобового стекла", unit: "шт.", pay: 6000 },
+  { code: "Брон. Фар", direction: "Бронирование", service: "Бронирование фар", unit: "пара", pay: 2000 },
+  { code: "Брон. 1 фары", direction: "Бронирование", service: "Бронирование 1 фары", unit: "шт.", pay: 1000 },
+  { code: "Брон. Туманок", direction: "Бронирование", service: "Бронирование противотуманных фар (1 шт)", unit: "шт.", pay: 500 },
+  { code: "Брон. Порогов", direction: "Бронирование", service: "Бронирование порогов", unit: "шт.", pay: 500 },
+  { code: "Полоса на крышу", direction: "Бронирование", service: "Полоса на крышу", unit: "шт.", pay: 2000 },
+  { code: "Антиблик", direction: "Антиблик", service: "Антибликовая плёнка на монитор", unit: "шт.", pay: 700 },
+  { code: "Доплата", direction: "Доплаты", service: "Доплата", unit: "авто", payFromPrice: true }
+];
 const TRASH_STATUSES = new Set(["Отменена", "Удалена", "Отказ", "В корзине", "Удаление", "Событие (удаление)", "Событие удалено"]);
 const PAYROLL_STATUSES = new Set(["Выполнено", "Оплачено"]);
 const $ = (id) => document.getElementById(id);
@@ -105,6 +130,7 @@ function init() {
   initMobileSidebar();
   initClickableRows();
   initContextMenu();
+  initAutoServiceDatalist();
   initDialogBackdropClose();
 
   [els.searchInput, els.statusFilter, els.installerFilter, els.dateFrom, els.dateTo].forEach((el) => {
@@ -667,11 +693,44 @@ function autoServicesTotal(list) {
   return (list || []).reduce((sum, item) => sum + (parseFloat(String(item.price || "").replace(",", ".")) || 0), 0);
 }
 function autoServiceContainer(prefix) { return prefix === "quick" ? els.quickAutoServices : els.editAutoServices; }
+function initAutoServiceDatalist() {
+  const dl = document.getElementById("autoServiceDatalist");
+  if (!dl) return;
+  dl.innerHTML = AUTO_PAY_RATES.map((r) => `<option value="${e(r.service)}"></option><option value="${e(r.code)}"></option>`).join("");
+}
+function autoRateForService(name) {
+  const n = norm(name);
+  if (!n) return null;
+  let rate = AUTO_PAY_RATES.find((r) => norm(r.service) === n || norm(r.code) === n);
+  if (rate) return rate;
+  rate = AUTO_PAY_RATES.find((r) => n.includes(norm(r.service)) || n.includes(norm(r.code)) || norm(r.service).includes(n));
+  return rate || null;
+}
+function autoServicePay(item) {
+  const rate = autoRateForService(item?.name || "");
+  const price = num(item?.price || 0);
+  if (!rate) return { amount: 0, rateText: "не найдено в прайсе", direction: "", code: "" };
+  if (rate.payFromPrice) return { amount: price, rateText: "по сумме услуги", direction: rate.direction, code: rate.code };
+  if (rate.percent) return { amount: price * rate.percent, rateText: `${Math.round(rate.percent * 100)}% от суммы`, direction: rate.direction, code: rate.code };
+  return { amount: Number(rate.pay) || 0, rateText: moneyNumber(rate.pay), direction: rate.direction, code: rate.code };
+}
+function autoServicesPayTotal(list) {
+  return (list || []).reduce((sum, item) => sum + autoServicePay(item).amount, 0);
+}
+function ensureRomanInstallerForAuto(prefix) {
+  const isAuto = prefix === "quick" ? (els.quickDirection?.value || currentWorkspace) === "auto" : (els.editDirection?.value || recordDirection(current)) === "auto";
+  if (!isAuto) return;
+  if (prefix === "edit") {
+    const checked = [...document.querySelectorAll('[name="installer"]')].some((c) => c.checked);
+    if (!checked) document.querySelector('[name="installer"][value="Роман З"]')?.click();
+    if (els.editResponsible && !els.editResponsible.value.trim()) els.editResponsible.value = AUTO_DEFAULT_RESPONSIBLE;
+  }
+}
 function renderAutoServiceRows(prefix, list = null) {
   const box = autoServiceContainer(prefix);
   if (!box) return;
   const arr = list && list.length ? list : [{ name: "", price: "" }];
-  box.innerHTML = arr.map((item, i) => `<div class="auto-service-row" data-auto-service-row><input class="auto-service-name" placeholder="Название услуги" value="${e(item.name || "")}" /><input class="auto-service-price" type="number" step="1" placeholder="Сумма" value="${e(item.price || "")}" /><button type="button" class="ghost-small" data-auto-service-remove>×</button></div>`).join("");
+  box.innerHTML = arr.map((item, i) => `<div class="auto-service-row" data-auto-service-row><input class="auto-service-name" list="autoServiceDatalist" placeholder="Название услуги" value="${e(item.name || "")}" /><input class="auto-service-price" type="number" step="1" placeholder="Сумма" value="${e(item.price || "")}" /><button type="button" class="ghost-small" data-auto-service-remove>×</button></div>`).join("");
   box.querySelectorAll("input").forEach((input) => input.addEventListener("input", () => updateAutoTotal(prefix)));
   box.querySelectorAll("[data-auto-service-remove]").forEach((btn) => btn.addEventListener("click", () => { btn.closest("[data-auto-service-row]")?.remove(); updateAutoTotal(prefix); }));
   updateAutoTotal(prefix);
@@ -700,6 +759,7 @@ function updateEditDirectionUI() {
   const isAuto = (els.editDirection?.value || "architecture") === "auto";
   if (els.editAutoFields) els.editAutoFields.style.display = isAuto ? "block" : "none";
   if (isAuto && els.editAutoServices && !els.editAutoServices.children.length) renderAutoServiceRows("edit");
+  ensureRomanInstallerForAuto("edit");
 }
 
 function openRequest(id) {
@@ -723,7 +783,8 @@ function openRequest(id) {
   els.editAddress.value = f["Адрес"] || "";
   els.editAdminComment.value = f["Комментарий администратора"] || "";
   els.cancelReason.value = "";
-  const names = splitInstallers(f["Монтажники"]);
+  let names = splitInstallers(f["Монтажники"]);
+  if (recordDirection(current) === "auto" && !names.length) names = [AUTO_DEFAULT_INSTALLER];
   document.querySelectorAll('[name="installer"]').forEach((c) => c.checked = names.includes(c.value));
   renderRequestFiles(current.id);
   renderRequestHistory(current);
@@ -739,18 +800,20 @@ function openRequest(id) {
 function currentEditFields() {
   const direction = els.editDirection?.value || recordDirection(current);
   const autoServices = collectAutoServices("edit");
+  const selectedInstallers = [...document.querySelectorAll('[name="installer"]:checked')].map((x) => x.value);
+  if (direction === "auto" && !selectedInstallers.length) selectedInstallers.push(AUTO_DEFAULT_INSTALLER);
   const fields = {
     "Направление": direction === "auto" ? "Авто" : "Архитектура",
     "Дата записи": els.editDate.value,
     "Время записи": els.editTime.value,
     "Статус": els.editStatus.value,
     "Итоговый м2": els.editM2.value,
-    "Ответственный": els.editResponsible.value.trim(),
+    "Ответственный": direction === "auto" ? (els.editResponsible.value.trim() || AUTO_DEFAULT_RESPONSIBLE) : els.editResponsible.value.trim(),
     "Компания": els.editCompany?.value.trim() || "",
     "Услуга": els.editService.value.trim(),
     "Адрес": els.editAddress.value.trim(),
     "Комментарий администратора": els.editAdminComment.value.trim(),
-    "Монтажники": [...document.querySelectorAll('[name="installer"]:checked')].map((x) => x.value).join(", ")
+    "Монтажники": selectedInstallers.join(", ")
   };
   if (direction === "auto") {
     fields["Авто"] = els.editAuto?.value.trim() || "";
@@ -1093,7 +1156,7 @@ async function saveQuickAdd() {
   const direction = els.quickDirection?.value || currentWorkspace || "architecture";
     const autoServices = collectAutoServices("quick");
     const record = { "Направление": direction === "auto" ? "Авто" : "Архитектура", "Имя клиента": els.quickName.value.trim(), "Компания": els.quickCompany?.value.trim() || "", "Телефон": formatRussianPhone(els.quickPhone.value), "Услуга": els.quickService.value, "Дата записи": els.quickDate.value, "Время записи": els.quickTime.value, "Адрес": els.quickAddress.value.trim(), "м2": els.quickM2.value ? String(els.quickM2.value) : "", "Комментарий клиента": els.quickComment.value.trim(), "Статус": "Новая заявка", "Cal Booking ID": calendarId };
-    if (direction === "auto") { record["Авто"] = els.quickAuto?.value.trim() || ""; record["Пленка"] = els.quickFilm?.value.trim() || ""; record["Авто услуги"] = JSON.stringify(autoServices); record["Общая стоимость"] = String(autoServicesTotal(autoServices)); }
+    if (direction === "auto") { record["Авто"] = els.quickAuto?.value.trim() || ""; record["Пленка"] = els.quickFilm?.value.trim() || ""; record["Авто услуги"] = JSON.stringify(autoServices); record["Общая стоимость"] = String(autoServicesTotal(autoServices)); record["Монтажники"] = AUTO_DEFAULT_INSTALLER; record["Ответственный"] = AUTO_DEFAULT_RESPONSIBLE; }
   if (!record["Имя клиента"] || !record["Телефон"] || !record["Дата записи"] || !record["Время записи"]) { msg("Заполните ФИО, телефон, дату и время"); return; }
   try {
     const response = await fetch("/create-zayavka", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pwd() }, body: JSON.stringify({ fields: record }) });
@@ -1406,12 +1469,12 @@ function clearLocalHistory() { if (!confirm("Очистить локальную
 
 function openReport(type) {
   currentReportType = type;
-  const titles = { requests: "Отчёт по заявкам", payroll: "Отчёт по зарплате монтажников", objects: "Отчёт по объектам и объёму", clients: "Отчёт по клиентам" };
+  const titles = { requests: "Отчёт по заявкам", payroll: "Отчёт по зарплате монтажников", autoPayroll: "Авто: отчёт по оплате", objects: "Отчёт по объектам и объёму", clients: "Отчёт по клиентам" };
   els.reportTitle.textContent = titles[type] || "Настройка отчёта";
   els.reportDateFrom.value = els.dateFrom.value || monthStart();
   els.reportDateTo.value = els.dateTo.value || today();
   els.reportStatus.value = type === "payroll" ? "" : (els.statusFilter.value || "");
-  if (els.reportFormat) els.reportFormat.value = type === "payroll" ? "xls" : (els.reportFormat.value || "xls");
+  if (els.reportFormat) els.reportFormat.value = (type === "payroll" || type === "autoPayroll") ? "xls" : (els.reportFormat.value || "xls");
   els.reportAllInstallers.checked = true;
   document.querySelectorAll('[name="reportInstaller"]').forEach((c) => c.checked = false);
   els.payrollOptions.style.display = type === "payroll" ? "block" : "none";
@@ -1434,6 +1497,7 @@ function reportFiltered() {
 function updateReportPreview() {
   if (!els.reportPreview) return;
   if (currentReportType === "payroll") renderPayrollPreview();
+  else if (currentReportType === "autoPayroll") renderAutoPayrollPreview();
   else {
     const rows = reportFiltered();
     const m2 = rows.reduce((s, r) => s + getM2(r.fields || {}), 0);
@@ -1442,6 +1506,7 @@ function updateReportPreview() {
 }
 function downloadReport() {
   if (currentReportType === "payroll") return downloadPayrollReport();
+  if (currentReportType === "autoPayroll") return downloadAutoPayrollReport();
   const rows = reportFiltered();
   const format = els.reportFormat?.value || "xls";
   let fields, title, filename;
