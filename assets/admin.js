@@ -61,7 +61,8 @@ const storage = {
   notificationLog: "solncanet_notification_log_v19",
   calendarHidden: "solncanet_calendar_hidden_v22",
   activity: "solncanet_activity_v45",
-  comments: "solncanet_comments_v45"
+  comments: "solncanet_comments_v45",
+  filesFallback: "solncanet_files_fallback_v53"
 };
 
 
@@ -2093,19 +2094,40 @@ function renderFilesRequestSelect() {
   }).join("") || '<option value="">Нет заявок</option>';
   if (currentValue && [...select.options].some((o) => o.value === currentValue)) select.value = currentValue;
 }
+function getLocalFilesFallback() {
+  try { return JSON.parse(localStorage.getItem(storage.filesFallback) || "{}"); } catch (_) { return {}; }
+}
+function setLocalFilesFallback(requestId, files) {
+  const all = getLocalFilesFallback();
+  all[String(requestId)] = files || [];
+  localStorage.setItem(storage.filesFallback, JSON.stringify(all));
+}
+function mergeFilesUnique(files) {
+  const out = [];
+  const seen = new Set();
+  for (const file of files || []) {
+    const key = String(file.key || file.id || file.fileId || file.url || file.downloadUrl || file.originalName || Math.random());
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(file);
+  }
+  return out;
+}
 function parseRecordFiles(record) {
   const f = record?.fields || {};
-  const raw = f["Файлы"] || "";
-  if (!raw) return [];
+  const raw = f["Файлы"] || f["Файл"] || f["Вложения"] || f["Google Drive"] || "";
   let list = [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) list = parsed;
-    else if (parsed && typeof parsed === "object") list = [parsed];
-  } catch (_) {
-    list = String(raw).split(/\n+/).map((line) => ({ originalName: line.trim(), url: line.trim() })).filter((x) => x.originalName);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) list = parsed;
+      else if (parsed && typeof parsed === "object") list = [parsed];
+    } catch (_) {
+      list = String(raw).split(/\n+/).map((line) => ({ originalName: line.trim(), url: line.trim() })).filter((x) => x.originalName);
+    }
   }
-  return list.map((file) => normalizeFileMeta(file, record.id, f));
+  const local = getLocalFilesFallback()[String(record?.id)] || [];
+  return mergeFilesUnique([...list, ...local]).map((file) => normalizeFileMeta(file, record.id, f));
 }
 function parseFilesFromRecords(sourceRecords) {
   return (sourceRecords || []).flatMap((record) => parseRecordFiles(record)).sort((a, b) => String(b.uploadedAt || "").localeCompare(String(a.uploadedAt || "")));
@@ -2162,13 +2184,18 @@ function fileMiniHtml(file) {
   const thumb = isImage
     ? `<button type="button" class="file-thumb file-thumb-btn" data-file-preview="${e(file.key)}" title="Посмотреть файл"><img src="${e(file.downloadUrl || file.url)}" alt="${e(file.originalName || "Файл")}" loading="lazy"></button>`
     : `<button type="button" class="file-thumb file-thumb-btn file-thumb-icon" data-file-preview="${e(file.key)}" title="Посмотреть файл">${fileIcon(file)}</button>`;
-  return `<div class="file-chip"><div class="file-chip__main">${thumb}<span><button type="button" class="file-title-button" data-file-preview="${e(file.key)}">${e(file.originalName || file.name || "Файл")}</button><small>${e(file.fileType || "файл")} · ${formatFileSize(file.size)} · ${e(formatDateTime(file.uploadedAt))}</small></span></div><div class="file-chip__actions"><button type="button" data-file-preview="${e(file.key)}">Посмотреть</button><button type="button" data-file-open="${e(file.key)}">Drive</button><button type="button" data-file-download="${e(file.key)}">Скачать</button><button type="button" class="danger-mini" data-file-delete="${e(file.key)}">Удалить</button></div></div>`;
+  return `<div class="file-chip file-chip-v53"><div class="file-chip__main">${thumb}<span><button type="button" class="file-title-button" data-file-preview="${e(file.key)}">${e(file.originalName || file.name || "Файл")}</button><small>${e(file.fileType || "файл")} · ${formatFileSize(file.size)} · ${e(formatDateTime(file.uploadedAt))}</small></span></div><div class="file-chip__actions"><button type="button" data-file-preview="${e(file.key)}">Посмотреть</button><button type="button" data-file-open="${e(file.key)}">Открыть</button><button type="button" data-file-download="${e(file.key)}">Скачать</button><button type="button" class="danger-mini" data-file-delete="${e(file.key)}">Удалить</button></div></div>`;
 }
 function renderRequestFiles(requestId) {
   const box = $("requestFilesBox");
   if (!box) return;
-  const files = filesCache.filter((file) => String(file.requestId) === String(requestId));
-  box.innerHTML = files.length ? files.map(fileMiniHtml).join("") : '<p class="muted-text">К этой заявке файлы пока не загружены.</p>';
+  const record = records.find((r) => String(r.id) === String(requestId)) || current;
+  const fromRecord = record ? parseRecordFiles(record) : [];
+  const fromCache = filesCache.filter((file) => String(file.requestId) === String(requestId));
+  const files = mergeFilesUnique([...fromRecord, ...fromCache]);
+  box.innerHTML = files.length
+    ? `<div class="files-list-head"><b>Загружено файлов: ${files.length}</b><span>Нажмите на файл, чтобы посмотреть его.</span></div>${files.map(fileMiniHtml).join("")}`
+    : '<p class="muted-text">К этой заявке файлы пока не загружены.</p>';
   bindActionButtons();
 }
 async function uploadFilesFromPanel() {
@@ -2208,12 +2235,17 @@ async function uploadFiles(requestId, fileList, input, statusFn = setFilesStatus
       throw new Error((data.error || "Ошибка загрузки") + (details ? " — " + details : ""));
     }
     const uploaded = data.uploaded.map((file) => normalizeFileMeta(file, requestId, f));
-    const merged = [...parseRecordFiles(record), ...uploaded];
+    const merged = mergeFilesUnique([...parseRecordFiles(record), ...uploaded]);
+    setLocalFilesFallback(requestId, merged);
     const filesJson = JSON.stringify(merged);
     let history = getHistoryForRecord(record);
     history = addHistory(record, "Загрузка файлов в Google Drive", uploaded.map((x) => x.originalName).join(", "), history);
     const updateFields = { "Файлы": filesJson, "История изменений": JSON.stringify(history) };
-    await updateRecord(requestId, updateFields, "Файлы загружены");
+    try {
+      await updateRecord(requestId, updateFields, "Файлы загружены");
+    } catch (saveError) {
+      statusFn("Файл загружен в Google Drive, но список не сохранился в NocoDB: " + saveError.message + ". Проверьте, что в таблице заявок есть поле Файлы типа Long text.");
+    }
     record.fields = { ...(record.fields || {}), ...updateFields };
     if (current && String(current.id) === String(requestId)) current.fields = { ...(current.fields || {}), ...updateFields };
     filesCache = parseFilesFromRecords(records);
@@ -2222,7 +2254,12 @@ async function uploadFiles(requestId, fileList, input, statusFn = setFilesStatus
     if (input) input.value = "";
     const googleText = await syncGoogleCalendarFilesForRecord(record, merged, statusFn);
     await load();
-    statusFn(`Загружено файлов: ${uploaded.length}. Данные сохранены в заявке.${googleText ? " " + googleText : ""}`);
+    const refreshed = records.find((r) => String(r.id) === String(requestId));
+    if (refreshed && current && String(current.id) === String(requestId)) current = refreshed;
+    filesCache = parseFilesFromRecords(records);
+    renderFiles();
+    renderRequestFiles(requestId);
+    statusFn(`Загружено файлов: ${uploaded.length}.${googleText ? " " + googleText : ""}`);
   } catch (error) {
     statusFn("Ошибка загрузки: " + error.message);
   }
@@ -2355,6 +2392,7 @@ async function deleteAdminFile(key) {
     const record = records.find((r) => String(r.id) === String(file.requestId));
     if (record) {
       const kept = parseRecordFiles(record).filter((x) => x.key !== key);
+      setLocalFilesFallback(record.id, kept);
       const filesJson = JSON.stringify(kept);
       let history = getHistoryForRecord(record);
       history = addHistory(record, "Удаление файла", file.originalName || file.name || "Файл", history);

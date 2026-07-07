@@ -275,3 +275,7 @@ body{font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif;background:linear-grad
   .bulk-toolbar b { width: 100%; margin-right: 0; }
   .bulk-toolbar select, .bulk-toolbar button { flex: 1 1 145px; }
 }
+
+/* v53: clear file list */
+.files-list-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 10px;padding:10px 12px;border:1px solid #dbeafe;background:#f8fbff;border-radius:12px;color:#0f172a}.files-list-head span{color:#64748b;font-size:13px;font-weight:700}.file-chip-v53{padding:12px!important;border-radius:12px!important}.file-chip-v53 .file-title-button{font-size:15px;font-weight:850;color:#0f172a!important;background:transparent!important;border:0!important;padding:0!important;text-decoration:none;white-space:normal}.file-chip-v53 .file-title-button:hover{text-decoration:underline}.file-chip-v53 .file-thumb{width:44px;height:44px;min-width:44px;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb!important;background:#f8fafc!important;color:#334155!important;display:inline-flex;align-items:center;justify-content:center;font-weight:900;padding:0!important}.file-chip-v53 .file-thumb img{width:100%;height:100%;object-fit:cover}.file-chip-v53 .file-chip__actions button{min-height:36px}.file-preview-content{background:#111827!important}
+@media(max-width:620px){.files-list-head{display:grid}.file-chip-v53 .file-chip__main{align-items:flex-start}.file-chip-v53 .file-title-button{font-size:14px}.file-chip-v53 .file-chip__actions{grid-template-columns:1fr 1fr!important}}
