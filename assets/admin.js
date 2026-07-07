@@ -2080,7 +2080,7 @@ function setFilesStatus(text) {
 
 function openGoogleDriveTest() {
   const password = encodeURIComponent(pwd());
-  window.open(`/google-drive-test?password=${password}`, "_blank", "noopener");
+  window.open(`/google-drive-test?password=${password}&t=${Date.now()}`, "_blank", "noopener");
 }
 function renderFilesRequestSelect() {
   const select = $("filesRequestSelect");

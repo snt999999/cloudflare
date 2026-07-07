@@ -11,8 +11,14 @@ function allowedPasswords(env) {
   return new Set([...builtin, ...extra]);
 }
 function checkAdmin(request, env) {
-  const provided = (request.headers.get("x-admin-password") || "").trim();
-  if (!provided) return { ok: false, status: 401, body: { ok: false, error: "Не передан пароль" } };
+  const url = new URL(request.url);
+  const provided = (
+    request.headers.get("x-admin-password") ||
+    url.searchParams.get("password") ||
+    url.searchParams.get("adminPassword") ||
+    ""
+  ).trim();
+  if (!provided) return { ok: false, status: 401, body: { ok: false, error: "Не передан пароль", hint: "Проверка Google Drive открыта напрямую без пароля администратора. Открывайте её кнопкой из админки или передайте ?password=..." } };
   if (!allowedPasswords(env).has(provided)) return { ok: false, status: 401, body: { ok: false, error: "Неверный пароль" } };
   return { ok: true };
 }
@@ -29,8 +35,9 @@ export async function onRequest(context) {
   const { request, env } = context;
   const auth = checkAdmin(request, env);
   if (!auth.ok) return json(auth.body, auth.status);
-  if (!env.GOOGLE_DRIVE_UPLOAD_URL) return json({ ok: false, error: "GOOGLE_DRIVE_UPLOAD_URL is not set" }, 500);
-  const payload = { action: "health", token: env.GOOGLE_DRIVE_UPLOAD_TOKEN || "" };
+  if (!env.GOOGLE_DRIVE_UPLOAD_URL) return json({ ok: false, error: "GOOGLE_DRIVE_UPLOAD_URL is not set", hint: "В Cloudflare Pages добавьте переменную GOOGLE_DRIVE_UPLOAD_URL со ссылкой Apps Script /exec." }, 500);
+  if (!env.GOOGLE_DRIVE_UPLOAD_TOKEN) return json({ ok: false, error: "GOOGLE_DRIVE_UPLOAD_TOKEN is not set", hint: "В Cloudflare Pages добавьте переменную GOOGLE_DRIVE_UPLOAD_TOKEN. Точно такой же токен должен быть в Apps Script." }, 500);
+  const payload = { action: "health", token: env.GOOGLE_DRIVE_UPLOAD_TOKEN };
   let response;
   try {
     response = await fetch(env.GOOGLE_DRIVE_UPLOAD_URL, { method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
