@@ -11,26 +11,162 @@ const WORKER_BY_KEY = Object.fromEntries(WORKER_PROFILES.map((w) => [w.key, w]))
 const AUTO_DEFAULT_INSTALLER = "Роман З";
 const AUTO_DEFAULT_RESPONSIBLE = "Роман";
 const AUTO_PAY_RATES = [
-  { code: "Зад.полусфера", direction: "Тонировка", service: "Задняя полусфера", unit: "авто", pay: 3000 },
-  { code: "Форточки", direction: "Тонировка", service: "Форточки", unit: "пара", pay: 1000 },
-  { code: "Пер. боковые", direction: "Тонировка", service: "Передняя полусфера", unit: "авто", pay: 4000 },
-  { code: "Боковые", direction: "Тонировка", service: "Боковые стекла", unit: "пара", pay: 2000 },
-  { code: "1 боковое", direction: "Тонировка", service: "1 боковое стекло", unit: "шт.", pay: 1000 },
-  { code: "Лоб. Стекло", direction: "Тонировка", service: "Лобовое стекло", unit: "шт.", pay: 2000 },
-  { code: "Зад стекло", direction: "Тонировка", service: "Заднее стекло", unit: "шт.", pay: 1500 },
-  { code: "Полоса лоб", direction: "Тонировка", service: "Полоса на лобовое стекло", unit: "шт.", pay: 1200 },
-  { code: "Панорама", direction: "Тонировка", service: "Панорамная крыша", unit: "шт.", pay: 4000 },
-  { code: "Люк", direction: "Тонировка", service: "Люк", unit: "шт.", percent: 0.5 },
-  { code: "Демонтаж пленки", direction: "Демонтаж", service: "Демонтаж плёнки", unit: "пара", percent: 0.5 },
-  { code: "Демонтаж клея", direction: "Демонтаж", service: "Демонтаж клея", unit: "пара", percent: 0.5 },
-  { code: "Брон. Лобового", direction: "Бронирование", service: "Бронирование лобового стекла", unit: "шт.", pay: 6000 },
-  { code: "Брон. Фар", direction: "Бронирование", service: "Бронирование фар", unit: "пара", pay: 2000 },
-  { code: "Брон. 1 фары", direction: "Бронирование", service: "Бронирование 1 фары", unit: "шт.", pay: 1000 },
-  { code: "Брон. Туманок", direction: "Бронирование", service: "Бронирование противотуманных фар (1 шт)", unit: "шт.", pay: 500 },
-  { code: "Брон. Порогов", direction: "Бронирование", service: "Бронирование порогов", unit: "шт.", pay: 500 },
-  { code: "Полоса на крышу", direction: "Бронирование", service: "Полоса на крышу", unit: "шт.", pay: 2000 },
-  { code: "Антиблик", direction: "Антиблик", service: "Антибликовая плёнка на монитор", unit: "шт.", pay: 700 },
-  { code: "Доплата", direction: "Доплаты", service: "Доплата", unit: "авто", payFromPrice: true }
+  {
+    "code": "Зад.полусфера",
+    "direction": "Тонировка",
+    "service": "Задняя полусфера",
+    "unit": "авто",
+    "price": 6000,
+    "pay": 3000
+  },
+  {
+    "code": "Форточки",
+    "direction": "Тонировка",
+    "service": "Форточки",
+    "unit": "пара",
+    "price": 1000,
+    "pay": 1000
+  },
+  {
+    "code": "Пер. боковые",
+    "direction": "Тонировка",
+    "service": "Передняя полусфера",
+    "unit": "авто",
+    "price": 4000,
+    "pay": 4000
+  },
+  {
+    "code": "Боковые",
+    "direction": "Тонировка",
+    "service": "Боковые стекла",
+    "unit": "пара",
+    "price": 4000,
+    "pay": 2000
+  },
+  {
+    "code": "1 боковое",
+    "direction": "Тонировка",
+    "service": "1 боковое стекло",
+    "unit": "шт.",
+    "price": 2000,
+    "pay": 1000
+  },
+  {
+    "code": "Лоб. Стекло",
+    "direction": "Тонировка",
+    "service": "Лобовое стекло",
+    "unit": "шт.",
+    "price": 4000,
+    "pay": 2000
+  },
+  {
+    "code": "Зад стекло",
+    "direction": "Тонировка",
+    "service": "Заднее стекло",
+    "unit": "шт.",
+    "price": 4000,
+    "pay": 1500
+  },
+  {
+    "code": "Полоса лоб",
+    "direction": "Тонировка",
+    "service": "Полоса на лобовое стекло",
+    "unit": "шт.",
+    "price": 1200,
+    "pay": 1200
+  },
+  {
+    "code": "Панорама",
+    "direction": "Тонировка",
+    "service": "Панорамная крыша",
+    "unit": "шт.",
+    "price": 6000,
+    "pay": 4000
+  },
+  {
+    "code": "Люк",
+    "direction": "Тонировка",
+    "service": "Люк",
+    "unit": "шт.",
+    "percent": 0.5
+  },
+  {
+    "code": "Демонтаж пленки",
+    "direction": "Демонтаж",
+    "service": "Демонтаж плёнки",
+    "unit": "пара",
+    "percent": 0.5
+  },
+  {
+    "code": "Демонтаж клея",
+    "direction": "Демонтаж",
+    "service": "Демонтаж клея",
+    "unit": "пара",
+    "percent": 0.5
+  },
+  {
+    "code": "Брон. Лобового",
+    "direction": "Бронирование",
+    "service": "Бронирование лобового стекла",
+    "unit": "шт.",
+    "price": 24000,
+    "pay": 6000
+  },
+  {
+    "code": "Брон. Фар",
+    "direction": "Бронирование",
+    "service": "Бронирование фар",
+    "unit": "пара",
+    "price": 6000,
+    "pay": 2000
+  },
+  {
+    "code": "Брон. 1 фары",
+    "direction": "Бронирование",
+    "service": "Бронирование 1 фары",
+    "unit": "шт.",
+    "price": 3000,
+    "pay": 1000
+  },
+  {
+    "code": "Брон. Туманок",
+    "direction": "Бронирование",
+    "service": "Бронирование противотуманных фар (1 шт)",
+    "unit": "шт.",
+    "price": 500,
+    "pay": 500
+  },
+  {
+    "code": "Брон. Порогов",
+    "direction": "Бронирование",
+    "service": "Бронирование порогов",
+    "unit": "шт.",
+    "price": 500,
+    "pay": 500
+  },
+  {
+    "code": "Полоса на крышу",
+    "direction": "Бронирование",
+    "service": "Полоса на крышу",
+    "unit": "шт.",
+    "price": 4000,
+    "pay": 2000
+  },
+  {
+    "code": "Антиблик",
+    "direction": "Антиблик",
+    "service": "Антибликовая плёнка на монитор",
+    "unit": "шт.",
+    "price": 2000,
+    "pay": 700
+  },
+  {
+    "code": "Доплата",
+    "direction": "Доплаты",
+    "service": "Доплата",
+    "unit": "авто",
+    "payFromPrice": true
+  }
 ];
 const TRASH_STATUSES = new Set(["Отменена", "Удалена", "Отказ", "В корзине", "Удаление", "Событие (удаление)", "Событие удалено"]);
 const PAYROLL_STATUSES = new Set(["Выполнено", "Оплачено"]);
@@ -707,6 +843,54 @@ function autoRateForService(name) {
   rate = AUTO_PAY_RATES.find((r) => n.includes(norm(r.service)) || norm(r.service).includes(n));
   return rate || null;
 }
+function scoreAutoSuggestion(query, name) {
+  const q = norm(query || "");
+  const n = norm(name || "");
+  if (!q || !n) return 0;
+  if (n === q) return 1000;
+  if (n.startsWith(q)) return 900 - Math.max(0, n.length - q.length);
+  if (n.includes(q)) return 700 - n.indexOf(q);
+  const parts = q.split(" ").filter(Boolean);
+  if (parts.length && parts.every((part) => n.includes(part))) return 500 + parts.length * 20;
+  let score = 0;
+  parts.forEach((part) => { if (n.includes(part)) score += 80; });
+  return score;
+}
+function hideAutoServiceSuggestions(row) {
+  row?.querySelector(".auto-suggest-box")?.remove();
+}
+function showAutoServiceSuggestions(input, prefix) {
+  const row = input?.closest("[data-auto-service-row]");
+  if (!row) return;
+  const q = input.value || "";
+  if (norm(q).length < 1) { hideAutoServiceSuggestions(row); return; }
+  const matches = AUTO_PAY_RATES
+    .map((r) => ({ rate: r, score: scoreAutoSuggestion(q, r.service) }))
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score || String(a.rate.service).localeCompare(String(b.rate.service)))
+    .slice(0, 7);
+  if (!matches.length) { hideAutoServiceSuggestions(row); return; }
+  let box = row.querySelector(".auto-suggest-box");
+  if (!box) {
+    box = document.createElement("div");
+    box.className = "auto-suggest-box";
+    row.appendChild(box);
+  }
+  box.innerHTML = matches.map(({ rate }) => {
+    const price = rate.price !== undefined && rate.price !== null && rate.price !== "" ? `${moneyNumber(rate.price)} ₽` : (rate.percent ? `${Math.round(rate.percent * 100)}%` : "");
+    return `<button type="button" data-service="${e(rate.service)}"><span>${e(rate.service)}</span>${price ? `<small>${e(price)}</small>` : ""}</button>`;
+  }).join("");
+  box.querySelectorAll("button[data-service]").forEach((btn) => {
+    btn.addEventListener("pointerdown", (ev) => {
+      ev.preventDefault();
+      const service = btn.dataset.service || "";
+      input.value = service;
+      applyAutoServiceDefault(row);
+      hideAutoServiceSuggestions(row);
+      updateAutoTotal(prefix);
+    });
+  });
+}
 function autoServicePay(item) {
   const rate = autoRateForService(item?.name || "");
   const price = num(item?.price || 0);
@@ -730,8 +914,8 @@ function ensureRomanInstallerForAuto(prefix) {
 function defaultAutoServicePrice(name) {
   const rate = autoRateForService(name || "");
   if (!rate) return "";
-  if (rate.payFromPrice || rate.percent) return "";
-  return String(Number(rate.pay) || "");
+  if (rate.price !== undefined && rate.price !== null && rate.price !== "") return String(Number(rate.price) || "");
+  return "";
 }
 function applyAutoServiceDefault(row) {
   if (!row) return;
@@ -751,8 +935,10 @@ function renderAutoServiceRows(prefix, list = null) {
   const arr = list && list.length ? list : [{ name: "", material: "", price: "" }];
   box.innerHTML = arr.map((item, i) => `<div class="auto-service-row" data-auto-service-row><input class="auto-service-name" list="autoServiceDatalist" placeholder="Полное название услуги" value="${e(item.name || "")}" /><input class="auto-service-material" placeholder="Материал" value="${e(item.material || item["Материал"] || "")}" /><input class="auto-service-price" type="number" step="1" placeholder="Сумма" value="${e(item.price || "")}" /><button type="button" class="ghost-small" data-auto-service-remove>×</button></div>`).join("");
   box.querySelectorAll(".auto-service-name").forEach((input) => {
+    input.addEventListener("input", () => { showAutoServiceSuggestions(input, prefix); updateAutoTotal(prefix); });
+    input.addEventListener("focus", () => { showAutoServiceSuggestions(input, prefix); });
     input.addEventListener("change", () => { applyAutoServiceDefault(input.closest("[data-auto-service-row]")); updateAutoTotal(prefix); });
-    input.addEventListener("blur", () => { applyAutoServiceDefault(input.closest("[data-auto-service-row]")); updateAutoTotal(prefix); });
+    input.addEventListener("blur", () => { const row = input.closest("[data-auto-service-row]"); setTimeout(() => hideAutoServiceSuggestions(row), 160); applyAutoServiceDefault(row); updateAutoTotal(prefix); });
   });
   box.querySelectorAll("input").forEach((input) => input.addEventListener("input", () => updateAutoTotal(prefix)));
   box.querySelectorAll("[data-auto-service-remove]").forEach((btn) => btn.addEventListener("click", () => { btn.closest("[data-auto-service-row]")?.remove(); updateAutoTotal(prefix); }));
@@ -1669,9 +1855,9 @@ function buildAutoServicesSheet(data) {
 }
 function buildAutoRatesSheet(data) {
   const rows = [];
-  rows.push(xRow(["Код", "Группа", "Услуга", "Ед.", "Оплата", "Процент", "Особое правило"].map((h) => xCell(h, "Header"))));
-  AUTO_PAY_RATES.forEach((r) => rows.push(xRow([xCell(r.code), xCell(r.direction), xCell(r.service), xCell(r.unit), xCell(r.pay || 0,"Money","Number"), xCell(r.percent ? Math.round(r.percent * 100) + "%" : ""), xCell(r.payFromPrice ? "по сумме услуги" : "")])));
-  return xWorksheet("Прайс оплаты", [20, 18, 40, 12, 14, 12, 22], rows, 1);
+  rows.push(xRow(["Код", "Группа", "Услуга", "Ед.", "Стоимость", "Оплата сотруднику", "Процент", "Особое правило"].map((h) => xCell(h, "Header"))));
+  AUTO_PAY_RATES.forEach((r) => rows.push(xRow([xCell(r.code), xCell(r.direction), xCell(r.service), xCell(r.unit), xCell(r.price || 0,"Money","Number"), xCell(r.pay || 0,"Money","Number"), xCell(r.percent ? Math.round(r.percent * 100) + "%" : ""), xCell(r.payFromPrice ? "по сумме услуги" : "")])));
+  return xWorksheet("Прайс оплаты", [20, 18, 40, 12, 14, 16, 12, 22], rows, 1);
 }
 
 function updateReportPreview() {

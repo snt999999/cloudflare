@@ -326,3 +326,41 @@ body{font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif;background:linear-grad
 .crm-accordion > *:not(summary) { margin-left: 16px; margin-right: 16px; }
 .crm-accordion > :last-child { margin-bottom: 16px; }
 .crm-accordion[open] > summary { border-bottom: 1px solid #eef1f5; }
+
+
+/* v56: умные подсказки авто-услуг */
+.auto-service-row{position:relative;}
+.auto-suggest-box{
+  position:absolute;
+  left:0;
+  right:156px;
+  top:44px;
+  z-index:50;
+  display:grid;
+  gap:4px;
+  padding:6px;
+  border:1px solid #dbeafe;
+  border-radius:12px;
+  background:#fff;
+  box-shadow:0 12px 30px rgba(15,23,42,.14);
+}
+.auto-suggest-box button{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  min-height:34px;
+  padding:7px 9px;
+  border:0!important;
+  border-radius:9px;
+  background:#fff!important;
+  color:#0f172a!important;
+  text-align:left;
+  cursor:pointer;
+}
+.auto-suggest-box button:hover{background:#f1f5f9!important;}
+.auto-suggest-box span{font-weight:700;}
+.auto-suggest-box small{color:#64748b;font-weight:800;white-space:nowrap;}
+@media(max-width:720px){
+  .auto-suggest-box{position:static;right:auto;margin-top:6px;}
+}
