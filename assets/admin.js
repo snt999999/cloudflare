@@ -3316,7 +3316,9 @@ function markCalendarEventImported(id) {
 function existingRecordForCalendarEvent(id) {
   if (!id) return null;
   const needle = "gcal-" + id;
-  return records.find((r) => String((r.fields || {})["Cal Booking ID"] || "") === needle) || null;
+  // Важно: удалённая заявка не считается перенесённой из Google Календаря.
+  // Иначе после удаления события повторный перенос блокируется статусом «Уже перенесено».
+  return records.find((r) => !isTrashRecord(r) && String((r.fields || {})["Cal Booking ID"] || "") === needle) || null;
 }
 
 function calendarEventHay(ev) {
