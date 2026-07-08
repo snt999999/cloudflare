@@ -54,39 +54,24 @@ async function tryPatchVariants(env, id, variants) {
   return { ok: false, attempts };
 }
 
-async function tryPatchProgressive(env, id, fields) {
-  const attempts = [];
-  const savedFields = {};
-  for (const [key, value] of Object.entries(fields || {})) {
-    const part = { [key]: value };
-    const result = await patchRecord(env, id, part);
-    attempts.push({ status: result.status, fields: part, response: result.response });
-    if (result.ok) savedFields[key] = value;
-  }
-  return { ok: Object.keys(savedFields).length > 0, savedFields, attempts };
+async function patchRecordStrict(env, id, fields) {
+  const payload = [{ id: Number(id) || id, fields }];
+  const res = await fetch(env.NOCODB_ENDPOINT || DEFAULT_NOCODB_ENDPOINT, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "xc-token": env.NOCODB_TOKEN },
+    body: JSON.stringify(payload)
+  });
+  const text = await res.text();
+  return { ok: res.ok, status: res.status, response: parseJson(text), payload };
 }
 
-function makeTrashVariants(fields) {
-  const comment = fields["Комментарий администратора"] || "";
-  const variants = [];
-  variants.push(fields);
-  // Самый надежный вариант корзины: отдельная галочка, которую пользователь добавил в NocoDB.
-  variants.push({ "Удалено": true, "Дата удаления": fields["Дата удаления"] || new Date().toISOString(), "Кто удалил": fields["Кто удалил"] || "" });
-  variants.push({ "Удалено": true, "Дата удаления": fields["Дата удаления"] || new Date().toISOString() });
-  variants.push({ "Удалено": true });
-  // На разных таблицах NocoDB могут отсутствовать дополнительные колонки или варианты single select.
-  // Поэтому пробуем безопасные варианты: сначала статус, который уже есть в вашей таблице, потом минимальные статусы.
-  variants.push({ "Статус": "Событие (удаление)", "Комментарий администратора": comment });
-  variants.push({ "Статус": "Удаление", "Комментарий администратора": comment });
-  variants.push({ "Статус": "Удалена", "Комментарий администратора": comment });
-  variants.push({ "Статус": "Отменена", "Комментарий администратора": comment });
-  variants.push({ "Статус": "Отказ", "Комментарий администратора": comment });
-  variants.push({ "Статус": "Событие (удаление)" });
-  variants.push({ "Статус": "Удаление" });
-  variants.push({ "Статус": "Удалена" });
-  variants.push({ "Статус": "Отменена" });
-  variants.push({ "Статус": "Отказ" });
-  return variants;
+function compactFieldsForTrash(fields) {
+  // v61: удаление фиксируем только через реальные поля, которые пользователь добавил в NocoDB.
+  // Не отправляем дополнительные необязательные поля, чтобы NocoDB не отклонял весь PATCH.
+  return {
+    "Удалено": true,
+    "Дата удаления": fields["Дата удаления"] || new Date().toISOString()
+  };
 }
 
 export async function onRequestPost(context) {
@@ -119,45 +104,26 @@ export async function onRequestPost(context) {
   if (!Object.keys(fields).length) return json({ ok: false, error: "Нет данных для сохранения" }, 400);
 
   try {
-    const st = String(fields["Статус"] || "");
-    const isTrashMove = requested.__moveToTrash === true || ["Отменена", "Удалена", "Отказ", "Удаление", "Событие (удаление)", "Событие удалено"].includes(st) || st.toLowerCase().includes("удал") || st.toLowerCase().includes("отмен") || st.toLowerCase().includes("отказ");
-    const variants = [];
-    if (isTrashMove) {
-      variants.push(...makeTrashVariants(fields));
-    } else {
-      variants.push(fields);
-      const fallback = {};
-      for (const key of safeKeys) if (Object.prototype.hasOwnProperty.call(fields, key)) fallback[key] = fields[key];
-      if (Object.keys(fallback).length && Object.keys(fallback).length !== Object.keys(fields).length) variants.push(fallback);
-    }
-
-    const attempt = await tryPatchVariants(env, body.id, variants);
-    if (attempt.ok) {
-      const warning = Object.keys(attempt.savedFields).length !== Object.keys(fields).length
-        ? "Часть дополнительных полей не сохранена. Добавьте недостающие колонки в NocoDB, если они нужны в истории."
-        : "";
-      return json({ ok: true, nocodbResponse: attempt.result.response, savedFields: attempt.savedFields, warning, attempts: attempt.attempts });
-    }
-
-    // v55: если один из новых столбцов отсутствует в NocoDB, не теряем всё сохранение.
-    // Пробуем сохранить поля по одному и возвращаем успешную часть с предупреждением.
-    const progressive = await tryPatchProgressive(env, body.id, fields);
-    if (progressive.ok) {
+    const finalFields = requested.__moveToTrash === true ? compactFieldsForTrash(fields) : fields;
+    const result = await patchRecordStrict(env, body.id, finalFields);
+    if (!result.ok) {
       return json({
-        ok: true,
-        savedFields: progressive.savedFields,
-        warning: "Часть полей не сохранена, потому что в NocoDB нет соответствующих колонок или значений single select. Основные изменения сохранены.",
-        attempts: [...attempt.attempts, ...progressive.attempts]
-      });
+        ok: false,
+        error: "NocoDB update error",
+        hint: "NocoDB не принял сохранение. Теперь сайт не делает вид, что данные сохранились частично. Проверьте, что в таблице есть все нужные поля и варианты single select.",
+        status: result.status,
+        sentFields: finalFields,
+        nocodbResponse: result.response,
+        lastError: shortNocodbError(result)
+      }, 500);
     }
-
     return json({
-      ok: false,
-      error: "NocoDB update error",
-      hint: "Не удалось обновить запись. Проверьте права API-токена и наличие колонок в таблице NocoDB: Дата записи, Время записи, Статус, Направление, Авто, Пленка, Авто услуги, Общая стоимость, Файлы, Удалено.",
-      attempts: [...attempt.attempts, ...progressive.attempts],
-      lastError: attempt.attempts.length ? shortNocodbError(attempt.attempts[attempt.attempts.length - 1]) : ""
-    }, 500);
+      ok: true,
+      savedFields: finalFields,
+      nocodbResponse: result.response,
+      verified: true,
+      message: "Сохранено в NocoDB"
+    });
   } catch (error) {
     return json({ ok: false, error: error.message }, 500);
   }

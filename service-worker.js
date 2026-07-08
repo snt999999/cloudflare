@@ -1,4 +1,4 @@
-const CACHE_NAME = 'solncanet-v56';
+const CACHE_NAME = 'solncanet-v61';
 const APP_SHELL = [
   '/',
   '/index.html',

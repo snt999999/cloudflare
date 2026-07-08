@@ -12,79 +12,79 @@ const AUTO_DEFAULT_INSTALLER = "Роман З";
 const AUTO_DEFAULT_RESPONSIBLE = "Роман";
 const AUTO_PAY_RATES = [
   {
-    "code": "Тонирование задней полусферы",
+    "code": "Зад.полусфера",
     "direction": "Тонировка",
     "service": "Тонирование задней полусферы",
     "unit": "авто",
-    "price": 6000,
-    "pay": 3000
+    "price": 6000.0,
+    "pay": 3000.0
   },
   {
     "code": "Форточки",
     "direction": "Тонировка",
     "service": "Форточки",
     "unit": "пара",
-    "price": 1000,
-    "pay": 1000
+    "price": 1000.0,
+    "pay": 1000.0
   },
   {
-    "code": "Тонирование передней полусферы",
+    "code": "Пер. боковые",
     "direction": "Тонировка",
     "service": "Тонирование передней полусферы",
     "unit": "авто",
-    "price": 4000,
-    "pay": 4000
+    "price": 4000.0,
+    "pay": 4000.0
   },
   {
-    "code": "Тонирование передних/задних боковых стекол",
+    "code": "Боковые",
     "direction": "Тонировка",
     "service": "Тонирование передних/задних боковых стекол",
     "unit": "пара",
-    "price": 4000,
-    "pay": 2000
+    "price": 4000.0,
+    "pay": 2000.0
   },
   {
-    "code": "Тонирование 1 бокового стекла",
+    "code": "1 боковое",
     "direction": "Тонировка",
     "service": "Тонирование 1 бокового стекла",
     "unit": "шт.",
-    "price": 2000,
-    "pay": 1000
+    "price": 2000.0,
+    "pay": 1000.0
   },
   {
-    "code": "Тонирование лобового стекла",
+    "code": "Лоб. Стекло",
     "direction": "Тонировка",
     "service": "Тонирование лобового стекла",
     "unit": "шт.",
-    "price": 4000,
-    "pay": 2000
+    "price": 4000.0,
+    "pay": 2000.0
   },
   {
-    "code": "Тонирование заднего стекла",
+    "code": "Зад стекло",
     "direction": "Тонировка",
     "service": "Тонирование заднего стекла",
     "unit": "шт.",
-    "price": 4000,
-    "pay": 1500
+    "price": 4000.0,
+    "pay": 1500.0
   },
   {
-    "code": "Полоса на лобовое стекло",
+    "code": "Полоса лоб",
     "direction": "Тонировка",
     "service": "Полоса на лобовое стекло",
     "unit": "шт.",
-    "price": 1200,
-    "pay": 1200
+    "price": 1200.0,
+    "pay": 1200.0
   },
   {
-    "code": "Тонирование панорамы",
+    "code": "Панорама",
     "direction": "Тонировка",
     "service": "Тонирование панорамы",
     "unit": "шт.",
-    "price": 6000,
-    "pay": 4000
+    "price": 6000.0,
+    "pay": 4000.0
   },
   {
-    "code": "Тонирование люка",
+    "code": "Люк",
     "direction": "Тонировка",
     "service": "Тонирование люка",
     "unit": "шт.",
@@ -108,68 +108,67 @@ const AUTO_PAY_RATES = [
     "percent": 0.5
   },
   {
-    "code": "Бронирование лобового стекла",
+    "code": "Брон. Лобового",
     "direction": "Бронирование",
     "service": "Бронирование лобового стекла",
     "unit": "шт.",
-    "price": 24000,
-    "pay": 6000
+    "price": 24000.0,
+    "pay": 6000.0
   },
   {
-    "code": "Бронирование фар",
+    "code": "Брон. Фар",
     "direction": "Бронирование",
     "service": "Бронирование фар",
     "unit": "пара",
-    "price": 6000,
-    "pay": 2000
+    "price": 6000.0,
+    "pay": 2000.0
   },
   {
-    "code": "Бронирование 1 фары",
+    "code": "Брон. 1 фары",
     "direction": "Бронирование",
     "service": "Бронирование 1 фары",
     "unit": "шт.",
-    "price": 3000,
-    "pay": 1000
+    "price": 3000.0,
+    "pay": 1000.0
   },
   {
-    "code": "Бронирование противотуманных фар (1 шт)",
+    "code": "Брон. Туманок",
     "direction": "Бронирование",
     "service": "Бронирование противотуманных фар (1 шт)",
     "unit": "шт.",
-    "price": 500,
-    "pay": 500
+    "price": 500.0,
+    "pay": 500.0
   },
   {
-    "code": "Бронирование порогов",
+    "code": "Брон. Порогов",
     "direction": "Бронирование",
     "service": "Бронирование порогов",
     "unit": "шт.",
-    "price": 500,
-    "pay": 500
+    "price": 500.0,
+    "pay": 500.0
   },
   {
     "code": "Полоса на крышу",
     "direction": "Бронирование",
     "service": "Полоса на крышу",
     "unit": "шт.",
-    "price": 4000,
-    "pay": 2000
+    "price": 4000.0,
+    "pay": 2000.0
   },
   {
-    "code": "Антибликовая плёнка на монитор",
+    "code": "Антиблик",
     "direction": "Антиблик",
     "service": "Антибликовая плёнка на монитор",
     "unit": "шт.",
-    "price": 2000,
-    "pay": 700
+    "price": 2000.0,
+    "pay": 700.0
   },
   {
     "code": "Доплата",
     "direction": "Доплаты",
     "service": "Доплата",
     "unit": "авто",
-    "price": "",
-    "payFromPrice": true
+    "price": ""
   }
 ];
 const TRASH_STATUSES = new Set(["Отменена", "Удалена", "Отказ", "В корзине", "Удаление", "Событие (удаление)", "Событие удалено"]);
@@ -536,6 +535,29 @@ async function load(options = {}) {
   } catch (error) { if (!silent) msg(error.message); }
 }
 
+async function reloadRecordsFromNocoDB() {
+  const response = await fetch("/list-zayavki?_=" + Date.now(), { headers: { "x-admin-password": pwd() }, cache: "no-store" });
+  const data = await response.json();
+  if (!response.ok || !data.ok) throw new Error(data.error || "Не удалось перечитать NocoDB после сохранения");
+  records = data.records || [];
+  lastLoadAt = Date.now();
+  return records;
+}
+function sameSavedValue(a, b) {
+  const av = a === null || a === undefined ? "" : String(a);
+  const bv = b === null || b === undefined ? "" : String(b);
+  return av === bv;
+}
+function verifyRecordFields(record, fields) {
+  const f = record?.fields || {};
+  const misses = [];
+  Object.entries(fields || {}).forEach(([key, value]) => {
+    if (key.startsWith("__")) return;
+    if (!sameSavedValue(f[key], value)) misses.push(`${key}: отправлено «${value ?? ""}», в базе «${f[key] ?? ""}»`);
+  });
+  return misses;
+}
+
 function startAutoRefresh() {
   if (autoRefreshTimer) clearInterval(autoRefreshTimer);
   autoRefreshTimer = setInterval(() => {
@@ -851,14 +873,29 @@ function initContextMenu() {
 }
 
 
+function normalizeAutoServiceItem(item = {}) {
+  if (typeof item === "string") return { name: item, material: "", price: "" };
+  const name = item.name ?? item.service ?? item["Услуга"] ?? item["Название"] ?? "";
+  const material = item.material ?? item["Материал"] ?? item.film ?? item["Пленка"] ?? "";
+  const price = item.price ?? item.cost ?? item.amount ?? item["Стоимость"] ?? item["Сумма"] ?? item["Цена"] ?? "";
+  return { name: String(name || "").trim(), material: String(material || "").trim(), price: price === null || price === undefined ? "" : String(price).trim() };
+}
 function parseAutoServices(value, total = "", serviceName = "") {
-  if (Array.isArray(value)) return value;
-  try { const arr = JSON.parse(value || "[]"); if (Array.isArray(arr)) return arr; } catch (_) {}
+  let arr = [];
+  if (Array.isArray(value)) arr = value;
+  else {
+    try { const parsed = JSON.parse(value || "[]"); if (Array.isArray(parsed)) arr = parsed; } catch (_) {}
+  }
+  arr = arr.map(normalizeAutoServiceItem).filter((x) => x.name || x.material || x.price);
+  if (arr.length) return arr;
   if (serviceName || total) return [{ name: serviceName || "Услуга", material: "", price: total || "" }];
   return [{ name: "", material: "", price: "" }];
 }
+function autoServicePriceValue(item = {}) {
+  return parseFloat(String(item.price ?? item.cost ?? item.amount ?? item["Стоимость"] ?? item["Сумма"] ?? "").replace(",", ".")) || 0;
+}
 function autoServicesTotal(list) {
-  return (list || []).reduce((sum, item) => sum + (parseFloat(String(item.price || "").replace(",", ".")) || 0), 0);
+  return (list || []).reduce((sum, item) => sum + autoServicePriceValue(normalizeAutoServiceItem(item)), 0);
 }
 function autoServiceContainer(prefix) { return prefix === "quick" ? els.quickAutoServices : els.editAutoServices; }
 function initAutoServiceDatalist() {
@@ -923,8 +960,9 @@ function showAutoServiceSuggestions(input, prefix) {
   });
 }
 function autoServicePay(item) {
-  const rate = autoRateForService(item?.name || "");
-  const price = num(item?.price || 0);
+  const normalized = normalizeAutoServiceItem(item || {});
+  const rate = autoRateForService(normalized.name || "");
+  const price = autoServicePriceValue(normalized);
   if (!rate) return { amount: 0, rateText: "не найдено в прайсе", direction: "", code: "" };
   if (rate.payFromPrice) return { amount: price, rateText: "по сумме услуги", direction: rate.direction, code: rate.code };
   if (rate.percent) return { amount: price * rate.percent, rateText: `${Math.round(rate.percent * 100)}% от суммы`, direction: rate.direction, code: rate.code };
@@ -1032,7 +1070,7 @@ function openRequest(id) {
   renderRequestHistory(current);
   renderRequestComments(current);
   lastAutosaveSnapshot = JSON.stringify(currentEditFields());
-  setAutosaveStatus("Все изменения сохранены");
+  setAutosaveStatus("Сохраните изменения кнопкой «Сохранить»");
   updateRequestNotificationEditor();
   updateScheduleSmsEditor();
   renderRequestGoogleCalendar(current);
@@ -1132,21 +1170,37 @@ async function restoreRequest(id) {
 }
 async function updateRecord(id, fields, successText, options = {}) {
   try {
-    const response = await fetch("/update-zayavka", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pwd() }, body: JSON.stringify({ id, fields }) });
+    const response = await fetch("/update-zayavka", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": pwd() },
+      body: JSON.stringify({ id, fields })
+    });
     const data = await response.json();
-    if (!response.ok || !data.ok) throw new Error(data.error || data.hint || "Ошибка сохранения");
-
-    const saved = data.savedFields || fields || {};
-    const idx = records.findIndex((r) => String(r.id) === String(id));
-    if (idx >= 0) {
-      records[idx].fields = { ...(records[idx].fields || {}), ...saved };
-      if (current && String(current.id) === String(id)) current = records[idx];
+    if (!response.ok || !data.ok) {
+      const extra = data.lastError || data.hint || data.error || "Ошибка сохранения";
+      throw new Error(extra);
     }
 
-    if (!options.silent) { if (data.warning) msg(successText + ". " + data.warning); else msg(successText); }
-    return data;
-  } catch (error) { msg(error.message); throw error; }
+    const saved = data.savedFields || fields || {};
+    await reloadRecordsFromNocoDB();
+    const fresh = records.find((r) => String(r.id) === String(id));
+    if (!fresh) throw new Error("Сохранение прошло, но запись не найдена при повторной проверке NocoDB");
+
+    const misses = verifyRecordFields(fresh, saved);
+    if (misses.length) {
+      throw new Error("NocoDB сохранил не все данные: " + misses.slice(0, 3).join("; ") + (misses.length > 3 ? " ..." : ""));
+    }
+
+    if (current && String(current.id) === String(id)) current = fresh;
+    renderAll();
+    if (!options.silent) msg(successText || "Сохранено в NocoDB");
+    return { ...data, record: fresh };
+  } catch (error) {
+    msg("Не сохранено: " + error.message);
+    throw error;
+  }
 }
+
 
 
 function currentUserName() {
@@ -1166,31 +1220,12 @@ function initRequestAutosave() {
 }
 function scheduleRequestAutosave() {
   if (!current || !els.dialog?.open) return;
-  setAutosaveStatus("Сохраняю…");
-  clearTimeout(autosaveTimer);
-  autosaveTimer = setTimeout(runRequestAutosave, 900);
+  setAutosaveStatus("Есть несохранённые изменения");
 }
 async function runRequestAutosave() {
-  if (!current || autosaveBusy || !els.dialog?.open) return;
-  const fields = currentEditFields();
-  const snapshot = JSON.stringify(fields);
-  if (snapshot === lastAutosaveSnapshot) { setAutosaveStatus("Все изменения сохранены"); return; }
-  autosaveBusy = true;
-  try {
-    const oldFields = current.fields || {};
-    const changes = diffFields(oldFields, fields);
-    let history = getHistoryForRecord(current);
-    if (changes.length) history = addHistory(current, "Автосохранение", changes.join("; "), history);
-    fields["История изменений"] = JSON.stringify(history);
-    await updateRecord(current.id, fields, "Автосохранено", { silent: true });
-    lastAutosaveSnapshot = JSON.stringify(currentEditFields());
-    setAutosaveStatus("Сохранено автоматически");
-    renderAll();
-  } catch (error) {
-    setAutosaveStatus("Ошибка автосохранения");
-  } finally {
-    autosaveBusy = false;
-  }
+  // v61: автосохранение отключено, чтобы не было гонок и частичного сохранения.
+  // Сохранение карточки выполняется только кнопкой «Сохранить» и обязательно проверяется повторным чтением из NocoDB.
+  return;
 }
 function getCommentsForRecord(record) {
   const f = record?.fields || {};
@@ -1827,7 +1862,7 @@ function buildAutoPayrollWorkbookData(rows) {
     const pay = autoServicePay(s);
     serviceRows.push({
       id: r.id, date: r.date, client: r.client, auto: r.auto, material: String(s.material || r.material || ""),
-      service: String(s.name || ""), price: num(s.price), pay: pay.amount, rateText: pay.rateText, code: pay.code, direction: pay.direction
+      service: String(s.name || ""), price: autoServicePriceValue(s), pay: pay.amount, rateText: pay.rateText, code: pay.code || (pay.amount ? "" : "НЕ НАЙДЕНО"), direction: pay.direction
     });
   }));
   return { generatedAt: dateTimeY(), from: els.reportDateFrom?.value || "", to: els.reportDateTo?.value || "", autoRows, serviceRows };
