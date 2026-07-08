@@ -413,9 +413,36 @@ function initClickableRows() {
 
 function initDialogBackdropClose() {
   document.querySelectorAll('dialog').forEach((dialog) => {
+    let backdropPointerDown = false;
+    let pointerStartX = 0;
+    let pointerStartY = 0;
+    let pointerMoved = false;
+
+    dialog.addEventListener('pointerdown', (event) => {
+      backdropPointerDown = event.target === dialog;
+      pointerStartX = event.clientX || 0;
+      pointerStartY = event.clientY || 0;
+      pointerMoved = false;
+    });
+
+    dialog.addEventListener('pointermove', (event) => {
+      if (!backdropPointerDown) return;
+      const dx = Math.abs((event.clientX || 0) - pointerStartX);
+      const dy = Math.abs((event.clientY || 0) - pointerStartY);
+      if (dx > 6 || dy > 6) pointerMoved = true;
+    });
+
+    dialog.addEventListener('pointerup', (event) => {
+      if (!backdropPointerDown) return;
+      const shouldClose = event.target === dialog && !pointerMoved;
+      backdropPointerDown = false;
+      if (shouldClose) dialog.close();
+    });
+
     dialog.addEventListener('click', (event) => {
-      if (event.target !== dialog) return;
-      dialog.close();
+      // Закрытие по фону обрабатывается через pointerdown/pointerup.
+      // Это защищает карточку от случайного закрытия при выделении текста.
+      if (event.target === dialog) event.preventDefault();
     });
   });
 }
