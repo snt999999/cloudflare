@@ -1,0 +1,58 @@
+Точки замены в admin.js для v62
+
+Важно: эти изменения нужны, чтобы сайт не работал напрямую с NocoDB из браузера и не ловил Too Many Requests.
+
+1. Функция load()
+Было условно:
+const res = await fetch(NOCODB_URL, { headers: ... });
+records = await res.json();
+
+Стало:
+const data = await SOLNCANET_V62.nocodb.list({ limit: 1000 });
+records = SOLNCANET_V62.normalize.list(data);
+
+2. Функция saveQuickAdd()
+Перед запросом:
+quickSaveBtn.disabled = true;
+quickSaveBtn.textContent = 'Сохраняю...';
+
+Создание:
+const created = await SOLNCANET_V62.nocodb.create(payload);
+records.unshift(SOLNCANET_V62.normalize.record(created));
+
+В finally:
+quickSaveBtn.disabled = false;
+quickSaveBtn.textContent = 'Сохранить';
+
+3. Функция saveRequest()
+Перед запросом:
+saveRequestBtn.disabled = true;
+saveRequestBtn.textContent = 'Сохраняю...';
+
+Обновление:
+const saved = await SOLNCANET_V62.nocodb.update(current.Id || current.id, payload);
+const normalized = SOLNCANET_V62.normalize.record(saved);
+records = records.map((r) => String(r.Id || r.id) === String(normalized.Id || normalized.id) ? normalized : r);
+
+Карточку закрывать только после успешного ответа.
+При catch — НЕ закрывать, показать ошибку.
+
+4. Функция cancelCurrentRequest() / удаление
+Не делать DELETE в NocoDB.
+Делать:
+const saved = await SOLNCANET_V62.nocodb.trash(current.Id || current.id, cancelReason.value || 'Удалено из админки');
+SOLNCANET_V62.calendar.clearDeletedState(current);
+records = records.map(...обновить запись...);
+
+5. Google Calendar import / перенос
+Перед созданием/переносом проверить, что запись не в TRASH_STATUSES.
+При удалении записи обязательно вызвать:
+SOLNCANET_V62.calendar.clearDeletedState(record);
+
+6. Скачивание авто-отчета
+Можно оставить старую кнопку, но надежнее добавить кнопку v62:
+SOLNCANET_V62.autoReport.downloadFromServer({ dateFrom, dateTo, status });
+
+7. Диалоги
+Если в admin.js есть функция initDialogBackdropClose(), которая закрывает карточку по клику на фон,
+ее лучше отключить или заменить на безопасную версию из assets/admin-v62-dialog-safe.js.
