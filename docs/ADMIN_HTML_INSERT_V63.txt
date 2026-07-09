@@ -1,0 +1,5 @@
+<!-- Вставить в admin.html после основного assets/admin.js -->
+<script src="assets/admin-v63-dialog-safe.js?v=63"></script>
+<script src="assets/admin-v63-nocodb-safe.js?v=63"></script>
+<script src="assets/admin-v63-auto-report.js?v=63"></script>
+<script src="assets/admin-v63-auto-fields-clean.js?v=63"></script>

@@ -5,7 +5,7 @@ export async function onRequest(context) {
   if (options) return options;
   return json({
     ok: true,
-    version: "v62",
+    version: "v63",
     service: "solncanet-crm-cloudflare-functions",
     time: new Date().toISOString(),
     hasNocodbEndpoint: Boolean(context.env.NOCODB_RECORDS_ENDPOINT || (context.env.NOCODB_API_URL && (context.env.NOCODB_TABLE_ID || context.env.NOCODB_REQUESTS_TABLE_ID))),
