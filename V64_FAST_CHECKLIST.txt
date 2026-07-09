@@ -1,0 +1,11 @@
+Быстрая проверка v64:
+
+[ ] В NocoDB есть колонки: Направление, Авто, Авто услуги, Общая стоимость.
+[ ] В Cloudflare загружены functions/_nocodb.js и functions/update-zayavka.js.
+[ ] В assets загружен admin-v64-auto-clean-save-fix.js.
+[ ] В admin.html подключен <script src="assets/admin-v64-auto-clean-save-fix.js?v=64"></script>.
+[ ] Сделан deploy.
+[ ] Открыт сайт через Ctrl+F5.
+[ ] При направлении Авто скрыты Итоговый м², Адрес, общий Материал.
+[ ] Материал в строках услуг остался.
+[ ] Сохранение заявки не падает.

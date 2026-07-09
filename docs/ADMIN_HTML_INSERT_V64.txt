@@ -1,0 +1,3 @@
+Подключить в admin.html после основного admin.js и после предыдущих v63-скриптов:
+
+<script src="assets/admin-v64-auto-clean-save-fix.js?v=64"></script>
