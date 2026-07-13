@@ -209,14 +209,19 @@ function appointmentUtcMs(fields, env) {
 
 export async function onRequest(context) {
   const o = options(context.request); if (o) return o;
+  if (context.request.method !== "POST") return json({ ok:false, error:"Метод не поддерживается" }, 405);
   try {
     checkAdmin(context.request, context.env || {});
-    let nocodb = "переменные не проверялись";
-    if ((context.env || {}).NOCODB_API_TOKEN || (context.env || {}).NOCODB_TOKEN || (context.env || {}).XC_TOKEN) {
-      try { await ncFetch(context.env, `${endpoint(context.env)}?limit=1`, { method:"GET", headers:headers(context.env) }); nocodb = "OK"; }
-      catch (e) { nocodb = "ошибка: " + e.message; }
-    }
-    const sms = smsEnabled(context.env || {}) ? "включены" : "выключены: SMS_ENABLED не включён";
-    return json({ ok:true, version:"v68-sms-queue", cloudflare:"OK", nocodb, sms, smsProvider:(context.env || {}).SMS_WEBHOOK_URL ? "webhook" : "sigmasms" });
+    const body = await readBody(context.request);
+    const id = body.id || body.Id || body.recordId || body.ID;
+    const typeRaw = String(body.type || body.template || "").toLowerCase();
+    const typeMap = { "confirm":"confirm", "confirmation":"confirm", "day":"day", "reminder_day":"day", "2h":"two_hours", "two_hours":"two_hours", "reminder_2h":"two_hours", "reschedule":"reschedule", "perenos":"reschedule", "перенос":"reschedule", "review":"review", "отзыв":"review" };
+    const type = typeMap[typeRaw] || typeRaw;
+    if (!id) return json({ ok:false, error:"Не передан id записи" }, 400);
+    if (!Object.values(SMS_KEYS).includes(type)) return json({ ok:false, error:"Неизвестный шаблон SMS: " + typeRaw }, 400);
+    const record = await getRecord(context.env, id);
+    if (!record) return json({ ok:false, error:"Заявка не найдена" }, 404);
+    const result = await sendSmsForRecord(context.env, record, type, Boolean(body.force || type === "reschedule" || type === "review"));
+    return json({ ok:result.ok !== false, result, type });
   } catch (e) { return err(e); }
 }

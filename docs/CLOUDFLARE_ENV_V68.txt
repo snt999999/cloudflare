@@ -1,0 +1,25 @@
+Cloudflare Pages -> Settings -> Environment variables
+
+Обязательные переменные:
+ADMIN_PASSWORD=ваш_пароль_админки
+NOCODB_API_URL=https://ваш-nocodb
+NOCODB_TABLE_ID=ID_таблицы_заявок
+NOCODB_API_TOKEN=токен
+
+SMS:
+SMS_ENABLED=1
+SIGMASMS_USERNAME=логин
+SIGMASMS_PASSWORD=пароль
+SIGMASMS_SENDER=SOLNCANET
+SMS_CRON_SECRET=любой_длинный_секрет
+SMS_TIMEZONE_OFFSET_MINUTES=300
+
+Дополнительно:
+SMS_DRY_RUN=1 — тестовый режим без реальной отправки.
+SMS_AUTO_CONFIRM=0 — отключить автоматическое подтверждение записи.
+SMS_SEND_PAUSE_MS=350 — пауза между SMS при пакетной отправке.
+SMS_CRON_LIMIT=500 — сколько заявок проверять за один запуск.
+
+GitHub Actions -> Secrets and variables -> Actions:
+SOLNCANET_SITE_URL=https://адрес-сайта.pages.dev
+SMS_CRON_SECRET=тот_же_секрет_что_в_Cloudflare
