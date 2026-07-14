@@ -1,4 +1,4 @@
-const CACHE_NAME = 'solncanet-v69-sms-queue-design-restore';
+const CACHE_NAME = 'solncanet-v67-sms';
 const APP_SHELL = ['/', '/index.html', '/zapis.html', '/admin.html', '/assets/site.css', '/assets/admin.css', '/assets/site.js', '/assets/admin.js', '/assets/pwa.js', '/assets/logo-solncanet.svg', '/assets/icons/icon.svg', '/manifest.webmanifest'];
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).catch(() => null));

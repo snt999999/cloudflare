@@ -1,12 +1,13 @@
+
 const CORS = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET,POST,PATCH,PUT,DELETE,OPTIONS",
   "access-control-allow-headers": "content-type,authorization,x-admin-password,xc-token,idempotency-key,x-cron-secret"
 };
 function json(data, status = 200) {
-  return new Response(JSON.stringify(data, null, 2), { status, headers: { "content-type":"application/json; charset=utf-8", "cache-control":"no-store", ...CORS } });
+  return new Response(JSON.stringify(data, null, 2), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...CORS } });
 }
-function options(request) { return request.method === "OPTIONS" ? new Response(null, { status:204, headers:CORS }) : null; }
+function options(request) { return request.method === "OPTIONS" ? new Response(null, { status: 204, headers: CORS }) : null; }
 async function readBody(request) { const text = await request.text(); if (!text) return {}; try { return JSON.parse(text); } catch { throw makeError("Некорректный JSON", 400); } }
 function makeError(message, status = 500, details = null) { const e = new Error(message); e.status = status; e.details = details; return e; }
 function err(error) { return json({ ok:false, error:error.message || "Ошибка сервера", details:error.details || null }, Number(error.status || 500)); }
@@ -28,7 +29,7 @@ function headers(env) {
   return { "accept":"application/json", "content-type":"application/json", "xc-token": token };
 }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-function retryAfter(value) { if (!value) return 0; const n = Number(value); if (Number.isFinite(n)) return Math.max(0, n * 1000); const d = Date.parse(value); return Number.isFinite(d) ? Math.max(0, d - Date.now()) : 0; }
+function retryAfter(value) { if (!value) return 0; const n=Number(value); if (Number.isFinite(n)) return Math.max(0,n*1000); const d=Date.parse(value); return Number.isFinite(d) ? Math.max(0,d-Date.now()) : 0; }
 async function ncFetch(env, url, init = {}, attempt = 0) {
   const max = Number(env.NOCODB_MAX_RETRIES || 5);
   const base = Number(env.NOCODB_RETRY_BASE_MS || 650);
@@ -40,49 +41,42 @@ async function ncFetch(env, url, init = {}, attempt = 0) {
   let data = null;
   if (text) { try { data = JSON.parse(text); } catch { data = { raw:text }; } }
   if (!res.ok) { const m = data?.message || data?.msg || data?.error || data?.raw || res.statusText || "Ошибка NocoDB"; throw makeError(String(m), res.status, data); }
-  return { data, status:res.status, attempts:attempt + 1 };
+  return { data, status: res.status, attempts: attempt + 1 };
 }
 function listFrom(payload) { if (Array.isArray(payload)) return payload; if (Array.isArray(payload?.list)) return payload.list; if (Array.isArray(payload?.records)) return payload.records; if (Array.isArray(payload?.data)) return payload.data; return []; }
 function getId(record) { return record?.Id ?? record?.id ?? record?.ID ?? record?.ncRecordId ?? record?.fields?.Id ?? record?.fields?.id ?? ""; }
-function normalizeRecord(record, fallbackId = "") { if (!record) return { id:String(fallbackId || ""), fields:{} }; const id = getId(record) || fallbackId || ""; const fields = record.fields && typeof record.fields === "object" ? record.fields : record; return { id:String(id), fields }; }
-async function listRecords(env, limit = 1000) {
-  const params = new URLSearchParams({ limit:String(limit), sort:"Дата записи" });
-  const res = await ncFetch(env, `${endpoint(env)}?${params.toString()}`, { method:"GET", headers:headers(env) });
-  return listFrom(res.data).map(x => normalizeRecord(x)).filter(x => x.id);
+function norm(v) { return String(v || "").toLowerCase().replace(/ё/g,"е").trim(); }
+function isAuto(fields) { return norm(fields["Направление"]).includes("авто") || Boolean(fields["Авто"] || fields["Авто услуги"]); }
+function isTrashStatus(status) { const s=norm(status); return ["удалена","отменена","в корзине","удаление","отказ"].includes(s) || s.includes("удален") || s.includes("отмен"); }
+function isDoneStatus(status) { const s=norm(status); return s.includes("выполн") || s.includes("оплачен"); }
+function isActiveForSms(fields) { return !isTrashStatus(fields["Статус"]) && !isDoneStatus(fields["Статус"]); }
+function parseServices(v) { if (Array.isArray(v)) return v; if (!v) return []; try { const x=JSON.parse(v); return Array.isArray(x)?x:[]; } catch { return []; } }
+function num(v) { return Number(String(v || "").replace(/[^\d.,-]/g,"").replace(",",".")) || 0; }
+function cleanAutoFields(fields) {
+  if (!fields || typeof fields !== "object") return {};
+  const copy = { ...fields };
+  if (!isAuto(copy)) return copy;
+  copy["Направление"] = "Авто";
+  copy["м2"] = ""; copy["Итоговый м²"] = ""; copy["Итоговый м2"] = ""; copy["Адрес"] = ""; copy["Плёнка"] = ""; copy["Пленка"] = ""; copy["Материал"] = "";
+  const services = parseServices(copy["Авто услуги"]).map(x => ({ name:String(x?.name || x?.service || x?.title || "").trim(), material:String(x?.material || "").trim(), price:String(x?.price ?? x?.sum ?? x?.amount ?? "").replace(/[^\d.,-]/g,"").replace(",",".").trim() })).filter(x => x.name || x.material || x.price);
+  copy["Авто услуги"] = JSON.stringify(services);
+  copy["Общая стоимость"] = String(services.reduce((s,x)=>s+num(x.price),0));
+  if (services.length) copy["Услуга"] = services.map(x => [x.name, x.material ? `(${x.material})` : "", x.price ? `${Number(x.price).toLocaleString("ru-RU")} ₽` : ""].filter(Boolean).join(" ")).join("; ");
+  return copy;
 }
+function normalizeRecord(record, fallbackId = "") { if (!record) return { id:String(fallbackId || ""), fields:{} }; const id = getId(record) || fallbackId || ""; const fields = record.fields && typeof record.fields === "object" ? record.fields : record; return { id:String(id), fields }; }
 async function getRecord(env, id) {
-  if (!id) throw makeError("Не передан id заявки", 400);
   try { const res = await ncFetch(env, `${endpoint(env)}/${encodeURIComponent(id)}`, { method:"GET", headers:headers(env) }); return normalizeRecord(res.data, id); } catch (e) {}
-  const params = new URLSearchParams({ limit:"1", where:`(Id,eq,${String(id).replaceAll(",","")})` });
-  const res = await ncFetch(env, `${endpoint(env)}?${params.toString()}`, { method:"GET", headers:headers(env) });
-  const rec = listFrom(res.data)[0];
-  if (!rec) throw makeError("Заявка не найдена", 404);
-  return normalizeRecord(rec, id);
+  try { const params = new URLSearchParams({ limit:"1", where:`(Id,eq,${String(id).replaceAll(",","")})` }); const res = await ncFetch(env, `${endpoint(env)}?${params.toString()}`, { method:"GET", headers:headers(env) }); return normalizeRecord(listFrom(res.data)[0], id); } catch (e) {}
+  return null;
 }
 async function patchRecord(env, id, fields) {
   if (!id) throw makeError("Не передан id для обновления", 400);
   try { const res = await ncFetch(env, `${endpoint(env)}/${encodeURIComponent(id)}`, { method:"PATCH", headers:headers(env), body:JSON.stringify(fields) }); return normalizeRecord(res.data, id); }
-  catch (firstError) { const withId = { ...fields, Id:Number(id) || id }; const res = await ncFetch(env, endpoint(env), { method:"PATCH", headers:headers(env), body:JSON.stringify(withId) }); return normalizeRecord(res.data, id); }
+  catch (firstError) { const withId = { ...fields, Id: Number(id) || id }; const res = await ncFetch(env, endpoint(env), { method:"PATCH", headers:headers(env), body:JSON.stringify(withId) }); return normalizeRecord(res.data, id); }
 }
-function norm(v) { return String(v || "").toLowerCase().replace(/ё/g,"е").trim(); }
-function isTrashStatus(status) { const s = norm(status); return ["удалена","отменена","в корзине","удаление","отказ"].includes(s) || s.includes("удален") || s.includes("отмен"); }
-function isDoneStatus(status) { const s = norm(status); return s.includes("выполн") || s.includes("оплачен"); }
-function isActiveForSms(fields) { return !isTrashStatus(fields?.["Статус"]) && !isDoneStatus(fields?.["Статус"]); }
-function normalizePhone(phone) {
-  let p = String(phone || "").trim();
-  if (!p) return "";
-  p = p.replace(/[^\d+]/g, "");
-  if (p.startsWith("8") && p.length === 11) p = "+7" + p.slice(1);
-  if (p.startsWith("7") && p.length === 11) p = "+" + p;
-  if (!p.startsWith("+") && p.length >= 10) p = "+" + p;
-  return /^\+\d{10,15}$/.test(p) ? p : "";
-}
-function formatRuDate(value) { const s = String(value || "").trim(); const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}.${m[2]}.${m[1]}` : s; }
-function timeValue(fields) { return String(fields?.["Время записи"] || fields?.["Время"] || "").slice(0,5) || "10:00"; }
-function dateValue(fields) { return String(fields?.["Дата записи"] || fields?.["Дата"] || "").slice(0,10); }
 const SMS_LOG_PATTERN = /\n?\[SOLNCANET_SMS_LOG:([^\]]*)\]\s*$/;
-const AUTO_TYPES = ["confirm", "day", "two_hours"];
-const TYPE_LABELS = { confirm:"Подтверждение", day:"Напоминание за день", two_hours:"Напоминание за 2 часа", reschedule:"Перенос", review:"Благодарность + отзыв" };
+const SMS_KEYS = { confirm:"confirm", day:"day", two_hours:"two_hours", reschedule:"reschedule", review:"review" };
 function stripSmsLog(text) { return String(text || "").replace(SMS_LOG_PATTERN, "").trim(); }
 function smsLogFromFields(fields) {
   const text = String(fields?.["Комментарий администратора"] || "");
@@ -97,47 +91,52 @@ function writeSmsLog(fields, log) {
   copy["Комментарий администратора"] = visible ? `${visible}\n${marker}` : marker;
   return copy;
 }
-function queueOf(log) { const q = log?.queue; return q && typeof q === "object" ? q : {}; }
-function appointmentUtcMs(fields, env) {
-  const d = dateValue(fields); if (!d) return NaN;
-  const t = timeValue(fields) || "10:00";
-  const dm = d.match(/^(\d{4})-(\d{2})-(\d{2})$/); const tm = t.match(/^(\d{1,2}):(\d{2})/);
-  if (!dm || !tm) return NaN;
-  const offsetMin = Number(env.SMS_TIMEZONE_OFFSET_MINUTES || 300);
-  return Date.UTC(Number(dm[1]), Number(dm[2])-1, Number(dm[3]), Number(tm[1]), Number(tm[2])) - offsetMin*60000;
+function mergeExistingSmsLog(fields, existingFields) {
+  const existingLog = smsLogFromFields(existingFields || {});
+  if (!Object.keys(existingLog).length) return fields;
+  const incomingLog = smsLogFromFields(fields || {});
+  if (Object.keys(incomingLog).length) return fields;
+  return writeSmsLog(fields, existingLog);
 }
-function isoFromMs(ms) { return Number.isFinite(ms) ? new Date(ms).toISOString() : ""; }
-function localInputToIso(value, env) {
+function normalizePhone(phone) {
+  let p = String(phone || "").trim();
+  if (!p) return "";
+  p = p.replace(/[^\d+]/g, "");
+  if (p.startsWith("8") && p.length === 11) p = "+7" + p.slice(1);
+  if (p.startsWith("7") && p.length === 11) p = "+" + p;
+  if (!p.startsWith("+") && p.length >= 10) p = "+" + p;
+  return /^\+\d{10,15}$/.test(p) ? p : "";
+}
+function formatRuDate(value) {
   const s = String(value || "").trim();
-  if (!s) return "";
-  if (/Z$|[+-]\d{2}:?\d{2}$/.test(s)) { const ms = Date.parse(s); return Number.isFinite(ms) ? new Date(ms).toISOString() : ""; }
-  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2})/);
-  if (!m) return "";
-  const offsetMin = Number(env.SMS_TIMEZONE_OFFSET_MINUTES || 300);
-  const ms = Date.UTC(Number(m[1]), Number(m[2])-1, Number(m[3]), Number(m[4]), Number(m[5])) - offsetMin*60000;
-  return new Date(ms).toISOString();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[3]}.${m[2]}.${m[1]}`;
+  return s;
 }
-function defaultScheduleMs(type, fields, env, nowMs = Date.now()) {
-  const appt = appointmentUtcMs(fields, env);
-  if (type === "confirm") return nowMs;
-  if (!Number.isFinite(appt)) return NaN;
-  if (type === "day") return appt - 24*60*60000;
-  if (type === "two_hours") return appt - 2*60*60000;
-  return NaN;
-}
+function timeValue(fields) { return String(fields?.["Время записи"] || fields?.["Время"] || "").slice(0,5) || "10:00"; }
+function dateValue(fields) { return String(fields?.["Дата записи"] || fields?.["Дата"] || "").slice(0,10); }
 function templateText(env, type) {
   const defaults = {
-    confirm:"СОЛНЦАНЕТ: запись оформлена на {Дата} в {Время}.",
-    day:"СОЛНЦАНЕТ: напоминаем о записи {Дата} в {Время}.",
-    two_hours:"СОЛНЦАНЕТ: до записи осталось 2 часа.",
-    review:"Спасибо, что выбрали СОЛНЦАНЕТ! Оставьте отзыв: https://clck.su/solncanet",
-    reschedule:"СОЛНЦАНЕТ: запись перенесена на {Дата} в {Время}."
+    confirm: "СОЛНЦАНЕТ: запись оформлена на {Дата} в {Время}.",
+    day: "СОЛНЦАНЕТ: напоминаем о записи {Дата} в {Время}.",
+    two_hours: "СОЛНЦАНЕТ: до записи осталось 2 часа.",
+    review: "Спасибо, что выбрали СОЛНЦАНЕТ! Оставьте отзыв: https://clck.su/solncanet",
+    reschedule: "СОЛНЦАНЕТ: запись перенесена на {Дата} в {Время}."
   };
-  const envKey = ({confirm:"SMS_TEMPLATE_CONFIRM", day:"SMS_TEMPLATE_DAY", two_hours:"SMS_TEMPLATE_2H", review:"SMS_TEMPLATE_REVIEW", reschedule:"SMS_TEMPLATE_RESCHEDULE"})[type];
+  const envKey = ({confirm:"SMS_TEMPLATE_CONFIRM",day:"SMS_TEMPLATE_DAY",two_hours:"SMS_TEMPLATE_2H",review:"SMS_TEMPLATE_REVIEW",reschedule:"SMS_TEMPLATE_RESCHEDULE"})[type];
   return String((envKey && env[envKey]) || defaults[type] || defaults.confirm);
 }
 function renderTemplate(env, type, fields, record) {
-  const data = { "Дата":formatRuDate(dateValue(fields)), "Время":timeValue(fields), "Имя":fields?.["Имя клиента"] || "", "Телефон":fields?.["Телефон"] || "", "Компания":fields?.["Компания"] || "", "Авто":fields?.["Авто"] || "", "Услуга":fields?.["Услуга"] || "", "ID":record?.id || fields?.Id || "" };
+  const data = {
+    "Дата": formatRuDate(dateValue(fields)),
+    "Время": timeValue(fields),
+    "Имя": fields?.["Имя клиента"] || "",
+    "Телефон": fields?.["Телефон"] || "",
+    "Компания": fields?.["Компания"] || "",
+    "Авто": fields?.["Авто"] || "",
+    "Услуга": fields?.["Услуга"] || "",
+    "ID": record?.id || fields?.Id || ""
+  };
   return templateText(env, type).replace(/\{([^}]+)\}/g, (_, key) => String(data[key] ?? ""));
 }
 function smsEnabled(env) { return String(env.SMS_ENABLED || "").toLowerCase() === "1" || String(env.SMS_ENABLED || "").toLowerCase() === "true"; }
@@ -148,7 +147,8 @@ async function sigmaToken(env) {
   if (!username || !password) throw makeError("Не заданы SIGMASMS_USERNAME / SIGMASMS_PASSWORD", 500);
   const base = String(env.SIGMASMS_API_BASE || "https://online.sigmasms.ru/api").replace(/\/+$/, "");
   const res = await fetch(`${base}/login`, { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({ username, password }) });
-  const text = await res.text(); let data = {}; try { data = text ? JSON.parse(text) : {}; } catch { data = { raw:text }; }
+  const text = await res.text();
+  let data = {}; try { data = text ? JSON.parse(text) : {}; } catch { data = { raw:text }; }
   if (!res.ok || !data.token) throw makeError(data.message || data.error || data.raw || "Ошибка авторизации SigmaSMS", res.status || 502, data);
   return data.token;
 }
@@ -159,7 +159,7 @@ async function sendSms(env, phoneRaw, text, type = "manual") {
   if (!smsEnabled(env)) return { ok:false, skipped:true, reason:"SMS_ENABLED не включён", phone, text };
   if (String(env.SMS_DRY_RUN || "") === "1") return { ok:true, dryRun:true, id:`dry-${Date.now()}`, phone, text, type };
   if (env.SMS_WEBHOOK_URL) {
-    const res = await fetch(env.SMS_WEBHOOK_URL, { method:"POST", headers:{"content-type":"application/json", ...(env.SMS_WEBHOOK_TOKEN ? {"authorization":`Bearer ${env.SMS_WEBHOOK_TOKEN}`} : {})}, body:JSON.stringify({ phone, text, type }) });
+    const res = await fetch(env.SMS_WEBHOOK_URL, { method:"POST", headers:{"content-type":"application/json", ...(env.SMS_WEBHOOK_TOKEN ? {"authorization": `Bearer ${env.SMS_WEBHOOK_TOKEN}`} : {})}, body:JSON.stringify({ phone, text, type }) });
     const raw = await res.text(); let data = {}; try { data = raw ? JSON.parse(raw) : {}; } catch { data = { raw }; }
     if (!res.ok) throw makeError(data.message || data.error || data.raw || "Ошибка SMS webhook", res.status || 502, data);
     return { ok:true, provider:"webhook", id:data.id || data.message_id || "", data };
@@ -168,116 +168,43 @@ async function sendSms(env, phoneRaw, text, type = "manual") {
   const token = await sigmaToken(env);
   const sender = String(env.SIGMASMS_SENDER || env.SMS_SENDER || "SOLNCANET");
   const body = { recipient:[phone], type:"sms", payload:{ sender, text:String(text) } };
-  const res = await fetch(`${base}/sendings`, { method:"POST", headers:{"charset":"utf-8", "content-type":"application/json", "authorization":token}, body:JSON.stringify(body) });
+  const res = await fetch(`${base}/sendings`, { method:"POST", headers:{"charset":"utf-8", "content-type":"application/json", "authorization": token}, body:JSON.stringify(body) });
   const raw = await res.text(); let data = {}; try { data = raw ? JSON.parse(raw) : {}; } catch { data = { raw }; }
   if (!res.ok) throw makeError(data.message || data.error || data.raw || "Ошибка отправки SMS", res.status || 502, data);
   return { ok:true, provider:"sigmasms", id:data.id || data.message_id || data.uuid || "", data };
 }
-function buildQueueItem(env, record, type, nowMs = Date.now()) {
-  const fields = record?.fields || {};
-  const log = smsLogFromFields(fields);
-  const q = queueOf(log);
-  const qItem = q[type] && typeof q[type] === "object" ? q[type] : {};
-  const phone = normalizePhone(fields["Телефон"]);
-  const apptMs = appointmentUtcMs(fields, env);
-  const defaultMs = defaultScheduleMs(type, fields, env, nowMs);
-  const customMs = qItem.scheduledAt ? Date.parse(qItem.scheduledAt) : NaN;
-  const scheduleMs = Number.isFinite(customMs) ? customMs : defaultMs;
-  const sent = log[type];
-  let status = "scheduled", statusLabel = "В очереди", reason = "";
-  if (sent) { status = "sent"; statusLabel = "Отправлено"; }
-  else if (qItem.status === "canceled") { status = "canceled"; statusLabel = "Отменено"; reason = qItem.reason || "Отменено вручную"; }
-  else if (!phone) { status = "blocked"; statusLabel = "Нет телефона"; reason = "Некорректный или пустой телефон"; }
-  else if (!isActiveForSms(fields)) { status = "blocked"; statusLabel = "Неактивная заявка"; reason = "Статус заявки не подходит для автоматической SMS"; }
-  else if (type !== "confirm" && !Number.isFinite(apptMs)) { status = "blocked"; statusLabel = "Нет даты/времени"; reason = "Не указана дата или время записи"; }
-  else if (type !== "confirm" && apptMs <= nowMs) { status = "expired"; statusLabel = "Просрочено"; reason = "Запись уже прошла"; }
-  else if (!Number.isFinite(scheduleMs)) { status = "blocked"; statusLabel = "Нет времени отправки"; }
-  else if (scheduleMs <= nowMs) { status = "due"; statusLabel = "Пора отправить"; }
-  return {
-    id:String(record.id || ""),
-    type,
-    typeLabel:TYPE_LABELS[type] || type,
-    status,
-    statusLabel,
-    reason,
-    scheduledAt: Number.isFinite(scheduleMs) ? isoFromMs(scheduleMs) : "",
-    defaultScheduledAt: Number.isFinite(defaultMs) ? isoFromMs(defaultMs) : "",
-    custom:Boolean(Number.isFinite(customMs)),
-    sentAt: sent?.at || (typeof sent === "string" ? sent : ""),
-    canceledAt: qItem.canceledAt || "",
-    text: renderTemplate(env, type, fields, record),
-    phone: fields["Телефон"] || "",
-    normalizedPhone: phone,
-    customer: fields["Имя клиента"] || fields["Компания"] || "—",
-    recordStatus: fields["Статус"] || "",
-    direction: fields["Направление"] || "",
-    object: fields["Авто"] || fields["Адрес"] || "",
-    appointmentDate: dateValue(fields),
-    appointmentTime: timeValue(fields),
-    canCancel: !sent && !["canceled","expired"].includes(status),
-    canRestore: !sent && status === "canceled",
-    canEditTime: !sent && !["blocked","expired"].includes(status),
-    canSendNow: !sent && !["blocked","expired"].includes(status) && status !== "canceled"
-  };
-}
-function setQueueState(fields, type, update) {
-  const log = smsLogFromFields(fields);
-  const nextLog = { ...log, queue:{ ...queueOf(log) } };
-  if (update === null) delete nextLog.queue[type];
-  else nextLog.queue[type] = { ...(nextLog.queue[type] || {}), ...update };
-  if (!Object.keys(nextLog.queue).length) delete nextLog.queue;
-  return writeSmsLog(fields, nextLog);
-}
-async function patchSmsLog(env, record, nextLog) {
-  const updated = writeSmsLog(record.fields || {}, nextLog);
-  await patchRecord(env, record.id, { "Комментарий администратора": updated["Комментарий администратора"] });
-}
 async function sendSmsForRecord(env, record, type, force = false) {
   const fields = record?.fields || {};
   if (!isActiveForSms(fields) && type !== "review") return { ok:false, skipped:true, reason:"Статус не подходит для SMS" };
+  const logKey = SMS_KEYS[type] || type;
   const log = smsLogFromFields(fields);
-  if (!force && log[type]) return { ok:true, skipped:true, reason:"SMS уже отправлена", sentAt:log[type]?.at || log[type] };
+  if (!force && log[logKey]) return { ok:true, skipped:true, reason:"SMS уже отправлена", logKey, sentAt:log[logKey]?.at || log[logKey] };
   const text = renderTemplate(env, type, fields, record);
   const sms = await sendSms(env, fields["Телефон"], text, type);
   if (!sms.ok || sms.skipped) return sms;
   const now = new Date().toISOString();
-  const nextLog = { ...log, [type]:{ at:now, id:sms.id || "", type }, queue:{ ...queueOf(log), [type]:{ ...(queueOf(log)[type] || {}), status:"sent", sentAt:now } } };
-  await patchSmsLog(env, record, nextLog);
-  return { ok:true, sms, text, sentAt:now };
-}
-async function handlePost(env, body) {
-  const action = String(body.action || "").trim();
-  const id = String(body.id || "").trim();
-  const type = String(body.type || "").trim();
-  if (!AUTO_TYPES.includes(type)) throw makeError("Некорректный тип SMS", 400);
-  const record = await getRecord(env, id);
-  const fields = record.fields || {};
-  const log = smsLogFromFields(fields);
-  if (log[type] && action !== "send_now") throw makeError("Эта SMS уже отправлена, изменить или отменить её нельзя", 409);
-  if (action === "cancel") {
-    const next = setQueueState(fields, type, { status:"canceled", canceledAt:new Date().toISOString(), reason:String(body.reason || "Отменено вручную") });
-    await patchRecord(env, record.id, { "Комментарий администратора": next["Комментарий администратора"] });
-  } else if (action === "restore") {
-    const next = setQueueState(fields, type, null);
-    await patchRecord(env, record.id, { "Комментарий администратора": next["Комментарий администратора"] });
-  } else if (action === "reschedule") {
-    const iso = localInputToIso(body.scheduledAt || body.datetime || body.time, env);
-    if (!iso) throw makeError("Некорректное время отправки. Формат: 2026-07-09T12:30", 400);
-    const apptMs = appointmentUtcMs(fields, env);
-    const scheduleMs = Date.parse(iso);
-    if (type !== "confirm" && Number.isFinite(apptMs) && scheduleMs >= apptMs) throw makeError("Время SMS должно быть раньше времени записи", 400);
-    const next = setQueueState(fields, type, { status:"scheduled", scheduledAt:iso, updatedAt:new Date().toISOString() });
-    await patchRecord(env, record.id, { "Комментарий администратора": next["Комментарий администратора"] });
-  } else if (action === "send_now") {
-    const item = buildQueueItem(env, record, type, Date.now());
-    if (["blocked","expired"].includes(item.status)) throw makeError(item.reason || item.statusLabel || "SMS нельзя отправить", 400);
-    const result = await sendSmsForRecord(env, record, type, true);
-    return { ok:true, action, result, item:buildQueueItem(env, await getRecord(env, record.id), type, Date.now()) };
-  } else {
-    throw makeError("Неизвестное действие SMS-очереди", 400);
+  const nextLog = { ...log, [logKey]:{ at:now, id:sms.id || "", type } };
+  if (record?.id) {
+    const updated = writeSmsLog(fields, nextLog);
+    await patchRecord(env, record.id, { "Комментарий администратора": updated["Комментарий администратора"] });
   }
-  const fresh = await getRecord(env, record.id);
-  return { ok:true, action, item:buildQueueItem(env, fresh, type, Date.now()) };
+  return { ok:true, sms, logKey, text };
+}
+async function maybeAutoConfirm(env, record) {
+  if (String(env.SMS_AUTO_CONFIRM ?? "1") === "0") return { ok:false, skipped:true, reason:"SMS_AUTO_CONFIRM=0" };
+  const f = record?.fields || {};
+  if (!normalizePhone(f["Телефон"])) return { ok:false, skipped:true, reason:"Нет телефона" };
+  if (!dateValue(f)) return { ok:false, skipped:true, reason:"Нет даты" };
+  try { return await sendSmsForRecord(env, record, "confirm", false); }
+  catch (e) { return { ok:false, error:e.message, details:e.details || null }; }
+}
+function appointmentUtcMs(fields, env) {
+  const d = dateValue(fields); if (!d) return NaN;
+  const t = timeValue(fields) || "10:00";
+  const dm = d.match(/^(\d{4})-(\d{2})-(\d{2})$/); const tm = t.match(/^(\d{1,2}):(\d{2})/);
+  if (!dm || !tm) return NaN;
+  const offsetMin = Number(env.SMS_TIMEZONE_OFFSET_MINUTES || 300);
+  return Date.UTC(Number(dm[1]), Number(dm[2])-1, Number(dm[3]), Number(tm[1]), Number(tm[2])) - offsetMin*60000;
 }
 
 function cronOk(request, env) {
@@ -294,25 +221,36 @@ export async function onRequest(context) {
     if (!cronOk(context.request, env)) throw makeError("Нет доступа к SMS cron", 401);
     const body = context.request.method === "POST" ? await readBody(context.request).catch(()=>({})) : {};
     const nowMs = body.now ? Date.parse(body.now) : Date.now();
-    const limit = Number(env.SMS_CRON_LIMIT || 500);
-    const rows = await listRecords(env, limit);
+    const params = new URLSearchParams({ limit:String(env.SMS_CRON_LIMIT || 500), sort:"Дата записи" });
+    const res = await ncFetch(env, `${endpoint(env)}?${params.toString()}`, { method:"GET", headers:headers(env) });
+    const rows = listFrom(res.data).map(x => normalizeRecord(x)).filter(x => x.id);
+    const dayMin = Number(env.SMS_DAY_MIN_MINUTES || 1380);
+    const dayMax = Number(env.SMS_DAY_MAX_MINUTES || 1500);
+    const twoMin = Number(env.SMS_TWO_HOURS_MIN_MINUTES || 105);
+    const twoMax = Number(env.SMS_TWO_HOURS_MAX_MINUTES || 135);
     const results = [];
     for (const record of rows) {
-      for (const type of ["day", "two_hours"]) {
-        const item = buildQueueItem(env, record, type, nowMs);
-        if (item.status !== "due") continue;
-        try {
-          const fresh = await getRecord(env, record.id) || record;
-          const freshItem = buildQueueItem(env, fresh, type, nowMs);
-          if (freshItem.status !== "due") { results.push({ id:record.id, type, skipped:true, reason:freshItem.statusLabel }); continue; }
-          const result = await sendSmsForRecord(env, fresh, type, false);
-          results.push({ id:record.id, type, scheduledAt:freshItem.scheduledAt, result });
+      const f = record.fields || {};
+      if (!isActiveForSms(f)) continue;
+      if (!normalizePhone(f["Телефон"])) continue;
+      const apptMs = appointmentUtcMs(f, env);
+      if (!Number.isFinite(apptMs)) continue;
+      const diff = Math.round((apptMs - nowMs) / 60000);
+      const log = smsLogFromFields(f);
+      try {
+        if (diff >= dayMin && diff <= dayMax && !log.day) {
+          const r = await sendSmsForRecord(env, record, "day", false);
+          results.push({ id:record.id, type:"day", diffMinutes:diff, result:r });
           await sleep(Number(env.SMS_SEND_PAUSE_MS || 350));
-        } catch (e) {
-          results.push({ id:record.id, type, ok:false, error:e.message, details:e.details || null });
         }
-      }
+        if (diff >= twoMin && diff <= twoMax && !log.two_hours) {
+          const fresh = await getRecord(env, record.id) || record;
+          const r = await sendSmsForRecord(env, fresh, "two_hours", false);
+          results.push({ id:record.id, type:"two_hours", diffMinutes:diff, result:r });
+          await sleep(Number(env.SMS_SEND_PAUSE_MS || 350));
+        }
+      } catch (e) { results.push({ id:record.id, ok:false, error:e.message, details:e.details || null }); }
     }
-    return json({ ok:true, checked:rows.length, sent:results.filter(x=>x.result?.ok).length, results, version:"v68-sms-queue-cron" });
+    return json({ ok:true, checked:rows.length, sent:results.filter(x=>x.result?.ok).length, results });
   } catch (e) { return err(e); }
 }

@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>СОЛНЦАНЕТ CRM v69</title>
+  <title>СОЛНЦАНЕТ CRM v67</title>
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#e71630" />
   <link rel="icon" href="/assets/icons/icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="assets/admin.css?v=69" />
+  <link rel="stylesheet" href="assets/admin.css?v=67" />
 </head>
 <body class="admin-body">
   <section id="loginScreen" class="login-screen">
@@ -26,7 +26,7 @@
 
   <section id="app" class="admin-shell hidden">
     <div class="admin-topbar">
-      <div class="brand"><img src="assets/logo-solncanet.svg" alt="СОЛНЦАНЕТ"><span>CRM v69 SMS queue</span></div>
+      <div class="brand"><img src="assets/logo-solncanet.svg" alt="СОЛНЦАНЕТ"><span>CRM v67 clean</span></div>
       <div class="btn-row">
         <button id="newBtn" class="btn btn--red" type="button">+ Новая заявка</button>
         <button id="refreshBtn" class="btn btn--light" type="button">Обновить</button>
@@ -38,7 +38,6 @@
         <button data-section="requests" class="active">Заявки</button>
         <button data-section="calendar">Календарь</button>
         <button data-section="reports">Отчёты</button>
-        <button data-section="sms">SMS</button>
         <button data-section="trash">Корзина</button>
         <button data-section="settings">Проверка</button>
       </aside>
@@ -64,18 +63,6 @@
           <div class="table-wrap"><table><thead><tr><th>Показатель</th><th>Значение</th></tr></thead><tbody id="reportBody"></tbody></table></div>
         </section>
 
-
-        <section id="section-sms" class="panel hidden">
-          <div class="panel-title">
-            <div><h1>SMS-панель</h1><p class="hint">Очередь автоматических SMS: подтверждение, напоминание за день и за 2 часа. Перенос и отзыв остаются только вручную из карточки заявки.</p></div>
-            <div class="btn-row"><button id="smsQueueRefreshBtn" class="btn-small blue" type="button">Обновить очередь</button><button id="smsQueueCronBtn" class="btn-small blue" type="button">Запустить отправку сейчас</button></div>
-          </div>
-          <div class="stats sms-stats"><div class="stat"><span>В очереди</span><b id="smsStatScheduled">0</b></div><div class="stat"><span>Пора отправить</span><b id="smsStatDue">0</b></div><div class="stat"><span>Отправлено</span><b id="smsStatSent">0</b></div><div class="stat"><span>Отменено</span><b id="smsStatCanceled">0</b></div></div>
-          <div class="filters sms-filters"><input id="smsQueueSearch" placeholder="Поиск: клиент, телефон, заявка"><select id="smsQueueTypeFilter"><option value="">Все типы SMS</option><option value="confirm">Подтверждение</option><option value="day">За день</option><option value="two_hours">За 2 часа</option></select><select id="smsQueueStatusFilter"><option value="">Все статусы</option><option value="scheduled">В очереди</option><option value="due">Пора отправить</option><option value="sent">Отправлено</option><option value="canceled">Отменено</option><option value="blocked">Проблема</option><option value="expired">Просрочено</option></select><button id="smsQueueClearBtn" class="btn-small" type="button">Сброс</button></div>
-          <div class="ok-note">Время в таблице показывается по вашему рабочему часовому поясу из <b>SMS_TIMEZONE_OFFSET_MINUTES</b>. По умолчанию стоит Екатеринбург: +300 минут.</div>
-          <div class="table-wrap"><table><thead><tr><th>Отправка</th><th>SMS</th><th>Заявка</th><th>Клиент</th><th>Телефон</th><th>Запись</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="smsQueueBody"><tr><td colspan="8">Откройте вкладку SMS и нажмите «Обновить очередь»</td></tr></tbody></table></div>
-        </section>
-
         <section id="section-trash" class="panel hidden">
           <h1>Корзина</h1>
           <p class="hint">Удаление безопасное: заявка получает статус «Удалена», физически из NocoDB не стирается.</p>
@@ -84,9 +71,9 @@
 
         <section id="section-settings" class="panel hidden">
           <h1>Проверка подключения</h1>
-          <div class="btn-row"><button id="healthBtn" class="btn-small blue">Проверить Cloudflare / NocoDB / SMS</button><button id="runSmsCronBtn" class="btn-small blue">Запустить SMS-очередь сейчас</button><button id="clearCacheBtn" class="btn-small">Очистить кеш браузера</button></div>
+          <div class="btn-row"><button id="healthBtn" class="btn-small blue">Проверить Cloudflare / NocoDB / SMS</button><button id="runSmsCronBtn" class="btn-small blue">Запустить SMS-напоминания сейчас</button><button id="clearCacheBtn" class="btn-small">Очистить кеш браузера</button></div>
           <p id="healthResult" class="ok-note">После загрузки на Cloudflare нажмите проверку. Если переменные окружения заполнены, будет статус OK.</p><p class="hint">Автоматически отправляются: подтверждение записи, напоминание за день и за 2 часа. Вручную из карточки отправляются: перенос записи и благодарность с отзывом.</p>
-          <div class="danger-note"><b>Важно:</b> эта сборка содержит SMS-автоматизацию и SMS-панель v68. В GitHub нужно загрузить содержимое архива в корень репозитория.</div>
+          <div class="danger-note"><b>Важно:</b> эта сборка содержит SMS-автоматизацию v67. В GitHub нужно загрузить содержимое архива в корень репозитория.</div>
         </section>
       </main>
     </div>
@@ -124,6 +111,6 @@
     <div class="dialog-actions"><button id="deleteBtn" class="btn-small red" type="button">В корзину</button><button id="sendRescheduleSmsBtn" class="btn-small blue" type="button">SMS перенос</button><button id="sendReviewSmsBtn" class="btn-small blue" type="button">SMS отзыв</button><button id="saveBtn" class="btn btn--red" type="button">Сохранить</button></div>
   </dialog>
 
-  <script src="assets/admin.js?v=69"></script>
+  <script src="assets/admin.js?v=67"></script>
 </body>
 </html>

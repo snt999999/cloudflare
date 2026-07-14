@@ -1,12 +1,11 @@
 (function(){
   'use strict';
-  const VERSION = 'v68-sms-queue';
+  const VERSION = 'v67-sms-auto';
   const $ = (id) => document.getElementById(id);
-  const LS_AUTH = 'solncanet_auth_v68';
+  const LS_AUTH = 'solncanet_auth_v67';
   const PASSWORDS = new Set(['sergey41','roman41','admin','solncanet']);
   const TRASH = new Set(['удалена','отменена','в корзине','удаление','отказ']);
   let records = [];
-  let smsQueue = [];
   let currentId = null;
   let section = 'requests';
 
@@ -19,8 +18,7 @@
     fDate:$('fDate'), fTime:$('fTime'), fStatus:$('fStatus'), fDirection:$('fDirection'), fName:$('fName'), fPhone:$('fPhone'), fResponsible:$('fResponsible'), fCompany:$('fCompany'),
     fM2:$('fM2'), fFilm:$('fFilm'), fAddress:$('fAddress'), fService:$('fService'), fAuto:$('fAuto'), fComment:$('fComment'), autoBlock:$('autoBlock'), autoRows:$('autoRows'), addAutoService:$('addAutoService'), autoTotal:$('autoTotal'),
     downloadXlsBtn:$('downloadXlsBtn'), downloadCsvBtn:$('downloadCsvBtn'), reportFrom:$('reportFrom'), reportTo:$('reportTo'), reportDirection:$('reportDirection'), reportStatus:$('reportStatus'), reportXlsBtn:$('reportXlsBtn'), reportBody:$('reportBody'),
-    healthBtn:$('healthBtn'), healthResult:$('healthResult'), runSmsCronBtn:$('runSmsCronBtn'), clearCacheBtn:$('clearCacheBtn'), sendRescheduleSmsBtn:$('sendRescheduleSmsBtn'), sendReviewSmsBtn:$('sendReviewSmsBtn'),
-    smsQueueBody:$('smsQueueBody'), smsQueueRefreshBtn:$('smsQueueRefreshBtn'), smsQueueCronBtn:$('smsQueueCronBtn'), smsQueueSearch:$('smsQueueSearch'), smsQueueTypeFilter:$('smsQueueTypeFilter'), smsQueueStatusFilter:$('smsQueueStatusFilter'), smsQueueClearBtn:$('smsQueueClearBtn'), smsStatScheduled:$('smsStatScheduled'), smsStatDue:$('smsStatDue'), smsStatSent:$('smsStatSent'), smsStatCanceled:$('smsStatCanceled')
+    healthBtn:$('healthBtn'), healthResult:$('healthResult'), runSmsCronBtn:$('runSmsCronBtn'), clearCacheBtn:$('clearCacheBtn'), sendRescheduleSmsBtn:$('sendRescheduleSmsBtn'), sendReviewSmsBtn:$('sendReviewSmsBtn')
   };
 
   init();
@@ -49,11 +47,6 @@
     els.reportXlsBtn.addEventListener('click',()=>downloadRows('otchet-solncanet.xls', reportRows(), 'xls'));
     els.healthBtn.addEventListener('click', checkHealth);
     els.runSmsCronBtn?.addEventListener('click', runSmsCronNow);
-    els.smsQueueRefreshBtn?.addEventListener('click', loadSmsQueue);
-    els.smsQueueCronBtn?.addEventListener('click', runSmsCronNow);
-    [els.smsQueueSearch, els.smsQueueTypeFilter, els.smsQueueStatusFilter].filter(Boolean).forEach(el=>el.addEventListener('input', renderSmsQueue));
-    els.smsQueueClearBtn?.addEventListener('click', ()=>{els.smsQueueSearch.value='';els.smsQueueTypeFilter.value='';els.smsQueueStatusFilter.value='';renderSmsQueue();});
-    els.smsQueueBody?.addEventListener('click', handleSmsQueueClick);
     els.sendRescheduleSmsBtn?.addEventListener('click', ()=>sendManualSms('reschedule'));
     els.sendReviewSmsBtn?.addEventListener('click', ()=>sendManualSms('review'));
     els.clearCacheBtn.addEventListener('click', clearBrowserCache);
@@ -121,9 +114,8 @@
   function setSection(next){
     section = next;
     document.querySelectorAll('[data-section]').forEach(b=>b.classList.toggle('active', b.dataset.section===next));
-    ['requests','calendar','reports','sms','trash','settings'].forEach(s=>$('section-'+s).classList.toggle('hidden', s!==next));
+    ['requests','calendar','reports','trash','settings'].forEach(s=>$('section-'+s).classList.toggle('hidden', s!==next));
     render();
-    if (next === 'sms') loadSmsQueue();
   }
 
   function filteredRecords(includeTrash=false){
@@ -152,7 +144,6 @@
     renderTrash();
     renderCalendar();
     renderReports();
-    if (section === 'sms') renderSmsQueue();
   }
   function renderStats(){
     const active = records.filter(r=>!isTrash(r));
@@ -288,7 +279,7 @@
   async function trashCurrent(){ if(currentId) await trashById(currentId); }
   async function trashById(id){
     if (!confirm('Переместить заявку в корзину?')) return;
-    try{ await api('/delete-zayavka', {method:'POST', body:JSON.stringify({id, reason:'Удалено из админки v68'})}); msg('Заявка перемещена в корзину', 'ok'); closeDialog(); await load(); }
+    try{ await api('/delete-zayavka', {method:'POST', body:JSON.stringify({id, reason:'Удалено из админки v67'})}); msg('Заявка перемещена в корзину', 'ok'); closeDialog(); await load(); }
     catch(e){ msg(e.message, 'bad'); }
   }
 
@@ -302,105 +293,6 @@
     else { content='\ufeff<table border="1"><tr>'+keys.map(k=>`<th>${esc(k)}</th>`).join('')+'</tr>'+arr.map(o=>'<tr>'+keys.map(k=>`<td>${esc(o[k])}</td>`).join('')+'</tr>').join('')+'</table>'; type='application/vnd.ms-excel;charset=utf-8'; }
     const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type})); a.download=filename; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   }
-
-  function toLocalDateTimeValue(iso){
-    if (!iso) return '';
-    const d = new Date(iso); if (Number.isNaN(d.getTime())) return '';
-    const pad=n=>String(n).padStart(2,'0');
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
-  function prettyDateTime(iso){
-    if (!iso) return '—';
-    const d = new Date(iso); if (Number.isNaN(d.getTime())) return '—';
-    return d.toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
-  }
-  function smsStatusHtml(item){
-    const cls = item.status === 'sent' ? 'done' : (item.status === 'canceled' || item.status === 'expired' ? 'cancel' : (item.status === 'due' ? 'due' : ''));
-    return `<span class="status-pill ${cls}">${esc(item.statusLabel || item.status || '—')}</span>${item.reason ? `<br><span class="hint">${esc(item.reason)}</span>` : ''}${item.custom ? '<br><span class="queue-badge">время изменено</span>' : ''}`;
-  }
-  async function loadSmsQueue(){
-    if (!els.smsQueueBody) return;
-    els.smsQueueBody.innerHTML = '<tr><td colspan="8">Загружаю SMS-очередь...</td></tr>';
-    try{
-      const data = await api('/sms-queue?limit=1000', {method:'GET'});
-      smsQueue = Array.isArray(data.items) ? data.items : [];
-      renderSmsQueue();
-      msg('SMS-очередь загружена: ' + smsQueue.length, 'ok');
-    }catch(e){
-      els.smsQueueBody.innerHTML = `<tr><td colspan="8">Ошибка SMS-очереди: ${esc(e.message)}</td></tr>`;
-      msg('Ошибка SMS-очереди: ' + e.message, 'bad');
-    }
-  }
-  function filteredSmsQueue(){
-    const q = lower(els.smsQueueSearch?.value || '');
-    const type = els.smsQueueTypeFilter?.value || '';
-    const status = els.smsQueueStatusFilter?.value || '';
-    return smsQueue.filter(item=>{
-      if (type && item.type !== type) return false;
-      if (status && item.status !== status) return false;
-      if (q) {
-        const hay = lower([item.id,item.typeLabel,item.customer,item.phone,item.object,item.appointmentDate,item.appointmentTime,item.recordStatus,item.statusLabel].join(' '));
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    }).sort((a,b)=>{
-      const order = {due:0, scheduled:1, blocked:2, expired:3, canceled:4, sent:5};
-      const oa = order[a.status] ?? 9, ob = order[b.status] ?? 9;
-      if (oa !== ob) return oa - ob;
-      return String(a.scheduledAt || '').localeCompare(String(b.scheduledAt || '')) || Number(a.id||0)-Number(b.id||0);
-    });
-  }
-  function renderSmsQueue(){
-    if (!els.smsQueueBody) return;
-    const stats = smsQueue.reduce((acc,item)=>{acc[item.status]=(acc[item.status]||0)+1;return acc;},{});
-    if (els.smsStatScheduled) els.smsStatScheduled.textContent = stats.scheduled || 0;
-    if (els.smsStatDue) els.smsStatDue.textContent = stats.due || 0;
-    if (els.smsStatSent) els.smsStatSent.textContent = stats.sent || 0;
-    if (els.smsStatCanceled) els.smsStatCanceled.textContent = stats.canceled || 0;
-    const rows = filteredSmsQueue();
-    els.smsQueueBody.innerHTML = rows.map(item=>{
-      const key = `${esc(item.id)}|${esc(item.type)}`;
-      const canEdit = item.canEditTime;
-      const timeInput = canEdit ? `<input class="sms-time-input" type="datetime-local" value="${esc(toLocalDateTimeValue(item.scheduledAt))}" aria-label="Время отправки SMS">` : `<span>${esc(prettyDateTime(item.scheduledAt))}</span>`;
-      const actions = [
-        item.canEditTime ? `<button class="btn-small blue" data-sms-action="reschedule" data-key="${key}" type="button">Сменить время</button>` : '',
-        item.canCancel ? `<button class="btn-small red" data-sms-action="cancel" data-key="${key}" type="button">Отменить</button>` : '',
-        item.canRestore ? `<button class="btn-small blue" data-sms-action="restore" data-key="${key}" type="button">Вернуть</button>` : '',
-        item.canSendNow ? `<button class="btn-small blue" data-sms-action="send_now" data-key="${key}" type="button">Отправить сейчас</button>` : '',
-        `<button class="btn-small" data-open="${esc(item.id)}" type="button">Заявка</button>`
-      ].filter(Boolean).join(' ');
-      return `<tr data-sms-id="${esc(item.id)}" data-sms-type="${esc(item.type)}"><td>${timeInput}<br><span class="hint">${item.custom ? 'ручное время' : 'авто-время'}</span></td><td><b>${esc(item.typeLabel)}</b><br><span class="hint" title="${esc(item.text || '')}">${esc(item.text || '').slice(0,80)}</span></td><td>#${esc(item.id)}<br><span class="hint">${esc(item.direction||'')}</span></td><td><b>${esc(item.customer||'—')}</b><br><span class="hint">${esc(item.object||'')}</span></td><td>${esc(item.phone||'—')}</td><td>${esc(item.appointmentDate||'—')}<br><span class="hint">${esc(item.appointmentTime||'')}</span></td><td>${smsStatusHtml(item)}</td><td><div class="btn-row sms-actions">${actions}</div></td></tr>`;
-    }).join('') || '<tr><td colspan="8">SMS в очереди не найдены</td></tr>';
-  }
-  function smsItemByKey(key){
-    const [id,type] = String(key||'').split('|');
-    return smsQueue.find(x=>String(x.id)===String(id) && x.type===type) || {id,type};
-  }
-  async function handleSmsQueueClick(e){
-    const open=e.target.closest('[data-open]'); if(open) return openRecord(open.dataset.open);
-    const btn = e.target.closest('[data-sms-action]'); if (!btn) return;
-    const item = smsItemByKey(btn.dataset.key);
-    const row = btn.closest('tr');
-    const action = btn.dataset.smsAction;
-    let body = { action, id:item.id, type:item.type };
-    if (action === 'cancel' && !confirm(`Отменить SMS «${item.typeLabel || item.type}» по заявке #${item.id}?`)) return;
-    if (action === 'restore' && !confirm(`Вернуть SMS «${item.typeLabel || item.type}» в очередь по заявке #${item.id}?`)) return;
-    if (action === 'send_now' && !confirm(`Отправить сейчас SMS «${item.typeLabel || item.type}» по заявке #${item.id}?`)) return;
-    if (action === 'reschedule') {
-      const value = row?.querySelector('.sms-time-input')?.value || '';
-      if (!value) { msg('Укажите дату и время отправки SMS', 'bad'); return; }
-      body.scheduledAt = value;
-    }
-    const old = btn.textContent; btn.disabled = true; btn.textContent = 'Сохраняю...';
-    try{
-      await api('/sms-queue', {method:'POST', body:JSON.stringify(body)});
-      await loadSmsQueue();
-      await load();
-      msg('SMS-очередь обновлена', 'ok');
-    }catch(err){ msg('SMS-очередь: ' + err.message, 'bad'); }
-    finally{ btn.disabled=false; btn.textContent=old; }
-  }
-
   async function checkHealth(){
     els.healthResult.className='ok-note'; els.healthResult.textContent='Проверяю...';
     try{ const d=await api('/health',{method:'GET'}); els.healthResult.textContent='OK: Cloudflare Functions работают. NocoDB: '+(d.nocodb || 'проверка не выполнялась')+'. SMS: '+(d.sms || 'не проверялись')+'. Версия: '+VERSION; }
@@ -424,12 +316,11 @@
     finally{ if(btn){ btn.disabled=false; btn.textContent=old; } }
   }
   async function runSmsCronNow(){
-    els.healthResult.className='ok-note'; els.healthResult.textContent='Проверяю SMS-очередь и отправляю сообщения, у которых подошло время...';
+    els.healthResult.className='ok-note'; els.healthResult.textContent='Проверяю записи и отправляю SMS-напоминания...';
     try{
       const d = await api('/sms-cron', {method:'POST', body:JSON.stringify({source:'admin-button'})});
-      els.healthResult.textContent = 'SMS-очередь: проверено ' + (d.checked || 0) + ', отправлено ' + (d.sent || 0) + '. Автоматический запуск по расписанию делает GitHub Actions.';
+      els.healthResult.textContent = 'SMS-напоминания: проверено ' + (d.checked || 0) + ', отправлено ' + (d.sent || 0) + '. Автоматический запуск по расписанию делает GitHub Actions.';
       await load();
-      if (section === 'sms') await loadSmsQueue();
     }catch(e){ els.healthResult.className='danger-note'; els.healthResult.textContent='Ошибка SMS-напоминаний: '+e.message; }
   }
 
